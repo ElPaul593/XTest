@@ -1,0 +1,218 @@
+/* Página Rutas */
+.rutas-container {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: var(--spacing-xl) 0;
+}
+
+.rutas-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.rutas-header h1 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.rutas-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+.bienvenida-provincia {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: var(--bg);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xl);
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bienvenida-provincia h2 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bienvenida-provincia p {
+  margin: 0;
+  font-size: var(--font-size-base);
+  opacity: 0.95;
+}
+
+.provincia-selector {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.provincia-selector label {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.rutas-section {
+  margin-top: var(--spacing-xl);
+}
+
+.rutas-section h3 {
+  margin: 0 0 var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.rutas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.ruta-card {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ruta-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ruta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--spacing-md);
+}
+
+.ruta-route {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.ruta-origen,
+.ruta-destino {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--text);
+}
+
+.ruta-arrow {
+  color: var(--text-muted);
+  font-size: var(--font-size-lg);
+}
+
+.ruta-precio {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  white-space: nowrap;
+}
+
+.ruta-info {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.ruta-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ruta-item:last-child {
+  border-bottom: 0;
+}
+
+.ruta-label {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.ruta-value {
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+}
+
+.btn-ruta {
+  width: 100%;
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: var(--font-size-base);
+}
+
+.btn-ruta:hover {
+  background: var(--accent-hover);
+}
+
+.no-rutas {
+  text-align: center;
+  padding: var(--spacing-xl);
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+
+.no-rutas p {
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rutas-header h1 {
+    font-size: var(--font-size-lg);
+  }
+  
+  .bienvenida-provincia h2 {
+    font-size: var(--font-size-md);
+  }
+  
+  .rutas-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ruta-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .ruta-precio {
+    align-self: flex-end;
+  }
+}
+

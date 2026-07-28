@@ -1,0 +1,23 @@
+# Render Blueprint (Infrastructure as Code) para el BACKEND con Docker.
+# En Render: New + -> Blueprint -> conecta este repo. Render detecta este archivo.
+# Luego completa los valores secretos (sync:false) en el panel.
+
+services:
+  - type: web
+    name: culturaltrip-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Secretos: se cargan manualmente en el panel de Render (no se versionan).
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: EXTERNAL_API_URL
+        sync: false

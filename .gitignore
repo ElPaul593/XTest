@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Variables de entorno (NUNCA subir secretos)
+.env
+**/.env
+.env.local
+**/.env.local
+
+# Build / salida
+dist/
+**/dist/
+build/
+**/build/
+
+# Logs
+*.log
+**/*.log
+error_output.txt
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

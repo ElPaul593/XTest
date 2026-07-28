@@ -1,0 +1,113 @@
+.lugares-container {
+  padding: 110px 0 40px;
+  min-height: 100vh;
+}
+
+.lugares-header {
+  margin-bottom: 20px;
+}
+
+.lugares-header h1 {
+  margin: 0 0 8px;
+}
+
+.lugares-header p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.lugares-filtros {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ciudades-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ciudad-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.ciudad-chip.active,
+.ciudad-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.lugares-total {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.lugares-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.lugar-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.lugar-imagen-wrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #0f1115;
+  display: grid;
+  place-items: center;
+}
+
+.lugar-imagen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.lugar-contenido {
+  padding: 12px;
+}
+
+.lugar-contenido h3 {
+  margin: 0 0 6px;
+}
+
+.lugar-contenido p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+.lugar-ciudad {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.lugar-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .lugares-container {
+    padding-top: 90px;
+  }
+
+  .lugares-grid {
+    grid-template-columns: 1fr;
+  }
+}

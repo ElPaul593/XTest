@@ -1,0 +1,237 @@
+/* Navbar */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+}
+
+.navbar-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 70px;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.navbar-logo:hover {
+  color: var(--accent);
+}
+
+.logo-icon {
+  font-size: 1.8rem;
+}
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.navbar-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  padding: var(--spacing-sm) 0;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.navbar-link:hover,
+.navbar-link.active {
+  color: var(--accent);
+}
+
+.navbar-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.navbar-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  cursor: pointer;
+  border: none;
+  font-size: var(--font-size-base);
+}
+
+.navbar-btn.login {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.navbar-btn.login:hover {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.navbar-btn.register {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.navbar-btn.register:hover {
+  background: var(--accent-hover);
+}
+
+.navbar-btn.logout {
+  background: var(--surface-light);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.navbar-btn.logout:hover {
+  background: var(--error);
+  border-color: var(--error);
+}
+
+/* Mobile Menu */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-sm);
+}
+
+.hamburger {
+  width: 24px;
+  height: 18px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hamburger span {
+  width: 100%;
+  height: 2px;
+  background: var(--text);
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
+.mobile-menu {
+  display: none;
+  background: rgba(10, 10, 10, 0.98);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  padding: var(--spacing-lg) 0;
+}
+
+.mobile-link {
+  display: block;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: var(--spacing-md) var(--container-padding);
+  font-weight: 500;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.mobile-link:hover,
+.mobile-link.active {
+  color: var(--accent);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.mobile-btn {
+  display: block;
+  margin: var(--spacing-md) var(--container-padding);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 0.2s, color 0.2s;
+  cursor: pointer;
+  border: none;
+  font-size: var(--font-size-base);
+}
+
+.mobile-btn.login {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.mobile-btn.login:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.mobile-btn.register {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.mobile-btn.register:hover {
+  background: var(--accent-hover);
+}
+
+.mobile-btn.logout {
+  background: var(--surface-light);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.mobile-btn.logout:hover {
+  background: var(--error);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-container {
+    padding: 0 var(--container-padding);
+  }
+  
+  .navbar-menu {
+    display: none;
+  }
+  
+  .mobile-menu-btn {
+    display: block;
+  }
+  
+  .mobile-menu {
+    display: block;
+  }
+}
+

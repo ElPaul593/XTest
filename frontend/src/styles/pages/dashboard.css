@@ -1,0 +1,239 @@
+/* Página Dashboard */
+.dashboard-container {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  padding: var(--spacing-xl) 0;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.dashboard-header h1 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-xl);
+  color: var(--accent);
+}
+
+.dashboard-header p {
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+.dashboard-section {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.dashboard-section h2 {
+  margin: 0 0 var(--spacing-lg);
+  font-size: var(--font-size-lg);
+  color: var(--accent);
+}
+
+.user-form {
+  margin-bottom: 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+.form-row .field {
+  margin-bottom: 0;
+}
+
+.form-row .btn {
+  grid-column: span 1;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.users-table thead {
+  background: var(--surface-light);
+}
+
+.users-table th {
+  padding: var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  color: var(--accent);
+  border-bottom: 2px solid var(--border);
+}
+
+.users-table td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-base);
+}
+
+.users-table tbody tr:hover {
+  background: var(--surface-light);
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table .input {
+  width: 100%;
+  min-width: 120px;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-base);
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.action-buttons .btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row .btn {
+    grid-column: span 1;
+  }
+  
+  .table-container {
+    overflow-x: scroll;
+  }
+  
+  .users-table {
+    min-width: 600px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-buttons .btn {
+    width: 100%;
+  }
+}
+
+/* Validador de Cédula Simple */
+.cedula-validator-simple {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.validator-header h3 {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-base);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.validator-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.validator-input-group {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.validator-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.validator-input:focus {
+  border-color: var(--accent);
+}
+
+.validator-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.validator-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.validator-btn:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.validator-result {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.validator-result.valida {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.validator-result.invalida {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+@media (max-width: 768px) {
+  .validator-input-group {
+    flex-direction: column;
+  }
+  
+  .validator-btn {
+    width: 100%;
+  }
+}
+
