@@ -7,6 +7,7 @@ const authSchemas = {
   register: Joi.object({
     cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional(),
     pasaporte: Joi.string().min(6).max(20).optional(),
+    email: Joi.string().email().required(),
     nombre: Joi.string().required().min(2).max(50),
     apellido: Joi.string().required().min(2).max(50),
     telefono: Joi.string().required().min(10).max(15).pattern(/^\d+$/),
@@ -30,6 +31,7 @@ const userSchemas = {
   create: Joi.object({
     cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional(),
     pasaporte: Joi.string().min(6).max(20).optional(),
+    email: Joi.string().email().required(),
     nombre: Joi.string().required().min(2).max(50),
     apellido: Joi.string().required().min(2).max(50),
     telefono: Joi.string().required().min(10).max(15).pattern(/^\d+$/),
@@ -41,6 +43,7 @@ const userSchemas = {
   }).or('cedula', 'pasaporte'),
 
   update: Joi.object({
+    email: Joi.string().email().optional(),
     nombre: Joi.string().min(2).max(50).optional(),
     apellido: Joi.string().min(2).max(50).optional(),
     telefono: Joi.string().min(10).max(15).pattern(/^\d+$/).optional(),
@@ -113,8 +116,8 @@ const rutaSchemas = {
     to: Joi.string().required().min(2).max(50),
     price: Joi.number().min(3).max(20).required(),
     duration: Joi.string().required(),
+    horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
     seats: Joi.number().integer().min(1).max(80).optional(),
-    departureTime: Joi.string().optional()
   }),
 
   query: Joi.object({
@@ -136,7 +139,14 @@ const hotelSchemas = {
     descripcion: Joi.string().allow('').max(1000).optional(),
     telefono: Joi.string().allow('').max(20).optional(),
     email: Joi.string().allow('').email().optional(),
-    precioPromedio: Joi.number().min(0).optional()
+    precioPromedio: Joi.number().min(0).optional(),
+    googlePlaceId: Joi.string().optional(),
+    ratingGoogle: Joi.number().min(0).max(5).optional(),
+    totalRatingsGoogle: Joi.number().integer().min(0).optional(),
+    fotoUrl: Joi.string().allow('').max(500).optional(),
+    lat: Joi.number().optional(),
+    lng: Joi.number().optional(),
+    fechaSincronizacion: Joi.date().optional()
   }),
 
   update: Joi.object({
@@ -146,7 +156,14 @@ const hotelSchemas = {
     descripcion: Joi.string().allow('').max(1000).optional(),
     telefono: Joi.string().allow('').max(20).optional(),
     email: Joi.string().allow('').email().optional(),
-    precioPromedio: Joi.number().min(0).optional()
+    precioPromedio: Joi.number().min(0).optional(),
+    googlePlaceId: Joi.string().optional(),
+    ratingGoogle: Joi.number().min(0).max(5).optional(),
+    totalRatingsGoogle: Joi.number().integer().min(0).optional(),
+    fotoUrl: Joi.string().allow('').max(500).optional(),
+    lat: Joi.number().optional(),
+    lng: Joi.number().optional(),
+    fechaSincronizacion: Joi.date().optional()
   })
 };
 

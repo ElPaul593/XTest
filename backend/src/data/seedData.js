@@ -1,4 +1,6 @@
 ﻿// Datos de lugares turísticos por provincia (sin Galápagos)
+const { getDeterministicHoraSalida } = require('../utils/dateTimeUtils');
+
 const lugaresTuristicosRaw = [
   // Azuay (Cuenca)
   {
@@ -2510,11 +2512,14 @@ function getPrecioYDuracion(from, to) {
   const ruta = rutas[key];
 
   if (ruta) {
-    return ruta;
+    return {
+      ...ruta,
+      horaSalida: getDeterministicHoraSalida(from, to)
+    };
   }
 
   // Valores por defecto si no se encuentra la ruta
-  return { price: 10, duration: '4 horas' };
+  return { price: 10, duration: '4 horas', horaSalida: getDeterministicHoraSalida(from, to) };
 }
 
 // Datos de rutas entre ciudades

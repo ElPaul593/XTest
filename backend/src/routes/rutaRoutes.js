@@ -60,6 +60,7 @@ router.get('/', rutaController.getAll);
  *               - to
  *               - price
  *               - duration
+ *               - horaSalida
  *             properties:
  *               from:
  *                 type: string
@@ -68,6 +69,8 @@ router.get('/', rutaController.getAll);
  *               price:
  *                 type: number
  *               duration:
+ *                 type: string
+ *               horaSalida:
  *                 type: string
  *     responses:
  *       201:

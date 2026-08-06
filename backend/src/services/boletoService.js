@@ -2,6 +2,7 @@ const BoletoRepo = require('../repositories/boletoRepo');
 const ReservaRepo = require('../repositories/reservaRepo');
 const Ruta = require('../models/rutaModel');
 const PricingStrategySelector = require('../strategies/PricingStrategySelector');
+const { buildRouteSchedule } = require('../utils/dateTimeUtils');
 
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern
@@ -40,11 +41,8 @@ exports.create = async (data) => {
   const basePrice = ruta.price;
 
   // Determinar contexto para la estrategia de pricing
-  const now = new Date();
-  const departureDate = ruta.departureTime ? new Date(ruta.departureTime) : null;
-  const hoursUntilDeparture = departureDate 
-    ? Math.floor((departureDate - now) / (1000 * 60 * 60))
-    : null;
+  const schedule = buildRouteSchedule(ruta, reserva.fecha);
+  const hoursUntilDeparture = schedule.hoursUntilDeparture;
 
   // Verificar si es día festivo (simplificado: puedes mejorar esto)
   const isHoliday = false; // Aquí podrías implementar lógica para detectar días festivos

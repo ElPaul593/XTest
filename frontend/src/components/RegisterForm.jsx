@@ -11,6 +11,7 @@ export default function RegisterForm() {
   // Campos comunes
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
   
@@ -123,6 +124,13 @@ export default function RegisterForm() {
     return null;
   }, [apellido, touched.apellido]);
 
+  const emailError = useMemo(() => {
+    if (!touched.email) return null;
+    if (!email.trim()) return 'El correo electrónico es requerido';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Ingrese un correo electrónico válido';
+    return null;
+  }, [email, touched.email]);
+
   const passwordError = useMemo(() => {
     if (!touched.password) return null;
     if (password.length === 0) return 'La contraseña es requerida';
@@ -146,8 +154,8 @@ export default function RegisterForm() {
       ? true 
       : (!telefonoError && telefono.trim());
     
-    const camposComunes = !nombreError && !apellidoError && !passwordError && telefonoValido &&
-      nombre && apellido && password && (activeTab === 'extranjero' && !paisOrigen ? true : telefono);
+    const camposComunes = !nombreError && !apellidoError && !emailError && !passwordError && telefonoValido &&
+      nombre && apellido && email && password && (activeTab === 'extranjero' && !paisOrigen ? true : telefono);
     
     if (activeTab === 'nacional') {
       return camposComunes && !cedulaError && cedulaDigits &&
@@ -156,8 +164,8 @@ export default function RegisterForm() {
       return camposComunes && !pasaporteError && !paisOrigenError &&
         pasaporte.trim() && paisOrigen.trim() && paisOrigen.trim() !== 'Ecuador';
     }
-  }, [activeTab, nombreError, apellidoError, passwordError, telefonoError, cedulaError, pasaporteError, paisOrigenError,
-      nombre, apellido, password, telefono, cedulaDigits, cedulaValida, pasaporte, paisOrigen]);
+    }, [activeTab, nombreError, apellidoError, emailError, passwordError, telefonoError, cedulaError, pasaporteError, paisOrigenError,
+      nombre, apellido, email, password, telefono, cedulaDigits, cedulaValida, pasaporte, paisOrigen]);
 
   const handleCedulaChange = (e) => {
     const digitsOnly = e.target.value.replace(/\D/g, '');
@@ -169,9 +177,9 @@ export default function RegisterForm() {
     
     // Marcar todos los campos como tocados
     if (activeTab === 'nacional') {
-      setTouched({ cedula: true, nombre: true, apellido: true, password: true, telefono: true });
+      setTouched({ cedula: true, nombre: true, apellido: true, email: true, password: true, telefono: true });
     } else {
-      setTouched({ pasaporte: true, paisOrigen: true, nombre: true, apellido: true, password: true, telefono: true });
+      setTouched({ pasaporte: true, paisOrigen: true, nombre: true, apellido: true, email: true, password: true, telefono: true });
     }
     
     setError(null);
@@ -211,6 +219,7 @@ export default function RegisterForm() {
           cedula: cedulaDigits,
           nombre: nombre.trim(),
           apellido: apellido.trim(),
+          email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: 'Ecuador',
           password
@@ -246,6 +255,7 @@ export default function RegisterForm() {
           pasaporte: pasaporte.trim(),
           nombre: nombre.trim(),
           apellido: apellido.trim(),
+          email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: paisOrigen.trim(),
           password
@@ -408,6 +418,21 @@ export default function RegisterForm() {
               </div>
             </>
           )}
+
+          <div className="field">
+            <label htmlFor="email">Correo electrónico</label>
+            <input
+              id="email"
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              placeholder="correo@ejemplo.com"
+              required
+            />
+            {emailError && <div className="error">{emailError}</div>}
+          </div>
 
           {/* Campos comunes */}
           <div className="row-between" style={{gap:14, flexWrap:'wrap'}}>

@@ -1,5 +1,6 @@
 const PricingStrategySelector = require('../strategies/PricingStrategySelector');
 const Ruta = require('../models/rutaModel');
+const { buildRouteSchedule } = require('../utils/dateTimeUtils');
 
 /**
  * Servicio de Pricing Reutilizable
@@ -28,11 +29,8 @@ async function calculatePrice(rutaId, fecha, options = {}) {
   const precioBase = ruta.price;
 
   // Determinar contexto para la estrategia de pricing
-  const now = new Date();
-  const fechaViaje = new Date(fecha);
-  
-  // Calcular horas hasta la salida (asumiendo que la fecha es la fecha de salida)
-  const hoursUntilDeparture = Math.floor((fechaViaje - now) / (1000 * 60 * 60));
+  const schedule = buildRouteSchedule(ruta, fecha);
+  const hoursUntilDeparture = schedule.hoursUntilDeparture;
 
   // Verificar si es día festivo (simplificado - puedes mejorar esto)
   const isHoliday = options.isHoliday || false;
@@ -45,27 +43,35 @@ async function calculatePrice(rutaId, fecha, options = {}) {
 
   // Calcular descuento (negativo) o recargo (positivo)
   const diferencia = precioFinal - precioBase;
-  const descuento = diferencia < 0 ? Math.abs(diferencia) : 0;
-  const recargo = diferencia > 0 ? diferencia : 0;
+  let descuento = 0;
+  let recargo = 0;
+  if (diferencia < 0) {
+    descuento = Math.abs(diferencia);
+  } else if (diferencia > 0) {
+    recargo = diferencia;
+  }
 
   // Determinar motivo del descuento/recargo
   let motivoDescuento = null;
   let motivoRecargo = null;
+  let estrategia = 'standard';
   
   if (isHoliday) {
     motivoRecargo = 'Día festivo (+30%)';
+    estrategia = 'holiday';
   } else if (hoursUntilDeparture < 24 && hoursUntilDeparture > 0) {
     motivoRecargo = 'Reserva de última hora (+20%)';
+    estrategia = 'lastMinute';
   }
 
   return {
     precioBase,
     descuento,
-    recargo: recargo || 0,
-    motivoDescuento: motivoDescuento || null,
-    motivoRecargo: motivoRecargo || null,
+    recargo,
+    motivoDescuento,
+    motivoRecargo,
     totalPagar: precioFinal,
-    estrategia: isHoliday ? 'holiday' : (hoursUntilDeparture < 24 && hoursUntilDeparture > 0 ? 'lastMinute' : 'standard')
+    estrategia
   };
 }
 

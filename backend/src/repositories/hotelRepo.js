@@ -21,7 +21,25 @@ exports.findAll = async (filters = {}) => {
  * Encapsula la búsqueda de hoteles por ciudad.
  */
 exports.findByCiudad = async (ciudad) => {
-  return Hotel.find({ ciudad }).sort({ createdAt: -1 }).lean();
+  const ciudadNormalizada = ciudad ? ciudad.trim() : '';
+
+  if (!ciudadNormalizada) {
+    return [];
+  }
+
+  const ciudadEscapada = ciudadNormalizada.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return Hotel.find({
+    ciudad: { $regex: new RegExp(`^${ciudadEscapada}$`, 'i') }
+  }).sort({ createdAt: -1 }).lean();
+};
+
+exports.findByGooglePlaceId = async (googlePlaceId) => {
+  if (!googlePlaceId) {
+    return null;
+  }
+
+  return Hotel.findOne({ googlePlaceId }).lean();
 };
 
 exports.findById = async (id) => {
@@ -31,6 +49,28 @@ exports.findById = async (id) => {
 exports.create = async (data) => {
   const hotel = new Hotel(data);
   return hotel.save();
+};
+
+exports.upsertByGooglePlaceId = async (googlePlaceId, data) => {
+  if (!googlePlaceId) {
+    throw new Error('googlePlaceId es requerido para el upsert');
+  }
+
+  return Hotel.findOneAndUpdate(
+    { googlePlaceId },
+    {
+      $set: {
+        ...data,
+        googlePlaceId
+      }
+    },
+    {
+      new: true,
+      upsert: true,
+      runValidators: true,
+      setDefaultsOnInsert: true
+    }
+  ).lean();
 };
 
 exports.updateById = async (id, data) => {

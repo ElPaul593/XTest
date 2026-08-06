@@ -3,10 +3,12 @@ import AdminUsers from './admin/AdminUsers';
 import AdminRutas from './admin/AdminRutas';
 import AdminBoletos from './admin/AdminBoletos';
 import AdminStats from './admin/AdminStats';
+import AdminLugares from './admin/AdminLugares';
 
 const TABS = [
   { key: 'usuarios', label: '👥 Usuarios', Comp: AdminUsers },
   { key: 'rutas', label: '🛣️ Rutas', Comp: AdminRutas },
+  { key: 'lugares', label: '🗺️ Lugares', Comp: AdminLugares },
   { key: 'boletos', label: '🎫 Boletos', Comp: AdminBoletos },
   { key: 'stats', label: '📊 Estadísticas', Comp: AdminStats },
 ];
@@ -20,7 +22,7 @@ export default function Admin() {
       <div className="container">
         <div className="dashboard-header">
           <h1>Panel de Administración</h1>
-          <p>Gestión de usuarios, rutas, boletos y estadísticas</p>
+          <p>Gestión de usuarios, rutas, lugares turísticos, boletos y estadísticas</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>

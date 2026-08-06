@@ -32,6 +32,7 @@ exports.create = async (data) => {
 exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   const update = {};
 
+  if (data.email !== undefined) update.email = String(data.email).trim().toLowerCase();
   if (data.nombre !== undefined) update.nombre = String(data.nombre).trim();
   if (data.apellido !== undefined) update.apellido = String(data.apellido).trim();
   if (data.telefono !== undefined) update.telefono = String(data.telefono).replace(/\D/g, '').slice(0, 15);

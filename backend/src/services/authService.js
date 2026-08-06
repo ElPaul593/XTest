@@ -17,7 +17,7 @@ const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
 const SALT_ROUNDS = 10;
 
 function validateCedula(cedula) {
-  return /^[0-9]{1,10}$/.test(cedula);
+  return /^\d{1,10}$/.test(cedula);
 }
 
 /**
@@ -28,9 +28,15 @@ function validateCedula(cedula) {
  * @param {object} data
  * @param {string} [data.role] - 'USER' por defecto; 'ADMIN' solo si el llamador lo permite.
  */
-exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefono, password, paisOrigen, provincia, role = 'USER' }) => {
-  if (!nombre || !apellido || !telefono || !password) {
+exports.createUserAccount = async ({ cedula, pasaporte, email, nombre, apellido, telefono, password, paisOrigen, provincia, role = 'USER' }) => {
+  if (!nombre || !apellido || !telefono || !password || !email) {
     throw new AppError('Todos los campos son requeridos', 400);
+  }
+
+  const emailLimpio = String(email).trim().toLowerCase();
+  const existingEmail = await User.findOne({ email: emailLimpio });
+  if (existingEmail) {
+    throw new AppError('Usuario con ese correo ya existe', 409);
   }
 
   const telefonoLimpio = String(telefono).replace(/\D/g, '').slice(0, 15);
@@ -64,6 +70,7 @@ exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefo
       nombre,
       apellido,
       telefono: telefonoLimpio,
+      email: emailLimpio,
       password: hashed,
       paisOrigen: paisSeleccionado || 'Ecuador',
       provincia: provincia || getProvinciaFromCedula(cedulaLimpia),
@@ -90,6 +97,7 @@ exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefo
     nombre,
     apellido,
     telefono: telefonoLimpio,
+    email: emailLimpio,
     password: hashed,
     paisOrigen: paisSeleccionado,
     role: assignedRole

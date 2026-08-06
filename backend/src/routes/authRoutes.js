@@ -19,12 +19,14 @@ const { authSchemas } = require('../validations/schemas');
  *             required:
  *               - nombre
  *               - apellido
+ *               - email
  *               - telefono
  *               - paisOrigen
  *               - password
  *             properties:
  *               cedula: { type: string }
  *               pasaporte: { type: string }
+ *               email: { type: string, format: email }
  *               nombre: { type: string }
  *               apellido: { type: string }
  *               telefono: { type: string }

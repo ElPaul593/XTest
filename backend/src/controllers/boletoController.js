@@ -1,4 +1,5 @@
 const BoletoService = require('../services/boletoService');
+const BoletoEmailService = require('../services/boletoEmailService');
 const asyncHandler = require('../utils/asyncHandler');
 const { serializeBoleto } = require('../utils/serializers');
 
@@ -26,5 +27,17 @@ exports.create = asyncHandler(async (req, res) => {
   
   res.status(201).json({
     data: serializeBoleto(boleto)
+  });
+});
+
+exports.reenviarCorreo = asyncHandler(async (req, res) => {
+  const { reservaId } = req.params;
+  const result = await BoletoEmailService.enviarBoletoPorCorreo(reservaId);
+
+  res.status(result.ok ? 200 : 202).json({
+    data: result,
+    message: result.ok
+      ? 'Boleto enviado por correo correctamente'
+      : 'No se pudo enviar el correo del boleto'
   });
 });

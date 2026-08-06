@@ -10,6 +10,7 @@
     "start": "serve dist -s -l 3000"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
     "axios": "^1.4.0",
     "html5-qrcode": "^2.3.8",
     "qrcode.react": "^4.2.0",

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { listUsers, createUser, updateUser, deleteUser } from '../../services/users';
 import { getRutas } from '../../services/rutas';
 
-const emptyCreate = { cedula: '', pasaporte: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
+const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -14,7 +14,7 @@ export default function AdminUsers() {
 
   const [form, setForm] = useState(emptyCreate);
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ nombre: '', apellido: '', telefono: '', provincia: '', role: 'USER', password: '', assignedRutas: [] });
+  const [editForm, setEditForm] = useState({ email: '', nombre: '', apellido: '', telefono: '', provincia: '', role: 'USER', password: '', assignedRutas: [] });
   const [rutas, setRutas] = useState([]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function AdminUsers() {
   const startEdit = (u) => {
     setEditingId(u._id || u.id);
     setEditForm({
-      nombre: u.nombre || '', apellido: u.apellido || '', telefono: u.telefono || '',
+      email: u.email || '', nombre: u.nombre || '', apellido: u.apellido || '', telefono: u.telefono || '',
       provincia: u.provincia || '', role: (u.role || 'USER').toUpperCase(), password: '',
       assignedRutas: Array.isArray(u.assignedRutas) ? u.assignedRutas.map((r) => String(r._id || r)) : []
     });
@@ -113,6 +113,7 @@ export default function AdminUsers() {
             ) : (
               <input className="input" placeholder="Pasaporte" value={form.pasaporte} onChange={e => setForm({ ...form, pasaporte: e.target.value })} required />
             )}
+            <input className="input" type="email" placeholder="Correo electrónico" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
             <input className="input" placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
             <input className="input" placeholder="Apellido" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required />
             <input className="input" placeholder="Teléfono" value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} required />
@@ -149,7 +150,7 @@ export default function AdminUsers() {
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Provincia</th><th>Rol</th><th>Acciones</th>
+                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Teléfono</th><th>Provincia</th><th>Rol</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,6 +162,7 @@ export default function AdminUsers() {
                       <td>{u.cedula || u.pasaporte || '—'}</td>
                       <td>{editing ? <input className="input" value={editForm.nombre} onChange={e => setEditForm({ ...editForm, nombre: e.target.value })} /> : u.nombre}</td>
                       <td>{editing ? <input className="input" value={editForm.apellido} onChange={e => setEditForm({ ...editForm, apellido: e.target.value })} /> : u.apellido}</td>
+                      <td>{editing ? <input className="input" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} /> : (u.email || '—')}</td>
                       <td>{editing ? <input className="input" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} /> : u.telefono}</td>
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
                       <td>
