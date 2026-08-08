@@ -13,6 +13,7 @@ const authSchemas = {
     telefono: Joi.string().required().min(10).max(15).pattern(/^\d+$/),
     paisOrigen: Joi.string().required().min(2).max(50),
     provincia: Joi.string().optional().max(50),
+    preferencias: Joi.array().items(Joi.string().valid('Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro')).optional(),
     password: Joi.string().required().min(6),
     role: Joi.string().valid('ADMIN', 'USER').optional()
   }).or('cedula', 'pasaporte'),
@@ -48,6 +49,7 @@ const userSchemas = {
     apellido: Joi.string().min(2).max(50).optional(),
     telefono: Joi.string().min(10).max(15).pattern(/^\d+$/).optional(),
     provincia: Joi.string().max(50).optional(),
+    preferencias: Joi.array().items(Joi.string().valid('Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro')).optional(),
     password: Joi.string().min(6).allow('').optional(),
     role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()

@@ -15,8 +15,7 @@ const MapsService = require('./mapsService');
  */
 
 exports.getAll = async () => {
-  const rutasEncontradas = await RutaRepo.findAll();
-  return Promise.all(rutasEncontradas.map((ruta) => MapsService.ensureRouteMapData(ruta)));
+  return RutaRepo.findAll();
 };
 
 exports.getById = async (id) => {

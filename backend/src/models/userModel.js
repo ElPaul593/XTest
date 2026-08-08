@@ -71,6 +71,11 @@ const UserSchema = new mongoose.Schema({
 
   paisOrigen: { type: String, required: true },
   provincia: { type: String }, // Provincia de Ecuador (solo para usuarios ecuatorianos)
+  preferencias: {
+    type: [String],
+    enum: ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'],
+    default: []
+  },
 
  
   role: {

@@ -25,7 +25,7 @@ const User = require('../models/userModel');
  */
 exports.verRecomendados = async (req, res) => {
   try {
-    const { ciudadDestino, rutaId } = req.query;
+    const { ciudadDestino } = req.query;
     const usuarioId = req.query.usuarioId || req.user?.id;
     
     if (!ciudadDestino) {
@@ -38,7 +38,7 @@ exports.verRecomendados = async (req, res) => {
 
     // Obtener información del usuario
     const usuario = await User.findById(usuarioId)
-      .select('provincia paisOrigen nombre apellido')
+      .select('provincia paisOrigen nombre apellido preferencias')
       .lean();
 
     if (!usuario) {
@@ -56,7 +56,8 @@ exports.verRecomendados = async (req, res) => {
     const recomendados = await RecomendacionService.getRecomendadosPorProvincia(
       usuario.provincia,
       ciudadDestino,
-      usuarioId
+      usuarioId,
+      usuario.preferencias || []
     );
 
     res.json({
@@ -117,19 +118,20 @@ exports.getRecomendados = async (req, res) => {
     
     if (usuarioId) {
       const usuario = await User.findById(usuarioId)
-        .select('paisOrigen provincia')
+        .select('paisOrigen provincia preferencias')
         .lean();
 
       // Si el usuario tiene provincia, usar el nuevo algoritmo
-      if (usuario && usuario.provincia) {
+      if (usuario?.provincia) {
         console.log(`[Recomendaciones] Usuario ${usuarioId} de provincia ${usuario.provincia} buscando lugares en ${ciudad}`);
         recomendados = await RecomendacionService.getRecomendadosPorProvincia(
           usuario.provincia,
           ciudad,
-          usuarioId
+          usuarioId,
+          usuario.preferencias || []
         );
         console.log(`[Recomendaciones] Encontrados ${recomendados.length} lugares recomendados`);
-      } else if (usuario && usuario.paisOrigen) {
+      } else if (usuario?.paisOrigen) {
         // Fallback al método anterior por nacionalidad
         recomendados = await RecomendacionService.getRecomendadosPorNacionalidad(
           usuario.paisOrigen,

@@ -21,6 +21,7 @@ const serializeUser = (user) => {
     telefono: userObj.telefono,
     paisOrigen: userObj.paisOrigen,
     provincia: userObj.provincia || null,
+    preferencias: Array.isArray(userObj.preferencias) ? userObj.preferencias : [],
     role: userObj.role,
     assignedRutas: Array.isArray(userObj.assignedRutas)
       ? userObj.assignedRutas.map((r) => {

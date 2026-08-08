@@ -10,6 +10,8 @@ const RutaSchema = new mongoose.Schema({
   horaSalida: { type: String, default: '08:00' },
   polyline: { type: String, default: null },
   duracionEstimada: { type: Number, default: null },
+  mapNoDisponible: { type: Boolean, default: false },
+  mapNoDisponibleAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
 

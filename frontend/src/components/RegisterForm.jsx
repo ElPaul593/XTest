@@ -7,6 +7,7 @@ import { getCodigoTelefonico } from '../constants/codigosTelefonicos';
 
 export default function RegisterForm() {
   const [activeTab, setActiveTab] = useState('nacional'); // 'nacional' o 'extranjero'
+  const opcionesPreferencias = ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'];
   
   // Campos comunes
   const [nombre, setNombre] = useState('');
@@ -14,6 +15,7 @@ export default function RegisterForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [preferencias, setPreferencias] = useState([]);
   
   // Campos para nacionales
   const [cedula, setCedula] = useState('');
@@ -172,6 +174,14 @@ export default function RegisterForm() {
     setCedula(digitsOnly.slice(0, 10));
   };
 
+  const togglePreferencia = (preferencia) => {
+    setPreferencias((current) => (
+      current.includes(preferencia)
+        ? current.filter((item) => item !== preferencia)
+        : [...current, preferencia]
+    ));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -222,7 +232,8 @@ export default function RegisterForm() {
           email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: 'Ecuador',
-          password
+          password,
+          preferencias
         });
         const data = await login({ cedula: cedulaDigits, password });
         localStorage.setItem('token', data.token);
@@ -258,7 +269,8 @@ export default function RegisterForm() {
           email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: paisOrigen.trim(),
-          password
+          password,
+          preferencias
         });
         const data = await login({ pasaporte: pasaporte.trim(), password });
         localStorage.setItem('token', data.token);
@@ -434,6 +446,37 @@ export default function RegisterForm() {
             {emailError && <div className="error">{emailError}</div>}
           </div>
 
+          <div className="field">
+            <div id="preferencias-destinos-label" style={{ fontWeight: 600 }}>Preferencias de destinos turísticos</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+              {opcionesPreferencias.map((preferencia) => (
+                <label
+                  key={preferencia}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '999px',
+                    background: preferencias.includes(preferencia) ? '#e8f2ff' : '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={preferencias.includes(preferencia)}
+                    onChange={() => togglePreferencia(preferencia)}
+                  />
+                  <span>{preferencia}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>
+              Opcional: el sistema prioriza estas categorías, pero sigue mostrando recomendaciones de otras.
+            </div>
+          </div>
+
           {/* Campos comunes */}
           <div className="row-between" style={{gap:14, flexWrap:'wrap'}}>
             <div className="field" style={{flex:'1 1 240px'}}>
@@ -515,7 +558,7 @@ export default function RegisterForm() {
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 15))}
                   onBlur={() => setTouched((t) => ({ ...t, telefono: true }))}
-                  placeholder={activeTab === 'extranjero' ? (paisOrigen ? "1234567890" : "Seleccione país primero") : "0999999999"}
+                  placeholder={activeTab === 'extranjero' && !paisOrigen ? 'Seleccione país primero' : activeTab === 'extranjero' ? '1234567890' : '0999999999'}
                   required
                   disabled={activeTab === 'extranjero' && !paisOrigen}
                   style={{

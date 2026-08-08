@@ -36,7 +36,7 @@ const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
  * Método dedicado exclusivamente a generar recomendaciones basadas en provincia.
  * Implementa un algoritmo que filtra calificaciones por provincia de origen del usuario.
  */
-exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usuarioId = null) => {
+exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usuarioId = null, preferenciasUsuario = []) => {
   try {
     // Validar que se proporcione provincia de origen
     if (!provinciaOrigen) {
@@ -70,6 +70,10 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
       calificacionesPorLugar.get(key).push(c);
     }
 
+    const preferenciasValidas = Array.isArray(preferenciasUsuario)
+      ? preferenciasUsuario.filter(Boolean)
+      : [];
+
     // Procesar cada lugar usando el mapa precargado (sin consultas adicionales)
     const lugaresConCalificaciones = lugaresTuristicos.map((lugar) => {
         const todasCalificaciones = calificacionesPorLugar.get(String(lugar._id)) || [];
@@ -96,7 +100,11 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
 
         // Score final: promedio ajustado por factor de confianza
         // El score puede ser de 0 a 5
-        const score = promedioCalificaciones * (0.7 + factorConfianza * 0.3);
+        let score = promedioCalificaciones * (0.7 + factorConfianza * 0.3);
+
+        if (preferenciasValidas.length > 0 && preferenciasValidas.includes(lugar.tipo)) {
+          score *= 1.2;
+        }
 
         return {
           lugarTuristico: lugar,
@@ -114,7 +122,7 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
     const lugaresFiltrados = lugaresConCalificaciones.filter(item => item !== null);
 
     // Ordenar por score descendente (mejores primero)
-    const lugaresOrdenados = lugaresFiltrados.sort((a, b) => b.score - a.score);
+    const lugaresOrdenados = [...lugaresFiltrados].sort((a, b) => b.score - a.score);
 
     // Si hay un usuarioId, guardar las recomendaciones en la colección hija
     if (usuarioId && lugaresOrdenados.length > 0) {
@@ -201,7 +209,7 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
       };
       
       // Asegurar que _id existe
-      if (!lugar._id && item.lugarTuristico && item.lugarTuristico._id) {
+      if (!lugar._id && item.lugarTuristico?._id) {
         lugar._id = item.lugarTuristico._id;
       }
       

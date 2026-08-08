@@ -3,6 +3,7 @@ const AppError = require('../utils/AppError');
 const Ruta = require('../models/rutaModel');
 
 const GOOGLE_DIRECTIONS_URL = 'https://maps.googleapis.com/maps/api/directions/json';
+const MAP_NO_DISPONIBLE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function buildDirectionsParams(origen, destino) {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_KEY;
@@ -10,8 +11,8 @@ function buildDirectionsParams(origen, destino) {
     throw new AppError('GOOGLE_MAPS_SERVER_KEY no está configurada', 500);
   }
 
-  const origin = typeof origen === 'string' ? origen.trim() : '';
-  const destination = typeof destino === 'string' ? destino.trim() : '';
+  const origin = typeof origen === 'string' ? `${origen.trim()}, Ecuador` : '';
+  const destination = typeof destino === 'string' ? `${destino.trim()}, Ecuador` : '';
 
   if (!origin || !destination) {
     throw new AppError('Origen y destino son requeridos para consultar Google Maps', 400);
@@ -21,7 +22,8 @@ function buildDirectionsParams(origen, destino) {
     origin,
     destination,
     key: apiKey,
-    language: 'es'
+    language: 'es',
+    region: 'ec'
   };
 }
 
@@ -32,6 +34,26 @@ async function fetchDirections(origen, destino) {
     params,
     timeout: 10000
   });
+
+  const status = response.data?.status;
+
+  if (status === 'ZERO_RESULTS') {
+    const error = new Error('No existe ruta en auto entre estos puntos');
+    error.directionsStatus = status;
+    throw error;
+  }
+
+  if (status === 'OVER_QUERY_LIMIT' || status === 'REQUEST_DENIED') {
+    const error = new Error('Cuota o permisos de Google Directions agotados/inválidos');
+    error.directionsStatus = status;
+    throw error;
+  }
+
+  if (status && status !== 'OK') {
+    const error = new Error(`Google Directions respondió con estado inesperado: ${status}`);
+    error.directionsStatus = status;
+    throw error;
+  }
 
   const route = response.data?.routes?.[0];
   const leg = route?.legs?.[0];
@@ -51,13 +73,32 @@ async function ensureRouteMapData(ruta) {
   const rutaId = ruta?._id || ruta?.id;
   const existingPolyline = ruta?.polyline || null;
   const existingDuration = ruta?.duracionEstimada ?? null;
+  const mapNoDisponible = Boolean(ruta?.mapNoDisponible);
+  const mapNoDisponibleAt = ruta?.mapNoDisponibleAt ? new Date(ruta.mapNoDisponibleAt) : null;
+  const mapNoDisponibleVigente = mapNoDisponible
+    && mapNoDisponibleAt instanceof Date
+    && !Number.isNaN(mapNoDisponibleAt.getTime())
+    && (Date.now() - mapNoDisponibleAt.getTime()) < MAP_NO_DISPONIBLE_TTL_MS;
 
   if (existingPolyline && existingDuration != null) {
     return {
       ...ruta,
       polyline: existingPolyline,
       duracionEstimada: existingDuration,
-      mapAvailable: true
+      mapAvailable: true,
+      mapNoDisponible: false,
+      mapNoDisponibleAt: null
+    };
+  }
+
+  if (mapNoDisponibleVigente) {
+    return {
+      ...ruta,
+      polyline: existingPolyline,
+      duracionEstimada: existingDuration,
+      mapAvailable: false,
+      mapNoDisponible: true,
+      mapNoDisponibleAt: mapNoDisponibleAt.toISOString()
     };
   }
 
@@ -68,7 +109,9 @@ async function ensureRouteMapData(ruta) {
       await Ruta.findByIdAndUpdate(rutaId, {
         $set: {
           polyline: directions.polyline,
-          duracionEstimada: directions.duracionEstimada
+          duracionEstimada: directions.duracionEstimada,
+          mapNoDisponible: false,
+          mapNoDisponibleAt: null
         }
       });
     }
@@ -77,17 +120,39 @@ async function ensureRouteMapData(ruta) {
       ...ruta,
       polyline: directions.polyline,
       duracionEstimada: directions.duracionEstimada,
-      mapAvailable: Boolean(directions.polyline && directions.duracionEstimada != null)
+      mapAvailable: Boolean(directions.polyline && directions.duracionEstimada != null),
+      mapNoDisponible: false,
+      mapNoDisponibleAt: null
     };
   } catch (error) {
+    const isZeroResults = error?.directionsStatus === 'ZERO_RESULTS' || error?.message === 'No existe ruta en auto entre estos puntos';
+    const isQuotaOrPermissions = error?.directionsStatus === 'OVER_QUERY_LIMIT' || error?.directionsStatus === 'REQUEST_DENIED';
+
     console.warn(`[mapsService] No se pudo obtener mapa para ${ruta?.from} -> ${ruta?.to}: ${error.message}`);
+
+    if (rutaId && isZeroResults) {
+      await Ruta.findByIdAndUpdate(rutaId, {
+        $set: {
+          mapNoDisponible: true,
+          mapNoDisponibleAt: new Date()
+        }
+      });
+    }
 
     return {
       ...ruta,
       polyline: existingPolyline,
       duracionEstimada: existingDuration,
       mapAvailable: Boolean(existingPolyline && existingDuration != null),
-      mapError: 'No hay datos de mapa disponibles'
+      mapNoDisponible: isZeroResults ? true : Boolean(mapNoDisponibleVigente),
+      mapNoDisponibleAt: isZeroResults
+        ? new Date().toISOString()
+        : (mapNoDisponibleAt ? mapNoDisponibleAt.toISOString() : null),
+      mapError: isQuotaOrPermissions
+        ? 'Cuota o permisos de Google Directions agotados/inválidos'
+        : isZeroResults
+          ? 'No existe ruta en auto entre estos puntos'
+          : 'No hay datos de mapa disponibles'
     };
   }
 }
