@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../services/users';
 import { getProvinciaFromCedula } from '../constants/provincias';
-import { getRutasPorProvincia, getRutas } from '../services/rutas';
+import { getRutasPorProvincia, getRutas, getRutaById } from '../services/rutas';
 import EcuadorMapSelector from '../components/EcuadorMapSelector';
 import RouteMap from '../components/RouteMap';
 
@@ -59,6 +59,7 @@ function getRouteDurationMinutes(ruta) {
 export default function Rutas() {
   const [loading, setLoading] = useState(true);
   const [loadingRutas, setLoadingRutas] = useState(false);
+  const [loadingMapaId, setLoadingMapaId] = useState(null);
   const [user, setUser] = useState(null);
   const [provinciaUsuario, setProvinciaUsuario] = useState(null);
   const [provinciaSeleccionada, setProvinciaSeleccionada] = useState('');
@@ -110,20 +111,24 @@ export default function Rutas() {
     }
   }, [provinciaSeleccionada, mostrarTodas]);
 
+  const formatearObjRuta = (ruta) => ({
+    id: ruta._id || ruta.id,
+    origen: ruta.from,
+    destino: ruta.to,
+    nombre: ruta.name,
+    asientos: ruta.seats,
+    precio: ruta.price ? `$${ruta.price}` : 'Consultar precio',
+    duracion: ruta.duration || 'Consultar duración',
+    horaSalida: ruta.horaSalida || '08:00',
+    duracionEstimada: ruta.duracionEstimada || null,
+    polyline: ruta.polyline || null,
+    mapNoDisponible: ruta.mapNoDisponible || false,
+    mapError: ruta.mapError || null,
+    empresa: 'Varias empresas'
+  });
+
   const formatearRutas = (rutas) => {
-    return rutas.map(ruta => ({
-      id: ruta._id || ruta.id,
-      origen: ruta.from,
-      destino: ruta.to,
-      nombre: ruta.name,
-      asientos: ruta.seats,
-      precio: ruta.price ? `$${ruta.price}` : 'Consultar precio',
-      duracion: ruta.duration || 'Consultar duración',
-      horaSalida: ruta.horaSalida || '08:00',
-      duracionEstimada: ruta.duracionEstimada || null,
-      polyline: ruta.polyline || null,
-      empresa: 'Varias empresas'
-    }));
+    return rutas.map(formatearObjRuta);
   };
 
   const cargarRutasPorProvincia = async (provincia) => {
@@ -157,9 +162,21 @@ export default function Rutas() {
     }
   };
 
-  const abrirMapaRuta = (ruta) => {
-    setRutaMapaSeleccionada(ruta);
-    setFechaViajeMapa((currentValue) => currentValue || new Date().toISOString().slice(0, 10));
+  const abrirMapaRuta = async (ruta) => {
+    const rutaId = ruta.id || ruta._id;
+    setLoadingMapaId(rutaId);
+    try {
+      const freshRuta = await getRutaById(rutaId);
+      const rutaFormateada = formatearObjRuta(freshRuta);
+      setRutaMapaSeleccionada(rutaFormateada);
+      setFechaViajeMapa((currentValue) => currentValue || new Date().toISOString().slice(0, 10));
+    } catch (err) {
+      console.error('Error al obtener datos frescos de la ruta:', err);
+      setRutaMapaSeleccionada(ruta);
+      setFechaViajeMapa((currentValue) => currentValue || new Date().toISOString().slice(0, 10));
+    } finally {
+      setLoadingMapaId(null);
+    }
   };
 
   const fechaSalidaReal = rutaMapaSeleccionada
@@ -295,9 +312,10 @@ export default function Rutas() {
                   <button
                     className="btn-ruta btn-ruta-secondary"
                     onClick={() => abrirMapaRuta(ruta)}
+                    disabled={loadingMapaId === ruta.id}
                     style={{ marginTop: '10px' }}
                   >
-                    Ver mapa del trayecto
+                    {loadingMapaId === ruta.id ? 'Cargando mapa...' : 'Ver mapa del trayecto'}
                   </button>
                 </div>
               ))}
@@ -312,7 +330,11 @@ export default function Rutas() {
               <div className="ruta-map-controls">
                 <div className="ruta-map-meta">
                   <strong>{rutaMapaSeleccionada.origen} → {rutaMapaSeleccionada.destino}</strong>
-                  <span>Duración estimada: {rutaMapaSeleccionada.duracion}</span>
+                  <span>Duración estimada: {
+                    typeof rutaMapaSeleccionada.duracionEstimada === 'number' && Number.isFinite(rutaMapaSeleccionada.duracionEstimada)
+                      ? `${Math.floor(rutaMapaSeleccionada.duracionEstimada / 3600) > 0 ? `${Math.floor(rutaMapaSeleccionada.duracionEstimada / 3600)} h ` : ''}${Math.round((rutaMapaSeleccionada.duracionEstimada % 3600) / 60)} min`
+                      : rutaMapaSeleccionada.duracion
+                  }</span>
                 </div>
                 <label className="ruta-map-input">
                   <span>Fecha del viaje</span>

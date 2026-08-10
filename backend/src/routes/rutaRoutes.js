@@ -43,6 +43,26 @@ router.get('/', rutaController.getAll);
 
 /**
  * @swagger
+ * /api/rutas/{id}:
+ *   get:
+ *     summary: Obtener una ruta por ID (y actualizar datos de mapa si faltan)
+ *     tags: [Rutas]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ruta obtenida exitosamente
+ *       404:
+ *         description: Ruta no encontrada
+ */
+router.get('/:id', rutaController.getById);
+
+/**
+ * @swagger
  * /api/rutas:
  *   post:
  *     summary: Crear una nueva ruta (Admin)

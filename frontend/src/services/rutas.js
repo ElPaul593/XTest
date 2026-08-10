@@ -14,6 +14,19 @@ export async function getRutas() {
 }
 
 /**
+ * Obtiene una ruta por ID (hace fetch fresco al backend)
+ */
+export async function getRutaById(id) {
+  try {
+    const response = await api.get(`/rutas/${id}`);
+    return response.data;
+  } catch (err) {
+    console.error(`Error fetching ruta ${id}:`, err);
+    throw new Error(err.response?.data?.error || err.message || 'Error al obtener la ruta');
+  }
+}
+
+/**
  * Crea una ruta (Admin). El backend deriva el nombre de from-to si no se envía.
  */
 export async function createRuta(data) {
