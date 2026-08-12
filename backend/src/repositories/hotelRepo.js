@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Hotel = require('../models/hotelModel');
 
 /**
@@ -73,6 +74,63 @@ exports.upsertByGooglePlaceId = async (googlePlaceId, data) => {
   ).lean();
 };
 
+exports.bulkUpsertGoogleHotels = async (hotelesGoogle = [], ciudad) => {
+  if (!Array.isArray(hotelesGoogle) || hotelesGoogle.length === 0) {
+    return;
+  }
+
+  const validHoteles = hotelesGoogle.filter(
+    (h) => h?.googlePlaceId && h?.nombre && h?.direccion
+  );
+
+  if (validHoteles.length === 0) {
+    return;
+  }
+
+  const placeIds = validHoteles.map((h) => h.googlePlaceId);
+  const existingHoteles = await Hotel.find(
+    { googlePlaceId: { $in: placeIds } },
+    { googlePlaceId: 1 }
+  ).lean();
+
+  const existingMap = new Map(existingHoteles.map((h) => [h.googlePlaceId, h._id]));
+  const fechaSincronizacion = new Date();
+
+  const operations = validHoteles.map((hotelGoogle) => {
+    const existingId = existingMap.get(hotelGoogle.googlePlaceId);
+    const id = existingId || new mongoose.Types.ObjectId();
+
+    return {
+      updateOne: {
+        filter: { googlePlaceId: hotelGoogle.googlePlaceId },
+        update: {
+          $set: {
+            nombre: hotelGoogle.nombre,
+            ciudad,
+            direccion: hotelGoogle.direccion,
+            descripcion: hotelGoogle.descripcion || '',
+            telefono: hotelGoogle.telefono || '',
+            email: hotelGoogle.email || '',
+            precioPromedio: hotelGoogle.precioPromedio ?? null,
+            ratingGoogle: hotelGoogle.ratingGoogle ?? null,
+            totalRatingsGoogle: hotelGoogle.totalRatingsGoogle ?? null,
+            lat: hotelGoogle.lat ?? null,
+            lng: hotelGoogle.lng ?? null,
+            fechaSincronizacion,
+            fotoUrl: `/hoteles/${id}/foto`
+          },
+          $setOnInsert: {
+            _id: id
+          }
+        },
+        upsert: true
+      }
+    };
+  });
+
+  return Hotel.bulkWrite(operations);
+};
+
 exports.updateById = async (id, data) => {
   return Hotel.findByIdAndUpdate(
     id,
@@ -84,4 +142,5 @@ exports.updateById = async (id, data) => {
 exports.deleteById = async (id) => {
   return Hotel.findByIdAndDelete(id).lean();
 };
+
 

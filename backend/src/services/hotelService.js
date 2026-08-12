@@ -37,43 +37,7 @@ function isHotelCacheFresh(hoteles = []) {
 }
 
 async function persistGoogleHotels(hotelesGoogle = [], ciudad) {
-  const hotelesPersistidos = [];
-  const fechaSincronizacion = new Date();
-
-  for (const hotelGoogle of hotelesGoogle) {
-    if (!hotelGoogle?.googlePlaceId || !hotelGoogle?.nombre || !hotelGoogle?.direccion) {
-      continue;
-    }
-
-    const hotelGuardado = await HotelRepo.upsertByGooglePlaceId(hotelGoogle.googlePlaceId, {
-      nombre: hotelGoogle.nombre,
-      ciudad,
-      direccion: hotelGoogle.direccion,
-      descripcion: hotelGoogle.descripcion || '',
-      telefono: hotelGoogle.telefono || '',
-      email: hotelGoogle.email || '',
-      precioPromedio: hotelGoogle.precioPromedio ?? null,
-      ratingGoogle: hotelGoogle.ratingGoogle ?? null,
-      totalRatingsGoogle: hotelGoogle.totalRatingsGoogle ?? null,
-      lat: hotelGoogle.lat ?? null,
-      lng: hotelGoogle.lng ?? null,
-      fechaSincronizacion,
-      fotoUrl: null
-    });
-
-    if (hotelGuardado?._id) {
-      const hotelConFoto = await HotelRepo.updateById(hotelGuardado._id, {
-        fotoUrl: `/hoteles/${hotelGuardado._id}/foto`
-      });
-
-      hotelesPersistidos.push(hotelConFoto || hotelGuardado);
-      continue;
-    }
-
-    hotelesPersistidos.push(hotelGuardado);
-  }
-
-  return hotelesPersistidos;
+  return HotelRepo.bulkUpsertGoogleHotels(hotelesGoogle, ciudad);
 }
 
 /**
@@ -106,12 +70,16 @@ exports.getByCiudad = async (ciudad) => {
   }
 
   const provincia = getProvinciaFromCiudad(ciudadNormalizada);
+  const timerLabel = `[hotelService] Sincronización Google Places para ${ciudadNormalizada}`;
+  console.time(timerLabel);
+
   const hotelesGoogle = await googlePlacesService.searchHotelsByLocation({
     ciudad: ciudadNormalizada,
     provincia
   });
 
   if (!Array.isArray(hotelesGoogle) || hotelesGoogle.length === 0) {
+    console.timeEnd(timerLabel);
     return hotelesMongo;
   }
 
@@ -119,8 +87,10 @@ exports.getByCiudad = async (ciudad) => {
     await persistGoogleHotels(hotelesGoogle, ciudadNormalizada);
   } catch (error) {
     console.warn(`[hotelService] No se pudieron persistir hoteles de Google para ${ciudadNormalizada}: ${error.message}`);
+    console.timeEnd(timerLabel);
     return hotelesMongo;
   }
+  console.timeEnd(timerLabel);
 
   const hotelesActualizados = await HotelRepo.findByCiudad(ciudadNormalizada);
   return hotelesActualizados.length > 0 ? hotelesActualizados : hotelesMongo;
