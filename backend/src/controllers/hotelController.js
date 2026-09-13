@@ -33,6 +33,22 @@ exports.getById = async (req, res) => {
   }
 };
 
+exports.getPhoto = async (req, res) => {
+  try {
+    const photo = await HotelService.getPhotoById(req.params.id);
+
+    if (!photo?.buffer) {
+      return res.status(404).json({ error: 'Foto no disponible' });
+    }
+
+    res.set('Content-Type', photo.contentType || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(photo.buffer);
+  } catch (err) {
+    return res.status(404).json({ error: 'Foto no disponible' });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const hotel = await HotelService.create(req.body);

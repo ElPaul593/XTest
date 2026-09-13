@@ -7,12 +7,15 @@ import { getCodigoTelefonico } from '../constants/codigosTelefonicos';
 
 export default function RegisterForm() {
   const [activeTab, setActiveTab] = useState('nacional'); // 'nacional' o 'extranjero'
+  const opcionesPreferencias = ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'];
   
   // Campos comunes
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [telefono, setTelefono] = useState('');
+  const [preferencias, setPreferencias] = useState([]);
   
   // Campos para nacionales
   const [cedula, setCedula] = useState('');
@@ -123,6 +126,13 @@ export default function RegisterForm() {
     return null;
   }, [apellido, touched.apellido]);
 
+  const emailError = useMemo(() => {
+    if (!touched.email) return null;
+    if (!email.trim()) return 'El correo electrónico es requerido';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Ingrese un correo electrónico válido';
+    return null;
+  }, [email, touched.email]);
+
   const passwordError = useMemo(() => {
     if (!touched.password) return null;
     if (password.length === 0) return 'La contraseña es requerida';
@@ -146,8 +156,8 @@ export default function RegisterForm() {
       ? true 
       : (!telefonoError && telefono.trim());
     
-    const camposComunes = !nombreError && !apellidoError && !passwordError && telefonoValido &&
-      nombre && apellido && password && (activeTab === 'extranjero' && !paisOrigen ? true : telefono);
+    const camposComunes = !nombreError && !apellidoError && !emailError && !passwordError && telefonoValido &&
+      nombre && apellido && email && password && (activeTab === 'extranjero' && !paisOrigen ? true : telefono);
     
     if (activeTab === 'nacional') {
       return camposComunes && !cedulaError && cedulaDigits &&
@@ -156,12 +166,20 @@ export default function RegisterForm() {
       return camposComunes && !pasaporteError && !paisOrigenError &&
         pasaporte.trim() && paisOrigen.trim() && paisOrigen.trim() !== 'Ecuador';
     }
-  }, [activeTab, nombreError, apellidoError, passwordError, telefonoError, cedulaError, pasaporteError, paisOrigenError,
-      nombre, apellido, password, telefono, cedulaDigits, cedulaValida, pasaporte, paisOrigen]);
+    }, [activeTab, nombreError, apellidoError, emailError, passwordError, telefonoError, cedulaError, pasaporteError, paisOrigenError,
+      nombre, apellido, email, password, telefono, cedulaDigits, cedulaValida, pasaporte, paisOrigen]);
 
   const handleCedulaChange = (e) => {
     const digitsOnly = e.target.value.replace(/\D/g, '');
     setCedula(digitsOnly.slice(0, 10));
+  };
+
+  const togglePreferencia = (preferencia) => {
+    setPreferencias((current) => (
+      current.includes(preferencia)
+        ? current.filter((item) => item !== preferencia)
+        : [...current, preferencia]
+    ));
   };
 
   const handleSubmit = async (e) => {
@@ -169,9 +187,9 @@ export default function RegisterForm() {
     
     // Marcar todos los campos como tocados
     if (activeTab === 'nacional') {
-      setTouched({ cedula: true, nombre: true, apellido: true, password: true, telefono: true });
+      setTouched({ cedula: true, nombre: true, apellido: true, email: true, password: true, telefono: true });
     } else {
-      setTouched({ pasaporte: true, paisOrigen: true, nombre: true, apellido: true, password: true, telefono: true });
+      setTouched({ pasaporte: true, paisOrigen: true, nombre: true, apellido: true, email: true, password: true, telefono: true });
     }
     
     setError(null);
@@ -211,9 +229,11 @@ export default function RegisterForm() {
           cedula: cedulaDigits,
           nombre: nombre.trim(),
           apellido: apellido.trim(),
+          email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: 'Ecuador',
-          password
+          password,
+          preferencias
         });
         const data = await login({ cedula: cedulaDigits, password });
         localStorage.setItem('token', data.token);
@@ -246,9 +266,11 @@ export default function RegisterForm() {
           pasaporte: pasaporte.trim(),
           nombre: nombre.trim(),
           apellido: apellido.trim(),
+          email: email.trim(),
           telefono: telefonoCompleto,
           paisOrigen: paisOrigen.trim(),
-          password
+          password,
+          preferencias
         });
         const data = await login({ pasaporte: pasaporte.trim(), password });
         localStorage.setItem('token', data.token);
@@ -409,6 +431,52 @@ export default function RegisterForm() {
             </>
           )}
 
+          <div className="field">
+            <label htmlFor="email">Correo electrónico</label>
+            <input
+              id="email"
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              placeholder="correo@ejemplo.com"
+              required
+            />
+            {emailError && <div className="error">{emailError}</div>}
+          </div>
+
+          <div className="field">
+            <div id="preferencias-destinos-label" style={{ fontWeight: 600 }}>Preferencias de destinos turísticos</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+              {opcionesPreferencias.map((preferencia) => (
+                <label
+                  key={preferencia}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '999px',
+                    background: preferencias.includes(preferencia) ? '#e8f2ff' : '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={preferencias.includes(preferencia)}
+                    onChange={() => togglePreferencia(preferencia)}
+                  />
+                  <span>{preferencia}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>
+              Opcional: el sistema prioriza estas categorías, pero sigue mostrando recomendaciones de otras.
+            </div>
+          </div>
+
           {/* Campos comunes */}
           <div className="row-between" style={{gap:14, flexWrap:'wrap'}}>
             <div className="field" style={{flex:'1 1 240px'}}>
@@ -490,7 +558,7 @@ export default function RegisterForm() {
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value.replace(/\D/g, '').slice(0, 15))}
                   onBlur={() => setTouched((t) => ({ ...t, telefono: true }))}
-                  placeholder={activeTab === 'extranjero' ? (paisOrigen ? "1234567890" : "Seleccione país primero") : "0999999999"}
+                  placeholder={activeTab === 'extranjero' && !paisOrigen ? 'Seleccione país primero' : activeTab === 'extranjero' ? '1234567890' : '0999999999'}
                   required
                   disabled={activeTab === 'extranjero' && !paisOrigen}
                   style={{

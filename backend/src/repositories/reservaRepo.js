@@ -58,7 +58,7 @@ exports.findAll = async (options = {}) => {
   const [data, total] = await Promise.all([
     Reserva.find(query)
       .populate('user', 'nombre apellido cedula pasaporte')
-      .populate('ruta', 'from to price duration')
+      .populate('ruta', 'from to price duration horaSalida duracionEstimada polyline')
       .lean()
       .skip(skip)
       .limit(limit)
@@ -71,8 +71,8 @@ exports.findAll = async (options = {}) => {
   return {
     data,
     pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: Number(page),
+      limit: Number(limit),
       total,
       totalPages
     }
@@ -89,9 +89,12 @@ exports.findAll = async (options = {}) => {
  * Lanza un error 409 si hay conflicto.
  */
 exports.create = async (data) => {
-  const requestedSeats = Array.isArray(data.seatNumbers) && data.seatNumbers.length > 0
-    ? data.seatNumbers.map(Number)
-    : (data.seatNumber ? [Number(data.seatNumber)] : []);
+  let requestedSeats = [];
+  if (Array.isArray(data.seatNumbers) && data.seatNumbers.length > 0) {
+    requestedSeats = data.seatNumbers.map((seat) => Number(seat));
+  } else if (data.seatNumber) {
+    requestedSeats = [Number(data.seatNumber)];
+  }
 
   if (requestedSeats.length === 0) {
     throw new AppError('Debe especificar al menos un asiento', 400);

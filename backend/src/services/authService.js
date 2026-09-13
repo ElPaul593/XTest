@@ -5,6 +5,8 @@ const AppError = require('../utils/AppError');
 const { validarCedulaEcuatoriana } = require('../utils/cedulaValidator');
 const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
 
+const PREFERENCIAS_VALIDAS = new Set(['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro']);
+
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern
  * Servicio especializado en autenticación, registro y emisión de tokens.
@@ -17,7 +19,54 @@ const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
 const SALT_ROUNDS = 10;
 
 function validateCedula(cedula) {
-  return /^[0-9]{1,10}$/.test(cedula);
+  return /^\d{1,10}$/.test(cedula);
+}
+
+function normalizePreferencias(preferencias) {
+  if (!Array.isArray(preferencias)) {
+    return [];
+  }
+
+  return [...new Set(preferencias.map((preferencia) => String(preferencia).trim()).filter((preferencia) => PREFERENCIAS_VALIDAS.has(preferencia)))];
+}
+
+async function createNationalUser({ cedulaLimpia, nombre, apellido, telefonoLimpio, emailLimpio, password, paisSeleccionado, provincia, preferenciasLimpias, assignedRole }) {
+  const existing = await User.findOne({ cedula: cedulaLimpia });
+  if (existing) throw new AppError('Usuario con esa cédula ya existe', 409);
+
+  const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+  const user = new User({
+    cedula: cedulaLimpia,
+    nombre,
+    apellido,
+    telefono: telefonoLimpio,
+    email: emailLimpio,
+    password: hashed,
+    paisOrigen: paisSeleccionado || 'Ecuador',
+    provincia: provincia || getProvinciaFromCedula(cedulaLimpia),
+    preferencias: preferenciasLimpias,
+    role: assignedRole
+  });
+  return user.save();
+}
+
+async function createForeignUser({ pasaporteLimpio, nombre, apellido, telefonoLimpio, emailLimpio, password, paisSeleccionado, preferenciasLimpias, assignedRole }) {
+  const existing = await User.findOne({ pasaporte: pasaporteLimpio });
+  if (existing) throw new AppError('Usuario con ese pasaporte ya existe', 409);
+
+  const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+  const user = new User({
+    pasaporte: pasaporteLimpio,
+    nombre,
+    apellido,
+    telefono: telefonoLimpio,
+    email: emailLimpio,
+    password: hashed,
+    paisOrigen: paisSeleccionado,
+    preferencias: preferenciasLimpias,
+    role: assignedRole
+  });
+  return user.save();
 }
 
 /**
@@ -28,9 +77,15 @@ function validateCedula(cedula) {
  * @param {object} data
  * @param {string} [data.role] - 'USER' por defecto; 'ADMIN' solo si el llamador lo permite.
  */
-exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefono, password, paisOrigen, provincia, role = 'USER' }) => {
-  if (!nombre || !apellido || !telefono || !password) {
+exports.createUserAccount = async ({ cedula, pasaporte, email, nombre, apellido, telefono, password, paisOrigen, provincia, preferencias = [], role = 'USER' }) => {
+  if (!nombre || !apellido || !telefono || !password || !email) {
     throw new AppError('Todos los campos son requeridos', 400);
+  }
+
+  const emailLimpio = String(email).trim().toLowerCase();
+  const existingEmail = await User.findOne({ email: emailLimpio });
+  if (existingEmail) {
+    throw new AppError('Usuario con ese correo ya existe', 409);
   }
 
   const telefonoLimpio = String(telefono).replace(/\D/g, '').slice(0, 15);
@@ -38,9 +93,12 @@ exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefo
     throw new AppError('El teléfono debe tener al menos 10 dígitos', 400);
   }
 
+  const preferenciasLimpias = normalizePreferencias(preferencias);
+
   const normalizedRole = String(role || 'USER').toUpperCase();
   const assignedRole = ['ADMIN', 'AGENTE', 'USER'].includes(normalizedRole) ? normalizedRole : 'USER';
   const paisSeleccionado = paisOrigen ? String(paisOrigen).trim() : '';
+  const pasaporteLimpio = pasaporte ? String(pasaporte).trim() : '';
 
   // Camino nacional: usa cédula ecuatoriana
   if (cedula || paisSeleccionado === 'Ecuador') {
@@ -55,46 +113,39 @@ exports.createUserAccount = async ({ cedula, pasaporte, nombre, apellido, telefo
       throw new AppError('La cédula ecuatoriana no es válida.', 400);
     }
 
-    const existing = await User.findOne({ cedula: cedulaLimpia });
-    if (existing) throw new AppError('Usuario con esa cédula ya existe', 409);
-
-    const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = new User({
-      cedula: cedulaLimpia,
+    return createNationalUser({
+      cedulaLimpia,
       nombre,
       apellido,
-      telefono: telefonoLimpio,
-      password: hashed,
-      paisOrigen: paisSeleccionado || 'Ecuador',
-      provincia: provincia || getProvinciaFromCedula(cedulaLimpia),
-      role: assignedRole
+      telefonoLimpio,
+      emailLimpio,
+      password,
+      paisSeleccionado,
+      provincia,
+      preferenciasLimpias,
+      assignedRole
     });
-    return user.save();
   }
 
   // Camino extranjero: usa pasaporte
   if (!pasaporte) throw new AppError('El pasaporte es requerido para usuarios extranjeros', 400);
   if (!paisSeleccionado) throw new AppError('El país de origen es requerido', 400);
 
-  const pasaporteLimpio = String(pasaporte).trim();
   if (pasaporteLimpio.length < 6 || pasaporteLimpio.length > 20) {
     throw new AppError('El pasaporte debe tener entre 6 y 20 caracteres', 400);
   }
 
-  const existing = await User.findOne({ pasaporte: pasaporteLimpio });
-  if (existing) throw new AppError('Usuario con ese pasaporte ya existe', 409);
-
-  const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = new User({
-    pasaporte: pasaporteLimpio,
+  return createForeignUser({
+    pasaporteLimpio,
     nombre,
     apellido,
-    telefono: telefonoLimpio,
-    password: hashed,
-    paisOrigen: paisSeleccionado,
-    role: assignedRole
+    telefonoLimpio,
+    emailLimpio,
+    password,
+    paisSeleccionado,
+    preferenciasLimpias,
+    assignedRole
   });
-  return user.save();
 };
 
 /**

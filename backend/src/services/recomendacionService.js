@@ -239,8 +239,8 @@ exports.getRecomendadosGenerales = async (ciudad, tipo = 'lugarTuristico') => {
  * PRINCIPIO SOLID: Dependency Inversion Principle (DIP)
  * Depende de la abstracción RecommendationCore.
  */
-exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usuarioId = null) => {
-  return await RecommendationCore.getRecomendadosPorProvincia(provinciaOrigen, ciudadDestino, usuarioId);
+exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usuarioId = null, preferenciasUsuario = []) => {
+  return await RecommendationCore.getRecomendadosPorProvincia(provinciaOrigen, ciudadDestino, usuarioId, preferenciasUsuario);
 };
 
 /**

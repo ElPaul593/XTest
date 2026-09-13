@@ -1,6 +1,7 @@
 const RutaRepo = require('../repositories/rutaRepo');
 const Ruta = require('../models/rutaModel');
 const { rutas } = require('../data/seedData');
+const MapsService = require('./mapsService');
 
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern
@@ -20,7 +21,7 @@ exports.getAll = async () => {
 exports.getById = async (id) => {
   const ruta = await RutaRepo.findById(id);
   if (!ruta) throw new Error('Ruta no encontrada');
-  return ruta;
+  return MapsService.ensureRouteMapData(ruta);
 };
 
 exports.remove = async (id) => {
@@ -32,7 +33,8 @@ exports.create = async (data) => {
   if (!payload.name && payload.from && payload.to) {
     payload.name = `${payload.from} - ${payload.to}`;
   }
-  return RutaRepo.create(payload);
+  const ruta = await RutaRepo.create(payload);
+  return MapsService.ensureRouteMapData(ruta);
 };
 
 /**

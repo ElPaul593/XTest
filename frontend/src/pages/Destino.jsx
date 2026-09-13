@@ -4,6 +4,7 @@ import { getHoteles } from '../services/hoteles';
 import { getLugaresTuristicos } from '../services/lugaresTuristicos';
 import { getCalificaciones, createCalificacion } from '../services/calificaciones';
 import { OPCIONES_CALIFICACION, CALIFICACION_DEFAULT } from '../constants/calificaciones';
+import { API_BASE_URL } from '../constants/api';
 
 export default function Destino() {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,15 @@ export default function Destino() {
   const getFallbackImageUrl = (lugar) => {
     const seed = encodeURIComponent(`${lugar.nombre}-${lugar.ciudad}`.toLowerCase());
     return `https://picsum.photos/seed/${seed}/900/600`;
+  };
+
+  const resolveBackendUrl = (url) => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+
+    const base = API_BASE_URL.replace(/\/$/, '');
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${base}${path}`;
   };
 
   useEffect(() => {
@@ -162,26 +172,50 @@ export default function Destino() {
           ) : (
             hoteles.map(hotel => {
               const califData = calificaciones[`hotel-${hotel._id}`] || { promedio: 0, calificaciones: [] };
+              const imagenHotel = resolveBackendUrl(hotel.fotoUrl);
+              const imagenDisponible = Boolean(imagenHotel) && !erroresImagen[hotel._id];
               return (
                 <div key={hotel._id} className="item-card">
-                  <h3>{hotel.nombre}</h3>
-                  <p className="direccion">{hotel.direccion}</p>
-                  {hotel.descripcion && <p className="descripcion">{hotel.descripcion}</p>}
-                  {hotel.telefono && <p className="info">Tel: {hotel.telefono}</p>}
-                  {hotel.precioPromedio && <p className="precio">Precio promedio: ${hotel.precioPromedio}</p>}
-                  <div className="rating">
-                    <span className="stars">{renderStars(califData.promedio)}</span>
-                    <span className="rating-text">
-                      {califData.promedio > 0 ? califData.promedio.toFixed(1) : 'Sin calificaciones'} 
-                      ({califData.calificaciones.length} reseñas)
-                    </span>
+                  <div className="item-card-image">
+                    {imagenDisponible ? (
+                      <img
+                        src={imagenHotel}
+                        alt={hotel.nombre}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={() => setErroresImagen((prev) => ({ ...prev, [hotel._id]: true }))}
+                      />
+                    ) : null}
+                    {!imagenDisponible && (
+                      <span className="hotel-fallback-image">Foto no disponible</span>
+                    )}
                   </div>
-                  <button 
-                    className="btn-calificar"
-                    onClick={() => setShowCalificarModal({ tipo: 'hotel', referencia: hotel._id, nombre: hotel.nombre })}
-                  >
-                    Calificar y Recomendar
-                  </button>
+                  <div className="item-card-body">
+                    <h3>{hotel.nombre}</h3>
+                    <p className="direccion">{hotel.direccion}</p>
+                    {hotel.descripcion && <p className="descripcion">{hotel.descripcion}</p>}
+                    {hotel.telefono && <p className="info">Tel: {hotel.telefono}</p>}
+                    {hotel.precioPromedio && <p className="precio">Precio promedio: ${hotel.precioPromedio}</p>}
+                    {(hotel.ratingGoogle != null || hotel.totalRatingsGoogle != null) && (
+                      <p className="info">
+                        Google: {hotel.ratingGoogle != null ? hotel.ratingGoogle.toFixed(1) : 'Sin rating'}
+                        {hotel.totalRatingsGoogle != null ? ` (${hotel.totalRatingsGoogle} reseñas)` : ''}
+                      </p>
+                    )}
+                    <div className="rating">
+                      <span className="stars">{renderStars(califData.promedio)}</span>
+                      <span className="rating-text">
+                        {califData.promedio > 0 ? califData.promedio.toFixed(1) : 'Sin calificaciones'} 
+                        ({califData.calificaciones.length} reseñas)
+                      </span>
+                    </div>
+                    <button 
+                      className="btn-calificar"
+                      onClick={() => setShowCalificarModal({ tipo: 'hotel', referencia: hotel._id, nombre: hotel.nombre })}
+                    >
+                      Calificar y Recomendar
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -268,14 +302,17 @@ export default function Destino() {
       )}
 
       {showCalificarModal && (
-        <div className="modal-overlay" onClick={() => setShowCalificarModal(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+        >
+          <div className="modal-content">
             <h2>Calificar: {showCalificarModal.nombre}</h2>
             <div className="form-group">
-              <label>Calificación (1-5 estrellas)</label>
+              <label htmlFor="calificacion-hotel">Calificación (1-5 estrellas)</label>
               <select 
+                id="calificacion-hotel"
                 value={calificacionForm.calificacion}
-                onChange={(e) => setCalificacionForm({ ...calificacionForm, calificacion: parseInt(e.target.value) })}
+                onChange={(e) => setCalificacionForm({ ...calificacionForm, calificacion: Number.parseInt(e.target.value, 10) })}
               >
                 {OPCIONES_CALIFICACION.map((opcion) => (
                   <option key={opcion.value} value={opcion.value}>{opcion.label}</option>
@@ -283,8 +320,9 @@ export default function Destino() {
               </select>
             </div>
             <div className="form-group">
-              <label>Recomendación</label>
+              <label htmlFor="recomendacion-hotel">Recomendación</label>
               <textarea
+                id="recomendacion-hotel"
                 value={calificacionForm.recomendacion}
                 onChange={(e) => setCalificacionForm({ ...calificacionForm, recomendacion: e.target.value })}
                 placeholder="Escribe tu recomendación..."

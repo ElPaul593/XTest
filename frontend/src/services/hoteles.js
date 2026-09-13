@@ -2,8 +2,9 @@ import api from './api';
 
 export async function getHoteles(ciudad = null) {
   try {
-    const url = ciudad ? `/hoteles?ciudad=${ciudad}` : '/hoteles';
-    const resp = await api.get(url);
+    const resp = await api.get('/hoteles', {
+      params: ciudad ? { ciudad } : undefined
+    });
     return resp.data;
   } catch (err) {
     const message = err?.response?.data?.error || err?.message || 'Error al obtener hoteles';

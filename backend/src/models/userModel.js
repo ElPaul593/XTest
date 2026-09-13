@@ -32,6 +32,35 @@ const UserSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
   apellido: { type: String, required: true },
 
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    sparse: true,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: (value) => {
+        if (value == null || value === '') return true;
+        const text = String(value);
+        const atIndex = text.indexOf('@');
+        const lastDotIndex = text.lastIndexOf('.');
+        if (!(atIndex > 0 && lastDotIndex > atIndex + 1 && lastDotIndex < text.length - 1)) {
+          return false;
+        }
+
+        for (const char of text) {
+          if (char.trim() === '') {
+            return false;
+          }
+        }
+
+        return true;
+      },
+      message: 'Email inválido'
+    }
+  },
+
   telefono: { 
     type: String, 
     required: true, 
@@ -42,6 +71,11 @@ const UserSchema = new mongoose.Schema({
 
   paisOrigen: { type: String, required: true },
   provincia: { type: String }, // Provincia de Ecuador (solo para usuarios ecuatorianos)
+  preferencias: {
+    type: [String],
+    enum: ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'],
+    default: []
+  },
 
  
   role: {
@@ -63,5 +97,7 @@ UserSchema.index({ cedula: 1 }, { unique: true, sparse: true });
 
 
 UserSchema.index({ pasaporte: 1 }, { unique: true, sparse: true });
+
+UserSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('User', UserSchema);

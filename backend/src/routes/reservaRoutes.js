@@ -146,10 +146,10 @@ router.get('/mine', authenticateToken, asyncHandler(async (req, res) => {
 
   const [list, total] = await Promise.all([
     Reserva.find({ user: req.user._id })
-      .populate('ruta', 'from to price duration')
+      .populate('ruta', 'from to price duration horaSalida duracionEstimada polyline')
       .lean()
       .skip(skip)
-      .limit(parseInt(limit))
+      .limit(Number(limit))
       .sort({ createdAt: -1 }),
     Reserva.countDocuments({ user: req.user._id })
   ]);
@@ -159,8 +159,8 @@ router.get('/mine', authenticateToken, asyncHandler(async (req, res) => {
   res.json({
     data: list.map(serializeReserva),
     pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
+      page: Number(page),
+      limit: Number(limit),
       total,
       totalPages
     }

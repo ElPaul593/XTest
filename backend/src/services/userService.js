@@ -2,6 +2,16 @@ const bcrypt = require('bcrypt');
 const UserRepo = require('../repositories/userRepo');
 const AuthService = require('./authService');
 
+const PREFERENCIAS_VALIDAS = new Set(['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro']);
+
+function normalizePreferencias(preferencias) {
+  if (!Array.isArray(preferencias)) {
+    return [];
+  }
+
+  return [...new Set(preferencias.map((preferencia) => String(preferencia).trim()).filter((preferencia) => PREFERENCIAS_VALIDAS.has(preferencia)))];
+}
+
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern
  * Lógica de negocio para usuarios. La creación delega en AuthService.createUserAccount
@@ -32,6 +42,7 @@ exports.create = async (data) => {
 exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   const update = {};
 
+  if (data.email !== undefined) update.email = String(data.email).trim().toLowerCase();
   if (data.nombre !== undefined) update.nombre = String(data.nombre).trim();
   if (data.apellido !== undefined) update.apellido = String(data.apellido).trim();
   if (data.telefono !== undefined) update.telefono = String(data.telefono).replace(/\D/g, '').slice(0, 15);
@@ -40,6 +51,8 @@ exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   if (data.password && String(data.password).trim() !== '') {
     update.password = await bcrypt.hash(String(data.password), 10);
   }
+
+  if (data.preferencias !== undefined) update.preferencias = normalizePreferencias(data.preferencias);
 
   if (allowRole && data.role !== undefined) {
     const normalized = String(data.role).toUpperCase();

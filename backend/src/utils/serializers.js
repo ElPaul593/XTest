@@ -15,14 +15,19 @@ const serializeUser = (user) => {
     id: userObj._id || userObj.id,
     cedula: userObj.cedula || null,
     pasaporte: userObj.pasaporte || null,
+    email: userObj.email || null,
     nombre: userObj.nombre,
     apellido: userObj.apellido,
     telefono: userObj.telefono,
     paisOrigen: userObj.paisOrigen,
     provincia: userObj.provincia || null,
+    preferencias: Array.isArray(userObj.preferencias) ? userObj.preferencias : [],
     role: userObj.role,
     assignedRutas: Array.isArray(userObj.assignedRutas)
-      ? userObj.assignedRutas.map((r) => (r && r._id ? String(r._id) : String(r)))
+      ? userObj.assignedRutas.map((r) => {
+          const rutaId = r && typeof r === 'object' && r._id ? r._id : r;
+          return String(rutaId);
+        })
       : [],
     createdAt: userObj.createdAt
   };
@@ -42,8 +47,10 @@ const serializeRuta = (ruta) => {
     to: rutaObj.to,
     price: rutaObj.price,
     duration: rutaObj.duration,
+    horaSalida: rutaObj.horaSalida,
+    polyline: rutaObj.polyline,
+    duracionEstimada: rutaObj.duracionEstimada,
     seats: rutaObj.seats,
-    departureTime: rutaObj.departureTime,
     createdAt: rutaObj.createdAt
   };
 };
@@ -57,8 +64,12 @@ const serializeReserva = (reserva) => {
   const reservaObj = reserva.toObject ? reserva.toObject() : reserva;
   
   const seatNumbers = Array.isArray(reservaObj.seatNumbers) && reservaObj.seatNumbers.length > 0
-    ? reservaObj.seatNumbers
-    : (reservaObj.seatNumber ? [reservaObj.seatNumber] : []);
+    ? [...reservaObj.seatNumbers]
+    : [];
+
+  if (reservaObj.seatNumber) {
+    seatNumbers.push(reservaObj.seatNumber);
+  }
 
   return {
     id: reservaObj._id || reservaObj.id,

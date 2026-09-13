@@ -1,20 +1,29 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const app = require('../../app');
 const AuthService = require('../../services/authService');
 
 let mongoServer;
+let app;
+let originalMongoUri;
 
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();
-  await mongoose.connect(mongoUri);
+  originalMongoUri = process.env.MONGO_URI;
+  process.env.MONGO_URI = mongoUri;
+  app = require('../../app');
+  await mongoose.connection.asPromise();
 });
 
 afterAll(async () => {
   await mongoose.disconnect();
   await mongoServer.stop();
+  if (originalMongoUri === undefined) {
+    delete process.env.MONGO_URI;
+  } else {
+    process.env.MONGO_URI = originalMongoUri;
+  }
 });
 
 beforeEach(async () => {
@@ -26,7 +35,8 @@ describe('Auth API Integration Tests', () => {
   describe('POST /api/auth/register', () => {
     test('debe registrar un nuevo usuario exitosamente', async () => {
       const userData = {
-        cedula: '1234567890',
+          cedula: '1722108188',
+        email: 'juan.test.register@example.com',
         nombre: 'Juan',
         apellido: 'Pérez',
         telefono: '0987654321',
@@ -65,6 +75,8 @@ describe('Auth API Integration Tests', () => {
       const userData = {
         nombre: 'Juan',
         apellido: 'Pérez',
+        email: 'juan.test.missing@example.com',
+        email: 'juan.test.nocedula@example.com',
         telefono: '0987654321',
         paisOrigen: 'Ecuador',
         password: 'password123'
@@ -83,7 +95,8 @@ describe('Auth API Integration Tests', () => {
     beforeEach(async () => {
       // Crear usuario de prueba usando el servicio
       await AuthService.register({
-        cedula: '1234567890',
+          cedula: '1722108188',
+        email: 'juan.test.login@example.com',
         nombre: 'Juan',
         apellido: 'Pérez',
         telefono: '0987654321',
@@ -94,7 +107,7 @@ describe('Auth API Integration Tests', () => {
 
     test('debe hacer login exitosamente con cédula', async () => {
       const loginData = {
-        cedula: '1234567890',
+          cedula: '1722108188',
         password: 'password123'
       };
 
@@ -109,14 +122,14 @@ describe('Auth API Integration Tests', () => {
 
     test('debe retornar error 400 si las credenciales son inválidas', async () => {
       const loginData = {
-        cedula: '1234567890',
+          cedula: '1722108188',
         password: 'wrongpassword'
       };
 
       const response = await request(app)
         .post('/api/auth/login')
         .send(loginData)
-        .expect(400);
+        .expect(401);
 
       expect(response.body).toHaveProperty('status', 'fail');
     });

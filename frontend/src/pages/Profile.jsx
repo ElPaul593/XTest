@@ -13,7 +13,7 @@ export default function Profile() {
   // Datos de ejemplo del usuario
 
   const [user, setUser] = useState(null);
-  const [formData, setFormData] = useState({ nombre: '', apellido: '', telefono: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', nombre: '', apellido: '', telefono: '', password: '' });
 
   useEffect(() => {
     // Validar autenticación
@@ -29,6 +29,7 @@ export default function Profile() {
         const me = await getCurrentUser();
         setUser(me);
         setFormData({
+          email: me.email || '',
           nombre: me.nombre || '',
           apellido: me.apellido || '',
           telefono: me.telefono || '',
@@ -61,6 +62,7 @@ export default function Profile() {
     try {
       // Preparar los datos para actualizar (solo enviar password si no está vacío)
       const updateData = {
+        email: formData.email,
         nombre: formData.nombre,
         apellido: formData.apellido,
         telefono: formData.telefono
@@ -77,6 +79,7 @@ export default function Profile() {
       // Actualizar el estado local con los datos actualizados
       setUser(updatedUser);
       setFormData({
+        email: updatedUser.email || '',
         nombre: updatedUser.nombre || '',
         apellido: updatedUser.apellido || '',
         telefono: updatedUser.telefono || '',
@@ -114,6 +117,7 @@ export default function Profile() {
   const handleCancelEdit = () => {
     setEditing(false);
     setFormData({
+      email: user.email || '',
       nombre: user.nombre || '',
       apellido: user.apellido || '',
       telefono: user.telefono || '',
@@ -179,6 +183,10 @@ export default function Profile() {
               </div>
             )}
             <div className="info-group">
+              <label>Correo electrónico:</label>
+              <span>{user.email || 'No especificado'}</span>
+            </div>
+            <div className="info-group">
               <label>Nombre:</label>
               <span>{user.nombre}</span>
             </div>
@@ -236,6 +244,17 @@ export default function Profile() {
               <small>El país de origen no se puede modificar</small>
             </div>
             
+            <div className="form-group">
+              <label>Correo electrónico:</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
             <div className="form-group">
               <label>Nombre:</label>
               <input

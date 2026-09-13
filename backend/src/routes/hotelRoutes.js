@@ -26,6 +26,26 @@ router.get('/', hotelController.getAll);
 
 /**
  * @swagger
+ * /api/hoteles/{id}/foto:
+ *   get:
+ *     summary: Obtener foto de un hotel
+ *     tags: [Hoteles]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Imagen del hotel
+ *       404:
+ *         description: Foto no disponible
+ */
+router.get('/:id/foto', hotelController.getPhoto);
+
+/**
+ * @swagger
  * /api/hoteles/{id}:
  *   get:
  *     summary: Obtener un hotel por ID

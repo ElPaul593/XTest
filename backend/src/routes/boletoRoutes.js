@@ -70,4 +70,6 @@ router.get('/', authenticateToken, requireAdminAccess, boletoController.getAll);
  */
 router.post('/', authenticateToken, validate(boletoSchemas.create, 'body'), boletoController.create);
 
+router.post('/:reservaId/reenviar-correo', authenticateToken, boletoController.reenviarCorreo);
+
 module.exports = router;

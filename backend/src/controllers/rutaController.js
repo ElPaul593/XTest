@@ -20,6 +20,17 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getById = async (req, res) => {
+  try {
+    const ruta = await RutaService.getById(req.params.id);
+    res.json(ruta);
+  } catch (err) {
+    if (err.message === 'Ruta no encontrada') return res.status(404).json({ error: err.message });
+    if (err.name === 'CastError') return res.status(400).json({ error: 'ID inválido' });
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const ruta = await RutaService.create(req.body);
