@@ -43,3 +43,20 @@ docker compose up --build
 - Arquitectura: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - Despliegue: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 - API (Swagger): `http://localhost:5000/api-docs`
+
+## CI/CD con GitHub Actions
+
+El workflow [`ci-cd.yml`](./.github/workflows/ci-cd.yml) automatiza el Sprint 0:
+
+- En cada pull request o push a `main`, instala dependencias con `npm ci`, ejecuta
+  lint y pruebas del backend y compila el frontend.
+- Después construye las imágenes Docker del backend y frontend.
+- Solo después de un push exitoso a `main`, publica ambas imágenes en GitHub
+  Container Registry (GHCR) con las etiquetas `latest` y `sha-<commit>`.
+
+El workflow usa `GITHUB_TOKEN`; no requiere guardar un token adicional. En el
+repositorio de GitHub, revisa **Settings → Actions → General → Workflow
+permissions** y permite que los workflows tengan permiso de lectura y escritura
+si la organización lo exige. Las variables de MongoDB, JWT, correo y APIs
+externas siguen siendo secretos de Render/Vercel o del entorno local, nunca del
+archivo YAML.

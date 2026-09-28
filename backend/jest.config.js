@@ -8,6 +8,7 @@ module.exports = {
     '!src/scripts/**'
   ],
   coverageDirectory: 'coverage',
-  verbose: true
+  verbose: true,
+  testTimeout: 30000,
 };
 

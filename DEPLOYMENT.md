@@ -37,6 +37,29 @@ git remote add origin https://github.com/<tu-usuario>/<tu-repo>.git
 git push -u origin main
 ```
 
+### Pipeline de GitHub Actions
+
+Al subir el repositorio se ejecuta `.github/workflows/ci-cd.yml`:
+
+1. Pull requests y pushes ejecutan el lint y las pruebas del backend y el build
+   de producción del frontend.
+2. Si esas validaciones pasan, se construyen las dos imágenes Docker.
+3. Un push a `main` publica las imágenes en GHCR:
+   `ghcr.io/<usuario>/culturaltrip-backend` y
+   `ghcr.io/<usuario>/culturaltrip-frontend`.
+
+El job de publicación usa automáticamente `secrets.GITHUB_TOKEN`. Si el
+repositorio pertenece a una organización, habilita en **Settings → Actions →
+General** el permiso `Read and write permissions` para que pueda publicar
+paquetes. No agregues `MONGO_URI`, `JWT_SECRET` ni otras credenciales al
+workflow.
+
+Render y Vercel pueden continuar desplegando automáticamente desde el mismo
+push a `main`: Render y Vercel debe tener configurado el
+directorio raíz `frontend`. GHCR queda como registro de imágenes versionadas y
+como evidencia del CD del Sprint 0; la aplicación desplegada mantiene las
+variables secretas en los paneles de cada proveedor.
+
 ---
 
 ## 2. Backend en Render (Docker)

@@ -1,7 +1,7 @@
-const StandardPricing = require('../src/strategies/StandardPricing');
-const HolidayPricing = require('../src/strategies/HolidayPricing');
-const LastMinutePricing = require('../src/strategies/LastMinutePricing');
-const PricingStrategySelector = require('../src/strategies/PricingStrategySelector');
+const StandardPricing = require('../../strategies/StandardPricing');
+const HolidayPricing = require('../../strategies/HolidayPricing');
+const LastMinutePricing = require('../../strategies/LastMinutePricing');
+const PricingStrategySelector = require('../../strategies/PricingStrategySelector');
 
 describe('PricingStrategy Tests', () => {
   describe('StandardPricing', () => {
