@@ -2,9 +2,9 @@ name: CI/CD CulturalTrip
 
 on:
   push:
-    branches: [main]
+    branches: [main, main_paul]
   pull_request:
-    branches: [main]
+    branches: [main, main_paul]
   workflow_dispatch:
 
 permissions:
