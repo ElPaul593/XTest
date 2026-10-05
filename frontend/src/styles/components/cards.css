@@ -1,0 +1,81 @@
+/* Cards */
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+.card h2 {
+  margin-bottom: var(--spacing-md);
+  font-weight: 700;
+}
+
+.item-card {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.item-card-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.item-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.item-card:hover .item-card-image img {
+  transform: scale(1.05);
+}
+
+.item-card-body {
+  padding: var(--spacing-md);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-card-body h3 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-md);
+}
+
+.item-card-body p {
+  margin: var(--spacing-sm) 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+.item-card-body .btn-calificar {
+  margin-top: auto;
+}
+
+.item-card h3 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-md);
+}
+
+.item-card p {
+  margin: var(--spacing-sm) 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+

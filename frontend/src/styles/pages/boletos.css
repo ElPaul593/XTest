@@ -1,0 +1,220 @@
+/* Página Boletos */
+.boletos-container {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: var(--spacing-xl) 0;
+}
+
+.boletos-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.boletos-header h1 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.boletos-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+.search-filters {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.filter-group label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.filter-group select,
+.filter-group input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-base);
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-btn:hover {
+  background: var(--accent-hover);
+}
+
+.boletos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.boleto-card {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.boleto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--spacing-md);
+}
+
+.route {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.origen, .destino {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+}
+
+.arrow {
+  color: var(--text-muted);
+}
+
+.precio {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+}
+
+.boleto-info {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-item:last-child {
+  border-bottom: 0;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.value {
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+}
+
+.boleto-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.reservar-btn {
+  width: 100%;
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reservar-btn:hover {
+  background: var(--accent-hover);
+}
+
+.destino-links {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.link-destino,
+.link-recomendados {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--border);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.link-destino:hover {
+  background: var(--surface);
+}
+
+.link-recomendados {
+  background: #667eea;
+}
+
+.link-recomendados:hover {
+  background: #5568d3;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .boletos-header h1 {
+    font-size: var(--font-size-lg);
+  }
+  
+  .search-filters {
+    grid-template-columns: 1fr;
+  }
+}
+

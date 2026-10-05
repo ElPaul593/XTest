@@ -1,0 +1,19 @@
+/* Importación principal de todos los estilos */
+@import './base/variables.css';
+@import './base/reset.css';
+@import './base/global.css';
+@import './utils/flex.css';
+@import './utils/grid.css';
+@import './components/buttons.css';
+@import './components/forms.css';
+@import './components/cards.css';
+@import './components/navbar.css';
+@import './pages/boletos.css';
+@import './pages/demo.css';
+@import './pages/destino.css';
+@import './pages/profile.css';
+@import './pages/recomendados.css';
+@import './pages/dashboard.css';
+@import './pages/rutas.css';
+@import './pages/lugares-turisticos.css';
+
