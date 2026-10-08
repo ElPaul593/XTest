@@ -127,7 +127,17 @@ const rutaSchemas = {
     to: Joi.string().optional(),
     page: Joi.number().integer().min(1).optional().default(1),
     limit: Joi.number().integer().min(1).max(100).optional().default(10)
-  })
+  }),
+
+  update: Joi.object({
+    name: Joi.string().min(2).max(120).optional(),
+    from: Joi.string().min(2).max(50).optional(),
+    to: Joi.string().min(2).max(50).optional(),
+    price: Joi.number().min(3).max(20).optional(),
+    duration: Joi.string().optional(),
+    horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+    seats: Joi.number().integer().min(1).max(80).optional()
+  }).min(1)
 };
 
 /**
