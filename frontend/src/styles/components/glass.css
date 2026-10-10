@@ -1,0 +1,465 @@
+/* ==========================================================================
+   Glassmorphism
+   --------------------------------------------------------------------------
+   Capa de superficie translúcida sobre la paleta existente (negro + amarillo).
+   No cambia colores ni tipografías: solo sustituye fondos opacos por cristal.
+
+   Dos reglas que conviene no romper:
+
+   1. `backdrop-filter` solo se aprecia si DETRÁS hay algo que desenfocar. Por eso
+      el body recibe dos manchas de color difusas (`body::before` / `::after`): sin
+      ellas, el cristal sobre negro plano se ve igual que un gris opaco.
+
+   2. `backdrop-filter` crea un contexto de apilamiento. Aplicarlo a un contenedor
+      haría que sus hijos no puedan escapar de él, así que nunca se pone en
+      elementos que envuelvan ventanas emergentes.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Fondo de la aplicación: las manchas que el cristal desenfoca.
+   `position: fixed` para que no se desplacen con el scroll y no generen
+   barras horizontales.
+   -------------------------------------------------------------------------- */
+body {
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  width: 520px;
+  height: 520px;
+  background: rgba(255, 215, 0, 0.13);
+  top: -180px;
+  left: -160px;
+}
+
+body::after {
+  width: 460px;
+  height: 460px;
+  background: rgba(255, 215, 0, 0.07);
+  bottom: -200px;
+  right: -140px;
+}
+
+/* El contenido va por encima de las manchas de fondo. */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Contenedores de página a pleno alto
+   Varias pantallas declaran `background: var(--bg)` con `min-height: 100vh`
+   (profile.css, dashboard.css, boletos.css…). Al ser negro opaco y cubrir todo
+   el viewport, tapaban las manchas de fondo y el cristal perdía su efecto.
+   Se vuelven transparentes para que el degradado del body se vea a través.
+   -------------------------------------------------------------------------- */
+.profile-container,
+.dashboard-container,
+.boletos-container,
+.destino-container,
+.rutas-container,
+.recomendados-container,
+.lugares-container,
+.admin-container,
+.demo-container {
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Utilidades reutilizables
+   -------------------------------------------------------------------------- */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+.glass-strong {
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  box-shadow: var(--glass-shadow-lg), var(--glass-highlight);
+}
+
+.glass-soft {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* --------------------------------------------------------------------------
+   Tarjetas
+   Se redefinen las existentes en lugar de crear clases nuevas, para que todas
+   las pantallas hereden el cristal sin tocar su JSX.
+   -------------------------------------------------------------------------- */
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+.item-card {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.32), var(--glass-highlight);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-accent-border);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--glass-accent-border),
+    var(--glass-highlight);
+}
+
+/* Las secciones del dashboard y del panel admin comparten este contenedor. */
+.dashboard-section,
+.profile-card,
+.stats-card,
+.table-container,
+.empty-state {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+/* --------------------------------------------------------------------------
+   Botones
+   Se conservan las clases de Bootstrap (.btn, .btn-primary, .btn-secondary,
+   .btn-ghost) y el amarillo sólido del botón principal: es el elemento que
+   debe destacar, así que NO se vuelve translúcido. El cristal se aplica a los
+   secundarios y al estado de foco.
+   -------------------------------------------------------------------------- */
+.btn {
+  position: relative;
+  border-radius: var(--radius-md);
+  transition: background-color 0.2s, opacity 0.2s, transform 0.15s, box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--glass-accent-glow);
+}
+
+/* Principal: amarillo sólido (sin cristal), con brillo al pasar el ratón. */
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.22);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.32);
+}
+
+/* Secundario: cristal. */
+.btn-secondary {
+  background: var(--glass-bg-soft);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-strong);
+}
+
+/* Fantasma: cristal apenas perceptible que se insinúa al pasar el ratón. */
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--glass-bg-soft);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-color: var(--glass-border-strong);
+}
+
+/* Variante destructiva (dar de baja, bloquear). Rojo translúcido, no sólido:
+   es una acción que debe verse disponible pero no invitar al clic. */
+.btn-danger {
+  background: rgba(255, 68, 68, 0.16);
+  color: #ffd4d4;
+  border: 1px solid rgba(255, 68, 68, 0.42);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 68, 68, 0.28);
+  border-color: rgba(255, 68, 68, 0.66);
+}
+
+/* Variante de aviso (bloquear / desbloquear). */
+.btn-warning {
+  background: rgba(255, 167, 38, 0.16);
+  color: #ffe2bd;
+  border: 1px solid rgba(255, 167, 38, 0.42);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: rgba(255, 167, 38, 0.28);
+  border-color: rgba(255, 167, 38, 0.66);
+}
+
+/* --------------------------------------------------------------------------
+   Formularios
+   -------------------------------------------------------------------------- */
+.input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-accent-border);
+  box-shadow: var(--glass-accent-glow);
+}
+
+.input:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+.input-disabled {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* El menú desplegable nativo necesita fondo opaco: el navegador lo pinta fuera
+   del documento y ahí `backdrop-filter` no llega. */
+select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   Navbar
+   Cristal + desenfoque: el contenido se intuye deslizándose por detrás.
+   Mantiene su z-index (--z-navbar), por debajo de las ventanas emergentes.
+   -------------------------------------------------------------------------- */
+.navbar {
+  background: rgba(10, 10, 10, 0.68) !important;
+  border-bottom: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  z-index: var(--z-navbar);
+}
+
+.navbar-link {
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.navbar-link:hover,
+.navbar-link.active {
+  background: var(--glass-accent);
+  color: var(--accent);
+}
+
+.navbar-btn {
+  border-radius: var(--radius-md);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.navbar-btn:hover {
+  transform: translateY(-1px);
+}
+
+.mobile-menu {
+  background: rgba(10, 10, 10, 0.88);
+  border-top: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+}
+
+/* --------------------------------------------------------------------------
+   Tablas (panel admin)
+   -------------------------------------------------------------------------- */
+.users-table thead th,
+.table-container thead th {
+  background: rgba(255, 255, 255, 0.055);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.users-table tbody tr,
+.table-container tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  transition: background-color 0.18s;
+}
+
+.users-table tbody tr:hover,
+.table-container tbody tr:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+/* --------------------------------------------------------------------------
+   Avisos en línea (los que no son ventana emergente)
+   -------------------------------------------------------------------------- */
+.error-message,
+.success-message,
+.error {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.error-message,
+.error {
+  background: rgba(255, 68, 68, 0.14);
+  border-color: rgba(255, 68, 68, 0.4);
+  color: #ffd4d4;
+}
+
+.success-message {
+  background: rgba(40, 167, 69, 0.14);
+  border-color: rgba(40, 167, 69, 0.4);
+  color: #ccf3d6;
+}
+
+/* --------------------------------------------------------------------------
+   Separador «o» entre el formulario y el acceso con Google
+   -------------------------------------------------------------------------- */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: var(--spacing-xl) 0 var(--spacing-lg);
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+
+.google-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.google-signin-placeholder {
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Reserva de accesibilidad
+   `backdrop-filter` es costoso y, para quien pide menos movimiento, las
+   transiciones sobran. El cristal se mantiene; se quitan las animaciones.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .item-card,
+  .navbar-btn,
+  .navbar-link {
+    transition: none;
+  }
+
+  .btn:hover:not(:disabled),
+  .item-card:hover,
+  .navbar-btn:hover {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Respaldo para navegadores sin `backdrop-filter`
+   Sin desenfoque, un fondo al 55 % de opacidad deja el texto ilegible, así que
+   se recurre a fondos casi opacos.
+   -------------------------------------------------------------------------- */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong,
+  .card,
+  .dashboard-section,
+  .profile-card,
+  .stats-card,
+  .table-container,
+  .empty-state {
+    background: rgba(26, 26, 26, 0.97);
+  }
+
+  .navbar {
+    background: rgba(10, 10, 10, 0.98) !important;
+  }
+
+  .item-card {
+    background: rgba(21, 21, 21, 0.97);
+  }
+}

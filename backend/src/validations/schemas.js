@@ -14,15 +14,49 @@ const authSchemas = {
     paisOrigen: Joi.string().required().min(2).max(50),
     provincia: Joi.string().optional().max(50),
     preferencias: Joi.array().items(Joi.string().valid('Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro')).optional(),
-    password: Joi.string().required().min(6),
-    role: Joi.string().valid('ADMIN', 'USER').optional()
+    password: Joi.string().required().min(6)
+    // #13BUG CORREGIDO: se quitó `role` de este esquema.
+    //
+    // Es el esquema del registro PÚBLICO, y `AuthService.register` fuerza
+    // `role: 'USER'` sobre cualquier valor recibido. Declararlo aquí hacía creer
+    // —también a quien leyera el Swagger de la ruta— que un cliente podía
+    // registrarse como ADMIN.
+    //
+    // Quitarlo no rompe a ningún cliente: el middleware de validación usa
+    // `stripUnknown: true`, así que un `role` que llegue en el cuerpo se descarta
+    // en silencio en lugar de provocar un 400. El rol sí se puede asignar desde
+    // el alta administrativa (`userSchemas.create`), que es donde corresponde.
   }).or('cedula', 'pasaporte'),
 
   login: Joi.object({
     cedula: Joi.string().optional(),
     pasaporte: Joi.string().optional(),
     password: Joi.string().required()
-  }).or('cedula', 'pasaporte')
+  }).or('cedula', 'pasaporte'),
+
+  // Inicio de sesión con Google. `credential` es el id_token que entrega
+  // Google Identity Services en el navegador.
+  google: Joi.object({
+    credential: Joi.string().required().messages({
+      'any.required': 'Falta el token de Google'
+    })
+  }),
+
+  // Solicitud del enlace de recuperación de contraseña.
+  forgotPassword: Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Introduce un correo electrónico válido',
+      'any.required': 'El correo es requerido'
+    })
+  }),
+
+  // Nueva contraseña. El token viaja en la URL, no en el cuerpo.
+  resetPassword: Joi.object({
+    password: Joi.string().required().min(6).messages({
+      'string.min': 'La contraseña debe tener al menos 6 caracteres',
+      'any.required': 'La contraseña es requerida'
+    })
+  })
 };
 
 /**
@@ -53,6 +87,19 @@ const userSchemas = {
     password: Joi.string().min(6).allow('').optional(),
     role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()
+  }),
+
+  /**
+   * Cambio de estado de la cuenta (bloqueo / reactivación / baja).
+   * El motivo es obligatorio al bloquear o dar de baja porque es el texto que ve
+   * el usuario cuando intenta iniciar sesión; al reactivar no aplica.
+   */
+  cambiarEstado: Joi.object({
+    estado: Joi.string().valid('ACTIVO', 'BLOQUEADO', 'ELIMINADO').required().messages({
+      'any.only': 'El estado debe ser ACTIVO, BLOQUEADO o ELIMINADO',
+      'any.required': 'El estado es requerido'
+    }),
+    motivo: Joi.string().max(300).allow('', null).optional()
   })
 };
 

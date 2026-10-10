@@ -4,6 +4,8 @@ import { getUserReservations, cancelReserva, createMultiSeatReserva } from '../s
 import { getRutas } from '../services/rutas';
 import BusSeatSelector from '../components/BusSeatSelector';
 import BoletoQR from '../components/BoletoQR';
+import { AlertPopup, ConfirmPopup } from '../components/Popup';
+import useFeedback from '../hooks/useFeedback';
 
 /**
  * Dashboard del USUARIO: "Mis Reservas".
@@ -28,6 +30,11 @@ export default function Dashboard() {
   const [isQuickReservation, setIsQuickReservation] = useState(false);
   const [changingSeatFor, setChangingSeatFor] = useState(null);
   const [qrReserva, setQrReserva] = useState(null);
+
+  // Cancelación de reserva pendiente de confirmar: { reserva, enCurso, error }
+  const [cancelacion, setCancelacion] = useState(null);
+
+  const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -63,20 +70,31 @@ export default function Dashboard() {
     loadRutasData();
   }, [token, page, navigate, loadReservas, loadRutasData]);
 
-  const handleCancelReserva = async (id) => {
-    if (!window.confirm('¿Estás seguro de que deseas cancelar esta reserva?')) return;
+  /** Abre la confirmación de cancelación (antes era `window.confirm`). */
+  const pedirCancelacion = (reserva) => {
+    setCancelacion({ reserva, enCurso: false, error: null });
+  };
+
+  const confirmarCancelacion = async () => {
+    if (!cancelacion) return;
+
+    const id = cancelacion.reserva._id || cancelacion.reserva.id;
+
     try {
+      setCancelacion((prev) => ({ ...prev, enCurso: true, error: null }));
       await cancelReserva(id);
-      alert('Reserva cancelada exitosamente');
+
+      setCancelacion(null);
       loadReservas();
+      mostrarExito('La reserva ha quedado cancelada y el asiento vuelve a estar disponible.', 'Reserva cancelada');
     } catch (err) {
-      alert(err.message);
+      setCancelacion((prev) => ({ ...prev, enCurso: false, error: err.message }));
     }
   };
 
   const handleStartSeatSelection = () => {
     if (!selectedRuta || !selectedFecha) {
-      alert('Por favor selecciona ruta y fecha');
+      mostrarError('Selecciona una ruta y una fecha antes de continuar.', 'Faltan datos');
       return;
     }
     setIsQuickReservation(true);
@@ -109,21 +127,73 @@ export default function Dashboard() {
   const handleReservationComplete = async (result) => {
     try {
       if (changingSeatFor) {
-        await cancelReserva(changingSeatFor.reservaId);
-        if (result.ok && changingSeatFor.rutaId) {
-          const asientos = result.asientos || (result.asiento ? [result.asiento] : []);
-          if (asientos.length > 0) {
-            await createMultiSeatReserva({
-              ruta: changingSeatFor.rutaId,
-              asientos,
-              fecha: result.fecha || changingSeatFor.fecha,
-              pricing: result.precio,
-              tipo: 'NORMAL'
-            });
-            alert(`¡Asiento(s) cambiado(s) exitosamente! (${asientos.length})`);
-          } else {
-            alert('¡Asiento cambiado exitosamente!');
-          }
+        /**
+         * Cambio de asiento: PRIMERO se crea la nueva reserva y solo después se
+         * cancela la anterior.
+         *
+         * El orden importa, y antes estaba al revés: se llamaba a
+         * `cancelReserva` de forma incondicional, incluso antes de comprobar
+         * `result.ok`. Eso abría tres formas de que el usuario se quedara sin
+         * nada:
+         *
+         *   1. Si cerraba el selector de asientos sin elegir (`result.ok` falso),
+         *      su reserva original ya había desaparecido y no se creaba ninguna
+         *      nueva, sin mostrar ningún aviso.
+         *   2. Si `createMultiSeatReserva` fallaba (asiento tomado entre medias,
+         *      red caída, validación), la original ya estaba cancelada: pérdida
+         *      total.
+         *   3. Si la API devolvía `ok` pero sin asientos, se cancelaba y se
+         *      informaba de un cambio que no había ocurrido.
+         *
+         * Con el orden invertido, el peor caso es quedarse con una reserva
+         * duplicada —recuperable, y además se avisa— en lugar de con ninguna.
+         */
+        const asientos = result.asientos || (result.asiento ? [result.asiento] : []);
+
+        if (!result.ok || asientos.length === 0) {
+          // No se eligió asiento: la reserva original se queda intacta.
+          mostrarError(
+            'No se seleccionó ningún asiento nuevo, así que tu reserva actual no se ha modificado.',
+            'Cambio cancelado'
+          );
+          return;
+        }
+
+        if (!changingSeatFor.rutaId) {
+          mostrarError(
+            'No se pudo identificar la ruta de la reserva, así que no se ha modificado nada.',
+            'Cambio cancelado'
+          );
+          return;
+        }
+
+        // Paso 1: crear la nueva. Si esto falla, el `catch` informa y la
+        // original sigue siendo válida.
+        await createMultiSeatReserva({
+          ruta: changingSeatFor.rutaId,
+          asientos,
+          fecha: result.fecha || changingSeatFor.fecha,
+          pricing: result.precio,
+          tipo: 'NORMAL'
+        });
+
+        // Paso 2: liberar la anterior. Si esto falla, el cambio ya surtió efecto
+        // pero queda la reserva antigua: se avisa para que la cancele a mano, en
+        // lugar de dar por bueno un estado que no es el esperado.
+        try {
+          await cancelReserva(changingSeatFor.reservaId);
+          mostrarExito(
+            asientos.length > 1
+              ? `Se han cambiado ${asientos.length} asientos: ${asientos.join(', ')}.`
+              : `Tu nuevo asiento es el ${asientos[0]}.`,
+            'Asiento cambiado'
+          );
+        } catch (errCancelar) {
+          console.error('Error cancelando la reserva anterior:', errCancelar);
+          mostrarError(
+            `Tu nuevo asiento (${asientos.join(', ')}) quedó reservado, pero no se pudo cancelar la reserva anterior. Cancélala manualmente desde esta misma pantalla para no quedarte con dos.`,
+            'Cambio incompleto'
+          );
         }
       } else if (result.ok && selectedRuta) {
         const asientos = result.asientos || (result.asiento ? [result.asiento] : []);
@@ -135,14 +205,21 @@ export default function Dashboard() {
             pricing: result.precio,
             tipo: isQuickReservation ? 'RAPIDA' : 'NORMAL'
           });
-          alert(`¡Reserva completada!\nAsientos: [${asientos.join(', ')}]\nTotal: $${result.precio?.totalPagar?.toLocaleString() || result.precio?.total?.toLocaleString() || '0'}`);
+          const total =
+            result.precio?.totalPagar?.toLocaleString() ||
+            result.precio?.total?.toLocaleString() ||
+            '0';
+          mostrarExito(
+            `Asientos reservados: ${asientos.join(', ')}. Total: $${total}.`,
+            'Reserva completada'
+          );
         } else {
-          alert('¡Reserva completada!');
+          mostrarExito('Tu reserva se ha registrado correctamente.', 'Reserva completada');
         }
       }
     } catch (err) {
       console.error('Error en reserva:', err);
-      alert('Hubo un problema al guardar la reserva: ' + err.message);
+      mostrarError(err, 'No se pudo guardar la reserva');
     } finally {
       closeSeatModals();
       loadReservas();
@@ -281,9 +358,9 @@ export default function Dashboard() {
                       🔄 Cambiar Asiento
                     </button>
                     <button
-                      className="cancel-btn"
-                      onClick={() => handleCancelReserva(reserva._id || reserva.id)}
-                      style={{ backgroundColor: '#e74c3c', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}
+                      className="btn btn-danger"
+                      onClick={() => pedirCancelacion(reserva)}
+                      style={{ marginTop: '10px' }}
                     >
                       Cancelar Reserva
                     </button>
@@ -302,6 +379,34 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Confirmación de cancelación de reserva */}
+      <ConfirmPopup
+        open={!!cancelacion}
+        onCancel={() => setCancelacion(null)}
+        onConfirm={confirmarCancelacion}
+        title="¿Cancelar esta reserva?"
+        message={
+          cancelacion
+            ? `Ruta ${cancelacion.reserva.ruta?.from || '—'} → ${cancelacion.reserva.ruta?.to || '—'}, fecha ${cancelacion.reserva.fecha || '—'}.`
+            : ''
+        }
+        note="El asiento volverá a estar disponible para otros viajeros. La reserva se conserva en tu historial marcada como cancelada."
+        confirmLabel="Sí, cancelar"
+        cancelLabel="Mantener reserva"
+        destructive
+        loading={!!cancelacion?.enCurso}
+        error={cancelacion?.error}
+      />
+
+      {/* Avisos de resultado */}
+      <AlertPopup
+        open={!!aviso}
+        variant={aviso?.variant}
+        title={aviso?.title}
+        message={aviso?.message}
+        onClose={cerrarAviso}
+      />
     </div>
   );
 }

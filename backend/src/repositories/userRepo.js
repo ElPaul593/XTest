@@ -17,12 +17,21 @@ const User = require('../models/userModel');
 const selectNoPassword = '-password';
 
 
-exports.findAll = async ({ page, limit, search } = {}) => {
+exports.findAll = async ({ page, limit, search, estado } = {}) => {
   const query = {};
   if (search) {
     const safe = String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const rx = new RegExp(safe, 'i');
     query.$or = [{ nombre: rx }, { apellido: rx }, { cedula: rx }, { pasaporte: rx }];
+  }
+
+  // Filtro por estado de cuenta. 'ACTIVO' incluye los documentos sin el campo,
+  // que son los usuarios registrados antes de existir la baja lógica.
+  if (estado) {
+    const estadoUpper = String(estado).toUpperCase();
+    query.estado = estadoUpper === 'ACTIVO'
+      ? { $in: ['ACTIVO', null] }
+      : estadoUpper;
   }
 
   // Retrocompatibilidad: sin page/limit devuelve un array con todos los usuarios.
@@ -46,26 +55,19 @@ exports.findAll = async ({ page, limit, search } = {}) => {
 };
 
 
-// PATRÓN REPOSITORY: Método create - encapsula la creación de entidades
-//Create
-exports.create = async (data) => {
-  const user = new User(data);
-   const saved = await user.save();
-  const { password, ...clean } = saved.toObject(); 
-  return clean;
-};
+/*
+ * #2BUG y #3BUG — CORREGIDOS: se eliminaron `create()` y `findByCedula()`.
+ *
+ * Ninguno de los dos se invocaba. `create()` además era peligroso: insertaba un
+ * usuario sin validar la cédula ni hashear la contraseña, saltándose
+ * `AuthService.createUserAccount`, que es la única puerta de creación de usuarios.
+ * Las búsquedas por cédula viven en `AuthService` (login y alta).
+ */
 
 // PATRÓN REPOSITORY: Método findById - encapsula la búsqueda por ID
-//Read by id 
+//Read by id
 exports.findById = async (id) => {
   return User.findById(id).select(selectNoPassword).lean();
-}
-
-// PATRÓN REPOSITORY: Método findByCedula - encapsula búsqueda por criterio específico
-//Read by cedula
-
-exports.findByCedula = async (cedula, projection = selectNoPassword) => {
-  return User.findOne({ cedula }).select(projection).lean();
 }
 
 // PATRÓN REPOSITORY: Método updateById - encapsula la actualización de entidades
@@ -81,8 +83,45 @@ exports.updateById = async (id, data) => {
 
 
 
-// PATRÓN REPOSITORY: Método deleteById - encapsula la eliminación de entidades
-//Delete 
-exports.deleteById = async (id) => {
-  return User.findByIdAndDelete(id).lean();
+/**
+ * Baja lógica: cambia el estado de la cuenta sin borrar el documento.
+ *
+ * #16BUG (documentado, ya corregido aquí) — Antes este repositorio exponía
+ * `deleteById` con `User.findByIdAndDelete`, un borrado FÍSICO. Al desaparecer el
+ * documento, las reservas, boletos y calificaciones que lo referencian quedaban
+ * con un `user` apuntando a un ObjectId inexistente: los `populate('user')`
+ * devolvían `null`, el panel de estadísticas contaba mal y se perdía para siempre
+ * el histórico de quién viajó. Se sustituye por baja lógica (ver utils/estadoCuenta.js).
+ *
+ * @param {string} id
+ * @param {object} cambio
+ * @param {'ACTIVO'|'BLOQUEADO'|'ELIMINADO'} cambio.estado
+ * @param {string|null} [cambio.motivo]
+ * @param {string|null} [cambio.actorId] - Usuario que ejecuta el cambio (auditoría).
+ */
+exports.updateEstadoById = async (id, { estado, motivo = null, actorId = null }) => {
+  return User.findByIdAndUpdate(
+    id,
+    {
+      $set: {
+        estado,
+        estadoMotivo: motivo,
+        estadoCambiadoEn: new Date(),
+        estadoCambiadoPor: actorId || null
+      }
+    },
+    { new: true, runValidators: true, select: '-password' }
+  ).lean();
+};
+
+// Recuento de cuentas por estado, para el panel administrativo.
+exports.countByEstado = async () => {
+  const filas = await User.aggregate([
+    { $group: { _id: { $ifNull: ['$estado', 'ACTIVO'] }, total: { $sum: 1 } } }
+  ]);
+
+  return filas.reduce((acc, fila) => {
+    acc[fila._id] = fila.total;
+    return acc;
+  }, { ACTIVO: 0, BLOQUEADO: 0, ELIMINADO: 0 });
 };

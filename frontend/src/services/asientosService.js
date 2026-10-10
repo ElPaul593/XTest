@@ -1,3 +1,28 @@
+/**
+ * ============================================================================
+ * #19BUG — ARCHIVO HUÉRFANO: 245 líneas que nunca se ejecutan.
+ * ============================================================================
+ *
+ * Ningún componente ni página importa este módulo.
+ *
+ * Verificado: 0 importaciones de `asientosService` en todo `src/`.
+ *
+ * Dos problemas añadidos si alguien decidiera resucitarlo:
+ *
+ *  1. Crea su propia instancia de `axios` en lugar de usar la de
+ *     `services/api.js`, así que se queda FUERA de los interceptores: no añade
+ *     la cabecera `Authorization` ni cierra la sesión ante un 401. Cualquier
+ *     endpoint autenticado al que llamara fallaría.
+ *
+ *  2. Depende de `VITE_SEAT_API_URL`, variable que no está declarada en
+ *     `frontend/.env.example` ni en `.env.production`, por lo que siempre caería
+ *     al valor por defecto.
+ *
+ * La lógica viva de asientos está en `components/BusSeatSelector.jsx` y
+ * `pages/SeatBooking.jsx`.
+ * ============================================================================
+ */
+
 import axios from 'axios';
 
 /**

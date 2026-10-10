@@ -26,6 +26,19 @@ export async function createCalificacion(data) {
   }
 }
 
+/**
+ * #24BUG — Funciones muertas: `updateCalificacion` y `deleteCalificacion` no se
+ * importan en ninguna pantalla. El usuario puede CREAR una calificación (en
+ * Destino.jsx y LugaresTuristicos.jsx) pero no tiene forma de editarla ni de
+ * borrarla: no existe botón para ello en ninguna vista.
+ *
+ * Lo llamativo es que el backend sí tiene el soporte completo y protegido:
+ * `PUT /api/calificaciones/:id` y `DELETE /api/calificaciones/:id` con el
+ * middleware `authorizeOwnerOrAdmin(Calificacion, 'usuario')`. O sea, hay una
+ * funcionalidad terminada y asegurada en el servidor que ninguna pantalla ofrece.
+ *
+ * Verificado: 0 importaciones en `pages/` y `components/`.
+ */
 export async function updateCalificacion(id, data) {
   try {
     const resp = await api.put(`/calificaciones/${id}`, data);

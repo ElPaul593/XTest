@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/auth';
+import { login, requestPasswordReset, loginConGoogle } from '../services/auth';
 import { setSession, homePathForRole } from '../services/session';
+import Popup, { AlertPopup } from './Popup';
+import GoogleSignInButton from './GoogleSignInButton';
+import useFeedback from '../hooks/useFeedback';
 
 export default function LoginForm() {
   const [tipoIdentificacion, setTipoIdentificacion] = useState('cedula'); // 'cedula' o 'pasaporte'
@@ -12,11 +15,38 @@ export default function LoginForm() {
   const [touched, setTouched] = useState({ identificacion: false, password: false });
   const navigate = useNavigate();
 
+  // Recuperación de contraseña (ventana emergente).
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEnviando, setResetEnviando] = useState(false);
+  const [resetError, setResetError] = useState(null);
+
+  const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
+
+  /**
+   * Si la sesión se cerró porque la cuenta quedó bloqueada o dada de baja, el
+   * interceptor de `services/api.js` dejó el motivo aquí antes de redirigir.
+   * Se muestra una sola vez: sin esto el usuario volvería al login sin saber por qué.
+   */
+  useEffect(() => {
+    let mensaje = null;
+    try {
+      mensaje = sessionStorage.getItem('authEstadoMensaje');
+      if (mensaje) sessionStorage.removeItem('authEstadoMensaje');
+    } catch {
+      // Almacenamiento no disponible (modo privado): no hay mensaje que mostrar.
+    }
+
+    if (mensaje) {
+      mostrarError(mensaje, 'Sesión cerrada');
+    }
+  }, [mostrarError]);
+
   const cedulaDigits = cedula.replace(/\D/g, '');
 
   const identificacionError = useMemo(() => {
     if (!touched.identificacion) return null;
-    
+
     if (tipoIdentificacion === 'cedula') {
       if (cedula.length === 0) return 'La cédula es requerida';
       if (!/^\d+$/.test(cedula)) return 'La cédula debe contener solo dígitos';
@@ -27,7 +57,7 @@ export default function LoginForm() {
       if (pasaporte.length < 6) return 'El pasaporte debe tener al menos 6 caracteres';
       if (pasaporte.length > 20) return 'El pasaporte no puede tener más de 20 caracteres';
     }
-    
+
     return null;
   }, [cedula, pasaporte, tipoIdentificacion, touched.identificacion]);
 
@@ -38,7 +68,7 @@ export default function LoginForm() {
     return null;
   }, [password, touched.password]);
 
-  const isFormValid = !identificacionError && !passwordError && 
+  const isFormValid = !identificacionError && !passwordError &&
     (tipoIdentificacion === 'cedula' ? cedula : pasaporte) && password;
 
   const handleCedulaChange = (e) => {
@@ -59,12 +89,12 @@ export default function LoginForm() {
     setTouched({ identificacion: true, password: true });
     setError(null);
     if (!isFormValid) return;
-    
+
     try {
-      const loginData = tipoIdentificacion === 'cedula' 
+      const loginData = tipoIdentificacion === 'cedula'
         ? { cedula: cedulaDigits, password }
         : { pasaporte: pasaporte.trim(), password };
-      
+
       const data = await login(loginData);
       setSession({ token: data.token, role: data.role });
       navigate(homePathForRole(data.role));
@@ -73,40 +103,110 @@ export default function LoginForm() {
     }
   };
 
+  /**
+   * Acceso con Google.
+   *
+   * Si no existe cuenta con ese correo, el backend NO crea nada: devuelve el
+   * perfil verificado y se redirige al registro con los datos ya rellenados.
+   * El modelo exige cédula o pasaporte, y Google no los proporciona, así que
+   * crear la cuenta a medias habría metido datos inválidos en la base.
+   */
+  const handleGoogleCredential = async (credential) => {
+    setError(null);
+
+    try {
+      const data = await loginConGoogle(credential);
+
+      if (data.requiereRegistro) {
+        navigate('/register', {
+          state: {
+            prefill: data.perfil,
+            origen: 'google',
+            aviso: 'Tu cuenta de Google se verificó correctamente. Completa los datos que Google no puede darnos para terminar el registro.'
+          }
+        });
+        return;
+      }
+
+      setSession({ token: data.token, role: data.role });
+      navigate(homePathForRole(data.role));
+    } catch (err) {
+      mostrarError(err.message, 'No se pudo entrar con Google');
+    }
+  };
+
+  const abrirReset = () => {
+    setResetError(null);
+    setResetOpen(true);
+  };
+
+  const cerrarReset = () => {
+    if (resetEnviando) return;
+    setResetOpen(false);
+    setResetError(null);
+  };
+
+  /**
+   * Pide el enlace de recuperación. El backend construye el enlace dinámico
+   * `{VERCEL_BACKEND_URL}/api/auth/reset-password/{token}` y delega el envío del
+   * correo en la API consumidora.
+   */
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetError(null);
+
+    const email = resetEmail.trim();
+    if (!email) {
+      setResetError('Introduce el correo con el que te registraste.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setResetError('Ese correo no tiene un formato válido.');
+      return;
+    }
+
+    try {
+      setResetEnviando(true);
+      const resultado = await requestPasswordReset(email);
+
+      setResetOpen(false);
+      setResetEmail('');
+      mostrarExito(
+        resultado?.message ||
+          'Si el correo corresponde a una cuenta registrada, recibirás un enlace para restablecer tu contraseña.',
+        'Revisa tu correo'
+      );
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetEnviando(false);
+    }
+  };
+
   return (
     <main className="center-screen">
       <div className="card" role="dialog" aria-labelledby="login-title">
         <h2 id="login-title">Iniciar sesión</h2>
-        
-        {/* Selector de tipo de identificación */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+
+        {/* Selector de tipo de identificación.
+            Usa las clases de botón de Bootstrap del proyecto (.btn/.btn-primary/
+            .btn-secondary) en lugar de estilos en línea: así hereda la paleta
+            negro + amarillo y el cristal, en vez del azul #007bff que traía
+            codificado y que no pertenecía a la identidad visual. */}
+        <div className="flex gap-sm" style={{ marginBottom: '16px' }}>
           <button
             type="button"
+            className={`btn ${tipoIdentificacion === 'cedula' ? 'btn-primary' : 'btn-secondary'}`}
+            aria-pressed={tipoIdentificacion === 'cedula'}
             onClick={() => handleTipoChange('cedula')}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              background: tipoIdentificacion === 'cedula' ? '#007bff' : '#fff',
-              color: tipoIdentificacion === 'cedula' ? '#fff' : '#333',
-              cursor: 'pointer',
-              borderRadius: '4px',
-              transition: 'all 0.2s'
-            }}
           >
             Cédula
           </button>
           <button
             type="button"
+            className={`btn ${tipoIdentificacion === 'pasaporte' ? 'btn-primary' : 'btn-secondary'}`}
+            aria-pressed={tipoIdentificacion === 'pasaporte'}
             onClick={() => handleTipoChange('pasaporte')}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              background: tipoIdentificacion === 'pasaporte' ? '#007bff' : '#fff',
-              color: tipoIdentificacion === 'pasaporte' ? '#fff' : '#333',
-              cursor: 'pointer',
-              borderRadius: '4px',
-              transition: 'all 0.2s'
-            }}
           >
             Pasaporte
           </button>
@@ -158,10 +258,10 @@ export default function LoginForm() {
             />
             {passwordError && <div className="error">{passwordError}</div>}
             <div className="forgot-password">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="forgot-link"
-                onClick={() => alert('Función de recuperar contraseña - Aquí se implementaría el flujo de recuperación')}
+                onClick={abrirReset}
               >
                 ¿Olvidaste tu contraseña?
               </button>
@@ -174,7 +274,77 @@ export default function LoginForm() {
 
           {error && <div className="error">{error}</div>}
         </form>
+
+        {/* Acceso con Google. El componente no renderiza nada si el servidor no
+            tiene GOOGLE_CLIENT_ID configurado, así que el formulario de cédula
+            sigue funcionando igual sin él. */}
+        <div className="auth-divider"><span>o</span></div>
+
+        <GoogleSignInButton
+          onCredential={handleGoogleCredential}
+          onError={(msg) => mostrarError(msg, 'Acceso con Google')}
+          texto="signin_with"
+        />
       </div>
+
+      {/* Ventana emergente de recuperación de contraseña */}
+      <Popup
+        open={resetOpen}
+        onClose={cerrarReset}
+        title="Recuperar contraseña"
+        subtitle="Te enviaremos un enlace para crear una contraseña nueva."
+        variant="info"
+        icon="✉"
+        closeOnBackdrop={!resetEnviando}
+        showClose={!resetEnviando}
+      >
+        <form onSubmit={handleResetSubmit} noValidate>
+          <div className="field">
+            <label htmlFor="reset-email">Correo electrónico de tu cuenta</label>
+            <input
+              id="reset-email"
+              className="input"
+              type="email"
+              autoComplete="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              placeholder="tucorreo@ejemplo.com"
+              disabled={resetEnviando}
+              required
+            />
+          </div>
+
+          <div className="popup-note">
+            El enlace caduca a los 30 minutos y solo puede usarse una vez. Si no
+            encuentras el correo, revisa la carpeta de spam.
+          </div>
+
+          {resetError && <div className="popup-error">{resetError}</div>}
+
+          <div className="popup-footer">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={cerrarReset}
+              disabled={resetEnviando}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={resetEnviando}>
+              {resetEnviando ? 'Enviando…' : 'Enviar enlace'}
+            </button>
+          </div>
+        </form>
+      </Popup>
+
+      {/* Avisos de resultado (éxito del envío, sesión cerrada por bloqueo…) */}
+      <AlertPopup
+        open={!!aviso}
+        variant={aviso?.variant}
+        title={aviso?.title}
+        message={aviso?.message}
+        onClose={cerrarAviso}
+      />
     </main>
   );
 }

@@ -115,6 +115,34 @@
   background: var(--accent-hover);
 }
 
+/**
+ * #32BUG — Las ventanas emergentes quedan por DEBAJO del header fijo.
+ *
+ * `.navbar` (components/navbar.css) es `position: fixed` con `z-index: 1000`, y
+ * este velo declara el MISMO `z-index: 1000`. Cuando dos elementos posicionados
+ * empatan en z-index, gana el que aparece después en el orden del documento: el
+ * navbar se renderiza en `App.jsx` antes que el contenido de las páginas, pero
+ * como hermano del árbol de rutas, termina pintándose por encima del velo. El
+ * resultado es que la barra de navegación atraviesa el diálogo y sigue siendo
+ * pulsable con el modal "abierto", así que el usuario puede navegar fuera
+ * dejando el modal huérfano.
+ *
+ * #34BUG — Estilos de página que se filtran a toda la aplicación.
+ *
+ * Este archivo es `styles/pages/destino.css`, es decir, los estilos de UNA
+ * pantalla, pero define selectores completamente genéricos: `.modal-overlay`,
+ * `.modal-content`, `.modal-actions` y `.form-group` (más abajo). Al importarse
+ * en `styles/index.css`, esas reglas se aplican a todo el proyecto. Por eso
+ * `pages/Dashboard.jsx`, `pages/SeatBooking.jsx` y `pages/admin/AdminLugares.jsx`
+ * "funcionan" con clases `.modal-*` que nunca declararon: dependen sin saberlo
+ * del CSS de la página de destinos. Si se eliminara este archivo, tres pantallas
+ * ajenas perderían su maquetación.
+ *
+ * NO se corrige aquí por indicación expresa: solo se documenta.
+ * Las ventanas emergentes nuevas usan `styles/components/modal.css`, con las
+ * clases `.popup-*` y las capas `--z-modal-backdrop` (2000) / `--z-modal` (2001),
+ * definidas en `base/variables.css` por encima de `--z-navbar` (1000).
+ */
 .modal-overlay {
   position: fixed;
   top: 0;

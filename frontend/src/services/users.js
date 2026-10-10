@@ -1,5 +1,22 @@
 import api from './api';
 
+/**
+ * #22BUG — Código redundante que no hace nada: `getAuthToken` / `getAuthHeaders`.
+ *
+ * `services/api.js` ya instala un interceptor de petición que añade
+ * `Authorization: Bearer <token>` a TODAS las llamadas que salen por esa
+ * instancia de axios. Cada `{ headers: getAuthHeaders() }` de este archivo vuelve
+ * a calcular y adjuntar la misma cabecera que el interceptor pondría de todos
+ * modos; axios la sobrescribe con un valor idéntico.
+ *
+ * Es decir: 9 llamadas pasan un objeto de cabeceras cuyo efecto neto es nulo.
+ * No rompe nada, pero hace creer que estas funciones necesitan autenticación
+ * manual y que otras (las que no lo pasan) van sin token, cuando todas la llevan.
+ * Este es el único archivo de `services/` que lo hace; el resto confía en el
+ * interceptor.
+ *
+ * Verificado: `api.js` líneas 10-21 (interceptors.request.use).
+ */
 // Función para obtener el token del localStorage
 const getAuthToken = () => {
   return localStorage.getItem('token');
@@ -17,6 +34,9 @@ export async function listUsers(params = {}) {
     if (params.page) qs.append('page', params.page);
     if (params.limit) qs.append('limit', params.limit);
     if (params.search) qs.append('search', params.search);
+    // Filtro por estado de cuenta: ACTIVO | BLOQUEADO | ELIMINADO.
+    // Sin él se listan todas, incluidas las bloqueadas y las dadas de baja.
+    if (params.estado) qs.append('estado', params.estado);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     const response = await api.get(`/users${suffix}`, {
       headers: getAuthHeaders()
@@ -53,6 +73,19 @@ export async function updateUser(id, userData) {
   }
 }
 
+/**
+ * Baja administrativa de una cuenta ajena (`DELETE /api/users/:id`).
+ *
+ * Desde el rediseño del manejo de cuentas, el panel admin ya no ofrece
+ * "Eliminar": usa `cambiarEstadoUsuario` con BLOQUEADO / ELIMINADO / ACTIVO,
+ * porque así queda constancia del motivo y la acción es reversible. Por eso esta
+ * función no se invoca hoy desde ninguna pantalla.
+ *
+ * Se conserva a propósito, no por descuido: el endpoint sigue existiendo (ahora
+ * hace baja LÓGICA, ya no borrado físico) y se usa desde la colección de Postman
+ * de `backend/docs/postman_collection.json`. Si se decide retirar también el
+ * endpoint, esta función debe irse con él.
+ */
 export async function deleteUser(id) {
   try {
     const response = await api.delete(`/users/${id}`, { 
@@ -65,14 +98,44 @@ export async function deleteUser(id) {
   }
 }
 
+/**
+ * #23BUG — Función muerta: `getUserById` no se importa en ninguna pantalla.
+ * El panel administrativo (`pages/admin/AdminUsers.jsx`) trabaja siempre con la
+ * lista completa que devuelve `listUsers` y edita en la propia fila de la tabla,
+ * así que nunca necesita cargar un usuario suelto.
+ * Verificado: 0 importaciones de `getUserById` en `pages/` y `components/`.
+ */
 export async function getUserById(id) {
   try {
-    const response = await api.get(`/users/${id}`, { 
-      headers: getAuthHeaders() 
+    const response = await api.get(`/users/${id}`, {
+      headers: getAuthHeaders()
     });
     return response.data;
   } catch (err) {
     const message = err?.response?.data?.message || err.message || 'Error al obtener usuario';
+    throw new Error(message);
+  }
+}
+
+/**
+ * Cambia el estado de una cuenta: bloquear, reactivar o dar de baja (solo admin).
+ * Sustituye al borrado de usuarios como herramienta de moderación: ninguna de las
+ * tres operaciones elimina datos de la base.
+ *
+ * @param {string} id
+ * @param {'ACTIVO'|'BLOQUEADO'|'ELIMINADO'} estado
+ * @param {string} [motivo] Texto que verá el usuario al intentar iniciar sesión.
+ */
+export async function cambiarEstadoUsuario(id, estado, motivo) {
+  try {
+    const response = await api.patch(`/users/${id}/estado`, { estado, motivo });
+    return response.data;
+  } catch (err) {
+    const message =
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      err.message ||
+      'Error al cambiar el estado de la cuenta';
     throw new Error(message);
   }
 }
@@ -111,17 +174,25 @@ export async function updateCurrentUser(userData) {
   }
 }
 
+/**
+ * Baja de la cuenta propia.
+ *
+ * Llama a `DELETE /api/users/me`, que identifica al usuario por su token.
+ * La baja es LÓGICA: la cuenta pasa a estado `ELIMINADO` y deja de poder iniciar
+ * sesión, pero el documento se conserva para no dejar huérfanas las reservas,
+ * boletos y calificaciones asociadas.
+ *
+ * Ver #17BUG en `backend/src/controllers/userController.js`: la versión anterior
+ * pedía `/users/me` solo para extraer el `_id` y llamaba a `DELETE /users/:id`,
+ * una ruta restringida a administradores, por lo que devolvía 403 a cualquier
+ * usuario con rol USER.
+ */
 export async function deleteCurrentUser() {
   try {
-    // Primero obtenemos el usuario actual para obtener su ID
-    const currentUser = await getCurrentUser();
-    // Luego eliminamos usando el ID
-    const response = await api.delete(`/users/${currentUser._id}`, { 
-      headers: getAuthHeaders() 
-    });
+    const response = await api.delete('/users/me');
     return response.data;
   } catch (err) {
-    const message = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Error al eliminar cuenta';
+    const message = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error al dar de baja la cuenta';
     throw new Error(message);
   }
 }

@@ -10,8 +10,53 @@
   --accent-hover: #e6c200;
   --error: #ff4444;
   --success: #28a745;
+  --warning: #ffa726;
   --border: #2a2a2a;
-  
+
+  /* ------------------------------------------------------------------
+     Glassmorphism
+     Se mantiene la paleta negro + amarillo: el cristal no introduce
+     colores nuevos, solo capas translúcidas del mismo negro con bordes
+     claros y desenfoque de fondo.
+     ------------------------------------------------------------------ */
+
+  /* Rellenos translúcidos, de más tenue a más sólido */
+  --glass-bg: rgba(26, 26, 26, 0.55);
+  --glass-bg-strong: rgba(18, 18, 18, 0.78);
+  --glass-bg-soft: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.09);
+
+  /* Bordes y luz superior: lo que da la sensación de canto de cristal */
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-strong: rgba(255, 255, 255, 0.2);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Acento amarillo en versión translúcida */
+  --glass-accent: rgba(255, 215, 0, 0.14);
+  --glass-accent-border: rgba(255, 215, 0, 0.38);
+  --glass-accent-glow: 0 0 0 3px rgba(255, 215, 0, 0.16);
+
+  /* Intensidad del desenfoque */
+  --glass-blur: 16px;
+  --glass-blur-strong: 24px;
+
+  /* Sombras */
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --glass-shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.6);
+
+  /* Velo de fondo de las ventanas emergentes */
+  --glass-backdrop: rgba(0, 0, 0, 0.62);
+
+  /* ------------------------------------------------------------------
+     Capas (z-index)
+     Centralizadas para que las ventanas emergentes queden SIEMPRE por
+     encima del navbar fijo, que vive en la capa 1000.
+     ------------------------------------------------------------------ */
+  --z-navbar: 1000;
+  --z-modal-backdrop: 2000;
+  --z-modal: 2001;
+  --z-toast: 2100;
+
   /* Espaciado */
   --spacing-xs: 4px;
   --spacing-sm: 8px;

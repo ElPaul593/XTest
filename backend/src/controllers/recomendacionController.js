@@ -103,6 +103,45 @@ exports.getRecomendadosGuardados = async (req, res) => {
 };
 
 /**
+ * #12BUG CORREGIDO: `getRecomendadosPorProvinciaYDestino` existía en el core y se
+ * reexportaba en el servicio, pero ningún controlador la llamaba y ninguna ruta la
+ * exponía: era inalcanzable por HTTP. Este controlador le da entrada.
+ *
+ * GET /api/recomendaciones/guardados-por-provincia?provinciaOrigen=&ciudadDestino=
+ *
+ * A diferencia de `/guardados` (que filtra por usuario y ruta), esto consulta la
+ * caché agregada: qué se recomendó a los viajeros de una provincia para un destino
+ * concreto, sin importar quién la pidió. Es la consulta que da sentido a la
+ * colección hija (ver #11BUG).
+ */
+exports.getRecomendadosPorProvinciaYDestino = async (req, res) => {
+  try {
+    const { provinciaOrigen, ciudadDestino } = req.query;
+
+    if (!provinciaOrigen || !ciudadDestino) {
+      return res.status(400).json({
+        error: 'provinciaOrigen y ciudadDestino son requeridos'
+      });
+    }
+
+    const recomendados = await RecomendacionService.getRecomendadosPorProvinciaYDestino(
+      provinciaOrigen,
+      ciudadDestino
+    );
+
+    res.json({
+      provinciaOrigen,
+      ciudadDestino,
+      totalRecomendaciones: recomendados.length,
+      recomendados
+    });
+  } catch (err) {
+    console.error('Error en getRecomendadosPorProvinciaYDestino:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
  * Endpoint original (mantener compatibilidad)
  * Obtiene recomendaciones por nacionalidad (método anterior)
  */

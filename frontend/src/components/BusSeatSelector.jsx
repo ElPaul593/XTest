@@ -302,6 +302,31 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete }) => {
     const handleCancelAll = async () => {
         if (myHolds.length === 0) return;
 
+        /**
+         * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
+         * emergente de la aplicación.
+         *
+         * Esta pantalla usa 3 llamadas nativas. Un `window.confirm` para liberar los holds y dos `alert` de resultado tras confirmar las reservas.
+         *
+         * Tres problemas concretos:
+         *
+         *  1. `alert()` y `confirm()` bloquean el hilo principal: mientras el diálogo
+         *     está abierto, React no puede repintar ni se ejecutan los temporizadores.
+         *     En las pantallas de asientos eso congela el contador del hold.
+         *  2. El navegador los pinta con su propio estilo, ajeno al negro + amarillo del
+         *     proyecto, y antepone el dominio ("localhost:3000 dice…").
+         *  3. No admiten formato ni contenido enriquecido, así que los mensajes largos
+         *     se apelmazan y los saltos de línea con `\n` se ven de forma distinta en
+         *     cada navegador.
+         *
+         * Sustitución disponible: `components/Popup.jsx` (`AlertPopup` para avisar,
+         * `ConfirmPopup` para confirmar) junto al hook `hooks/useFeedback.js`. Se
+         * renderizan con `createPortal` sobre `document.body` y en la capa `--z-modal`,
+         * por encima del navbar fijo. Ya están aplicados en `LoginForm`, `Profile`,
+         * `Dashboard` y `admin/AdminUsers` y pueden servir de referencia.
+         *
+         * NO se corrige aquí por indicación expresa: solo se documenta.
+         */
         if (!window.confirm(`¿Cancelar todos los holds? (${myHolds.length} asiento${myHolds.length > 1 ? 's' : ''})`)) {
             return;
         }

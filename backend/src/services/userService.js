@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 const UserRepo = require('../repositories/userRepo');
 const AuthService = require('./authService');
+const AppError = require('../utils/AppError');
+const { ESTADOS, getEstado } = require('../utils/estadoCuenta');
 
 const PREFERENCIAS_VALIDAS = new Set(['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro']);
 
@@ -71,4 +73,65 @@ exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   return UserRepo.updateById(id, update);
 };
 
-exports.remove = async (id) => UserRepo.deleteById(id);
+/**
+ * Baja de cuenta (la pide el propio usuario desde su perfil).
+ *
+ * No borra nada: marca la cuenta como ELIMINADO. Desde fuera la cuenta deja de
+ * existir (no puede iniciar sesión y su token deja de servir), pero el documento
+ * permanece para que las reservas, boletos y calificaciones conserven a quién
+ * pertenecieron. Es la diferencia entre "dar de baja" y "perder los datos".
+ */
+exports.softDelete = async (id, { motivo = null, actorId = null } = {}) => {
+  const user = await UserRepo.findById(id);
+  if (!user) return null;
+
+  if (getEstado(user) === ESTADOS.ELIMINADO) {
+    throw new AppError('Esta cuenta ya estaba dada de baja', 409);
+  }
+
+  return UserRepo.updateEstadoById(id, {
+    estado: ESTADOS.ELIMINADO,
+    motivo: motivo || 'Baja solicitada por el titular de la cuenta',
+    actorId
+  });
+};
+
+/**
+ * Cambio administrativo del estado de una cuenta (bloquear / reactivar / dar de baja).
+ *
+ * @param {string} id
+ * @param {'ACTIVO'|'BLOQUEADO'|'ELIMINADO'} estado
+ * @param {object} opts
+ * @param {string} [opts.motivo]  - Se le muestra al usuario al intentar entrar.
+ * @param {string} [opts.actorId] - Admin que ejecuta el cambio (auditoría).
+ */
+exports.cambiarEstado = async (id, estado, { motivo = null, actorId = null } = {}) => {
+  const estadoNormalizado = String(estado || '').toUpperCase();
+
+  if (!Object.values(ESTADOS).includes(estadoNormalizado)) {
+    throw new AppError(`Estado no válido. Valores permitidos: ${Object.values(ESTADOS).join(', ')}`, 400);
+  }
+
+  const user = await UserRepo.findById(id);
+  if (!user) return null;
+
+  // Un administrador no puede bloquearse ni darse de baja a sí mismo: dejaría el
+  // panel sin acceso y haría falta intervenir la base de datos a mano.
+  if (actorId && String(actorId) === String(id) && estadoNormalizado !== ESTADOS.ACTIVO) {
+    throw new AppError('No puedes bloquear ni dar de baja tu propia cuenta de administrador', 400);
+  }
+
+  if (getEstado(user) === estadoNormalizado) {
+    throw new AppError(`La cuenta ya está en estado ${estadoNormalizado}`, 409);
+  }
+
+  return UserRepo.updateEstadoById(id, {
+    estado: estadoNormalizado,
+    // Al reactivar se limpia el motivo anterior: ya no describe la situación actual.
+    motivo: estadoNormalizado === ESTADOS.ACTIVO ? null : motivo,
+    actorId
+  });
+};
+
+/** Recuento de cuentas por estado para el panel administrativo. */
+exports.contarPorEstado = async () => UserRepo.countByEstado();
