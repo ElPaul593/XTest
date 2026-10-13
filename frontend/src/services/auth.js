@@ -85,6 +85,26 @@ export async function loginConGoogle(credential) {
   }
 }
 
+/**
+ * Reenvía el correo de verificación de la dirección.
+ *
+ * Como `requestPasswordReset`, responde siempre lo mismo exista o no la cuenta,
+ * para que el endpoint no sirva para averiguar qué correos están registrados.
+ */
+export async function reenviarVerificacion(email) {
+  try {
+    const resp = await api.post('/auth/resend-verification', { email });
+    return resp.data;
+  } catch (err) {
+    const message =
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      err.message ||
+      'No se pudo reenviar el correo de verificación';
+    throw new Error(message);
+  }
+}
+
 export function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('role');

@@ -1,3 +1,7 @@
+// Mismo motivo que en `externalApis.js`: este módulo lee `process.env` al
+// importarse y puede alcanzarse antes de que `app.js` cargue el `.env`.
+require('dotenv').config();
+
 /**
  * URLs públicas de la aplicación.
  *
@@ -32,8 +36,18 @@ function buildResetPasswordUrl(token) {
   return `${VERCEL_BACKEND_URL}/api/auth/reset-password/${token}`;
 }
 
+/**
+ * Enlace de verificación del correo. Apunta al backend por el mismo motivo que el
+ * de reseteo: así el token se comprueba en el servidor y el usuario ve una página
+ * con el resultado aunque el frontend esté caído.
+ */
+function buildVerifyEmailUrl(token) {
+  return `${VERCEL_BACKEND_URL}/api/auth/verify-email/${token}`;
+}
+
 module.exports = {
   VERCEL_BACKEND_URL,
   FRONTEND_URL,
-  buildResetPasswordUrl
+  buildResetPasswordUrl,
+  buildVerifyEmailUrl
 };

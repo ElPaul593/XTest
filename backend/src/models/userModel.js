@@ -39,23 +39,39 @@ const UserSchema = new mongoose.Schema({
     sparse: true,
     lowercase: true,
     trim: true,
+    /**
+     * Validación del formato del correo.
+     *
+     * La versión anterior solo miraba posiciones de `@` y del último `.`, y
+     * dejaba pasar direcciones imposibles. Comprobado:
+     *
+     *   pablo@gmail..com    → ACEPTADO  (etiqueta de dominio vacía)
+     *   doble@@arroba.com   → ACEPTADO  (dos arrobas)
+     *
+     * No es un problema teórico: la ruta HTTP sí filtra con Joi, pero este modelo
+     * es la última defensa y lo usan caminos que NO pasan por Joi —`seedAdmin`,
+     * `populateData` y cualquier `User.create` directo—. Un correo así se guarda
+     * sin que nadie lo note y revienta después, al intentar enviar el boleto o el
+     * enlace de recuperación, cuando ya es tarde para corregirlo.
+     *
+     * Esta expresión exige, en el dominio, etiquetas separadas por un punto que
+     * no empiecen ni terminen en guion, y un TLD de al menos dos letras. Es
+     * deliberadamente algo más estricta que el RFC 5322 (que admite comillas y
+     * comentarios que ningún proveedor real acepta) y coherente con lo que Joi
+     * valida en la capa de rutas.
+     */
     validate: {
       validator: (value) => {
         if (value == null || value === '') return true;
-        const text = String(value);
-        const atIndex = text.indexOf('@');
-        const lastDotIndex = text.lastIndexOf('.');
-        if (!(atIndex > 0 && lastDotIndex > atIndex + 1 && lastDotIndex < text.length - 1)) {
-          return false;
-        }
 
-        for (const char of text) {
-          if (char.trim() === '') {
-            return false;
-          }
-        }
+        const text = String(value).trim();
 
-        return true;
+        // Longitud máxima de una dirección según el RFC 5321.
+        if (text.length > 254) return false;
+
+        const EMAIL = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+
+        return EMAIL.test(text);
       },
       message: 'Email inválido'
     }
@@ -148,6 +164,33 @@ const UserSchema = new mongoose.Schema({
    */
   resetPasswordTokenHash: { type: String, default: null, select: false },
   resetPasswordExpires: { type: Date, default: null, select: false },
+
+  /**
+   * Verificación del correo electrónico.
+   *
+   * Hasta ahora el correo solo se validaba de FORMA (que pareciera un correo),
+   * no de EXISTENCIA. Cualquiera podía registrarse con el correo de otra persona,
+   * o con uno inventado, y el sistema lo daba por bueno. Eso rompía dos cosas:
+   * el boleto electrónico se enviaba a un buzón que no era del viajero, y la
+   * recuperación de contraseña quedaba atada a una dirección sin dueño conocido.
+   *
+   * Ahora el registro envía un enlace y la cuenta nace sin verificar.
+   *
+   * Las cuentas creadas ANTES de esta migración no tienen el campo. Se tratan
+   * como verificadas (ver `utils/verificacionEmail.js`): invalidar de golpe a los
+   * usuarios existentes les dejaría fuera sin haber hecho nada mal.
+   */
+  emailVerificado: { type: Boolean, default: false },
+  emailVerificadoEn: { type: Date, default: null },
+
+  // Igual que en el reseteo: en la BD solo vive el hash del token, nunca el token
+  // en claro que viaja en el enlace del correo.
+  emailTokenHash: { type: String, default: null, select: false },
+  emailTokenExpires: { type: Date, default: null, select: false },
+
+  // Momento del último envío, para limitar reenvíos y evitar que el endpoint se
+  // use para bombardear un buzón ajeno.
+  emailUltimoEnvio: { type: Date, default: null, select: false },
 
   createdAt: { type: Date, default: Date.now }
 });

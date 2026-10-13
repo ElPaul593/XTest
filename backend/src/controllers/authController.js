@@ -2,7 +2,11 @@ const AuthService = require('../services/authService');
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
 const { serializeUser } = require('../utils/serializers');
-const { renderResetForm, renderInvalidToken } = require('../views/resetPasswordPage');
+const {
+  renderResetForm,
+  renderInvalidToken,
+  renderVerifyEmailResult
+} = require('../views/resetPasswordPage');
 const { FRONTEND_URL } = require('../config/appUrls');
 
 const APP_NAME = process.env.APP_NAME || 'CulturalTrip';
@@ -23,11 +27,73 @@ exports.register = asyncHandler(async (req, res) => {
 exports.login = asyncHandler(async (req, res) => {
   const result = await AuthService.login(req.body);
 
-  // result = { token, role }
   res.json({
     token: result.token,
-    role: result.role
+    role: result.role,
+    // Permite al frontend avisar de que falta confirmar el correo sin pedir el
+    // perfil en una segunda llamada.
+    emailVerificado: result.emailVerificado,
+    email: result.email
   });
+});
+
+/**
+ * GET /api/auth/verify-email/:token
+ * Destino del enlace que llega por correo. Devuelve una página con el resultado,
+ * o JSON si se pide con `Accept: application/json`.
+ */
+exports.verifyEmail = asyncHandler(async (req, res) => {
+  const resultado = await AuthService.verificarEmail(req.params.token);
+
+  if (wantsJson(req)) {
+    if (!resultado.ok) {
+      throw new AppError('El enlace de verificación no es válido o ya caducó.', 400);
+    }
+    return res.json({ ok: true, message: 'Correo verificado correctamente.' });
+  }
+
+  res.type('html');
+  const nonce = res.locals.cspNonce;
+
+  return res
+    .status(resultado.ok ? 200 : 400)
+    .send(renderVerifyEmailResult({
+      exito: resultado.ok,
+      nombre: resultado.nombre,
+      appName: APP_NAME,
+      frontendUrl: FRONTEND_URL,
+      nonce
+    }));
+});
+
+/**
+ * POST /api/auth/resend-verification
+ * Reenvía el enlace de verificación. Respuesta neutra: no revela si el correo
+ * existe en el sistema.
+ */
+exports.resendVerification = asyncHandler(async (req, res) => {
+  const resultado = await AuthService.reenviarVerificacionEmail({ email: req.body.email });
+  res.json({ ok: true, message: resultado.message });
+});
+
+/**
+ * GET /api/auth/mail-status
+ * Diagnóstico del envío de correo: qué transportes hay disponibles.
+ *
+ * Existe porque el fallo original —la API consumidora devolvía 404 en cada
+ * envío— era invisible: no había forma de saber si el correo salía sin provocar
+ * un registro real y esperar a que no llegara nada.
+ */
+exports.mailStatus = asyncHandler(async (req, res) => {
+  const MailerService = require('../services/mailerService');
+  const diagnostico = await MailerService.diagnostico();
+
+  const operativo =
+    diagnostico.apiConsumidora.disponible ||
+    diagnostico.smtp.configurado ||
+    diagnostico.archivoLocal.disponible;
+
+  res.status(operativo ? 200 : 503).json({ ok: operativo, ...diagnostico });
 });
 
 /**

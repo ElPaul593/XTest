@@ -1,4 +1,19 @@
 /**
+ * Las variables se cargan AQUÍ, no solo en `app.js`.
+ *
+ * Este módulo lee `process.env` en el momento de importarse. Si alguien lo
+ * alcanza antes de que `app.js` haya ejecutado `dotenv.config()` —cosa que pasa
+ * en los tests, que importan `authService` antes que `app`— todas las variables
+ * salen vacías y se usan los valores por defecto en silencio. Se detectó porque
+ * los tests tardaban 35 s: estaban llamando a la API de producción en Render con
+ * 15 s de espera, en lugar de a `http://localhost:5008` como dice el `.env`.
+ *
+ * `dotenv.config()` es idempotente y nunca pisa una variable ya definida, así que
+ * llamarlo varias veces es seguro.
+ */
+require('dotenv').config();
+
+/**
  * Configuración centralizada de la API externa de asientos y precios
  * (el proyecto `apiconsumidorac/seat-api`).
  *

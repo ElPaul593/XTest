@@ -111,6 +111,68 @@ router.post('/login', validate(authSchemas.login, 'body'), authController.login)
 
 /**
  * @swagger
+ * /api/auth/verify-email/{token}:
+ *   get:
+ *     summary: Confirmar la dirección de correo (destino del enlace del registro)
+ *     description: >
+ *       Consume el token (un solo uso) y marca el correo como verificado.
+ *       Devuelve una página HTML con el resultado, o JSON con
+ *       `Accept: application/json`.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Correo verificado }
+ *       400: { description: Token inválido o caducado }
+ */
+router.get('/verify-email/:token', cspPaginaReset, authController.verifyEmail);
+
+/**
+ * @swagger
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Reenviar el correo de verificación
+ *     description: >
+ *       Responde siempre lo mismo exista o no la cuenta, para no permitir
+ *       enumerar correos registrados. Limitado por `EMAIL_VERIFY_RESEND_SECONDS`.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email: { type: string, format: email }
+ *     responses:
+ *       200: { description: Solicitud registrada }
+ *       429: { description: Demasiados reenvíos seguidos }
+ */
+router.post(
+  '/resend-verification',
+  validate(authSchemas.forgotPassword, 'body'),
+  authController.resendVerification
+);
+
+/**
+ * @swagger
+ * /api/auth/mail-status:
+ *   get:
+ *     summary: Diagnóstico del envío de correo
+ *     description: Qué transportes están disponibles (API consumidora, SMTP, archivo local).
+ *     tags: [Auth]
+ *     responses:
+ *       200: { description: Hay al menos un transporte operativo }
+ *       503: { description: Ningún transporte disponible }
+ */
+router.get('/mail-status', authController.mailStatus);
+
+/**
+ * @swagger
  * /api/auth/google/config:
  *   get:
  *     summary: Saber si el acceso con Google está disponible

@@ -26,6 +26,11 @@ const serializeUser = (user) => {
     // Estado del ciclo de vida de la cuenta. Los usuarios creados antes de la baja
     // lógica no tienen el campo, así que se normalizan a ACTIVO.
     estado: userObj.estado || 'ACTIVO',
+    // Las cuentas anteriores a la verificación no tienen el campo: se tratan como
+    // verificadas para no mostrarles un aviso que no pueden resolver.
+    emailVerificado: userObj.emailVerificado === undefined || userObj.emailVerificado === null
+      ? true
+      : Boolean(userObj.emailVerificado),
     estadoMotivo: userObj.estadoMotivo || null,
     estadoCambiadoEn: userObj.estadoCambiadoEn || null,
     assignedRutas: Array.isArray(userObj.assignedRutas)

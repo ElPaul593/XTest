@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, requestPasswordReset, loginConGoogle } from '../services/auth';
+import { login, requestPasswordReset, loginConGoogle, reenviarVerificacion } from '../services/auth';
 import { setSession, homePathForRole } from '../services/session';
 import Popup, { AlertPopup } from './Popup';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -20,6 +20,10 @@ export default function LoginForm() {
   const [resetEmail, setResetEmail] = useState('');
   const [resetEnviando, setResetEnviando] = useState(false);
   const [resetError, setResetError] = useState(null);
+
+  // Aviso de correo sin confirmar: { email, destino }
+  const [verificacionPendiente, setVerificacionPendiente] = useState(null);
+  const [reenviando, setReenviando] = useState(false);
 
   const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
 
@@ -97,9 +101,39 @@ export default function LoginForm() {
 
       const data = await login(loginData);
       setSession({ token: data.token, role: data.role });
+
+      /**
+       * Correo sin confirmar.
+       *
+       * El backend deja entrar igualmente mientras `REQUIRE_EMAIL_VERIFIED` esté
+       * en false, así que aquí no se bloquea: se avisa y se ofrece reenviar el
+       * enlace. Importa porque de ese correo dependen el boleto electrónico y la
+       * recuperación de contraseña.
+       */
+      if (data.emailVerificado === false) {
+        setVerificacionPendiente({ email: data.email, destino: homePathForRole(data.role) });
+        return;
+      }
+
       navigate(homePathForRole(data.role));
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || 'Error en el login');
+    }
+  };
+
+  /** Pide otro enlace de verificación y continúa a la aplicación. */
+  const handleReenviarVerificacion = async () => {
+    try {
+      setReenviando(true);
+      await reenviarVerificacion(verificacionPendiente.email);
+      const destino = verificacionPendiente.destino;
+      setVerificacionPendiente(null);
+      mostrarExito('Te hemos enviado un enlace nuevo. Revisa tu bandeja de entrada y la carpeta de spam.', 'Correo reenviado');
+      navigate(destino);
+    } catch (err) {
+      mostrarError(err.message, 'No se pudo reenviar');
+    } finally {
+      setReenviando(false);
     }
   };
 
@@ -335,6 +369,55 @@ export default function LoginForm() {
             </button>
           </div>
         </form>
+      </Popup>
+
+      {/* Correo pendiente de confirmar. No bloquea el acceso: informa y ofrece
+          reenviar el enlace, porque de ese correo dependen el boleto electrónico
+          y la recuperación de contraseña. */}
+      <Popup
+        open={!!verificacionPendiente}
+        onClose={() => {
+          const destino = verificacionPendiente?.destino;
+          setVerificacionPendiente(null);
+          if (destino) navigate(destino);
+        }}
+        title="Confirma tu correo electrónico"
+        subtitle={verificacionPendiente?.email || undefined}
+        variant="warning"
+        icon="✉"
+      >
+        <p>
+          Todavía no has confirmado tu dirección. Te enviamos un enlace al registrarte:
+          búscalo en tu bandeja de entrada y revisa también la carpeta de spam.
+        </p>
+
+        <div className="popup-note popup-note--warning">
+          Mientras no la confirmes no podremos enviarte tus boletos electrónicos ni
+          ayudarte a recuperar la contraseña si la olvidas.
+        </div>
+
+        <div className="popup-footer">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={reenviando}
+            onClick={() => {
+              const destino = verificacionPendiente?.destino;
+              setVerificacionPendiente(null);
+              if (destino) navigate(destino);
+            }}
+          >
+            Lo haré luego
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleReenviarVerificacion}
+            disabled={reenviando}
+          >
+            {reenviando ? 'Enviando…' : 'Reenviar enlace'}
+          </button>
+        </div>
       </Popup>
 
       {/* Avisos de resultado (éxito del envío, sesión cerrada por bloqueo…) */}

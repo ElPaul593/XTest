@@ -6,9 +6,10 @@ const AppError = require('../utils/AppError');
 const { validarCedulaEcuatoriana } = require('../utils/cedulaValidator');
 const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
 const { assertCuentaOperativa, getEstado, ESTADOS } = require('../utils/estadoCuenta');
-const { buildResetPasswordUrl } = require('../config/appUrls');
+const { buildResetPasswordUrl, buildVerifyEmailUrl } = require('../config/appUrls');
 const MailerService = require('./mailerService');
 const GoogleAuthService = require('./googleAuthService');
+const VerificacionEmail = require('../utils/verificacionEmail');
 
 const PREFERENCIAS_VALIDAS = new Set(['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro']);
 
@@ -167,9 +168,145 @@ exports.createUserAccount = async ({ cedula, pasaporte, email, nombre, apellido,
 
 /**
  * Registro público: SIEMPRE crea con rol USER (no permite escalada de privilegios).
+ *
+ * Tras crear la cuenta se envía el correo de verificación. El envío se hace
+ * "best effort": si falla, el registro NO se deshace. Un usuario registrado que
+ * no recibió el correo puede pedir el reenvío; uno al que se le rechaza el
+ * registro por un problema del servidor de correo pierde todos sus datos y no
+ * entiende por qué.
  */
 exports.register = async (data) => {
-  return exports.createUserAccount({ ...data, role: 'USER' });
+  const user = await exports.createUserAccount({ ...data, role: 'USER' });
+
+  try {
+    await exports.enviarVerificacionEmail(user);
+  } catch (error) {
+    console.error(`[authService] Registro OK pero no se pudo enviar la verificación a ${user.email}:`, error.message);
+  }
+
+  return user;
+};
+
+// ---------------------------------------------------------------------------
+// Verificación del correo electrónico
+// ---------------------------------------------------------------------------
+
+/** El token viaja en el enlace; en la BD solo se guarda su hash. */
+function hashEmailToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+/**
+ * Genera un token de verificación, lo guarda hasheado y envía el correo.
+ *
+ * @param {object} user Documento Mongoose del usuario.
+ * @returns {Promise<{ok:boolean, via?:string}>}
+ */
+exports.enviarVerificacionEmail = async (user) => {
+  if (!user?.email) {
+    throw new AppError('El usuario no tiene correo electrónico', 400);
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        emailTokenHash: hashEmailToken(rawToken),
+        emailTokenExpires: new Date(Date.now() + VerificacionEmail.TTL_MINUTOS * 60 * 1000),
+        emailUltimoEnvio: new Date()
+      }
+    }
+  );
+
+  const verifyUrl = buildVerifyEmailUrl(rawToken);
+
+  const { subject, html, text } = MailerService.construirCorreoVerificacion({
+    nombre: user.nombre,
+    verifyUrl,
+    horasValidez: Math.round(VerificacionEmail.TTL_MINUTOS / 60)
+  });
+
+  const envio = await MailerService.enviarCorreo({
+    to: user.email,
+    subject,
+    html,
+    text,
+    meta: { tipo: 'verificar-email', usuarioId: String(user._id) }
+  });
+
+  if (!envio.ok) {
+    // El token queda guardado a propósito: si el fallo fue del transporte, un
+    // reenvío posterior generará otro y el usuario no se queda atrapado.
+    throw new AppError('No se pudo enviar el correo de verificación', 502);
+  }
+
+  return { ok: true, via: envio.via };
+};
+
+/**
+ * Consume el token y marca el correo como verificado.
+ * El token sirve una sola vez.
+ */
+exports.verificarEmail = async (token) => {
+  if (!token) throw new AppError('Falta el token de verificación', 400);
+
+  const user = await User.findOne({
+    emailTokenHash: hashEmailToken(token),
+    emailTokenExpires: { $gt: new Date() }
+  }).select('+emailTokenHash +emailTokenExpires');
+
+  if (!user) {
+    // Puede ser un token caducado, ya usado o inventado. No se distingue: decirlo
+    // permitiría averiguar qué tokens existieron.
+    return { ok: false, motivo: 'INVALIDO' };
+  }
+
+  // Si la cuenta se bloqueó o se dio de baja entre el envío y el clic, verificar
+  // el correo no debe revivirla.
+  assertCuentaOperativa(user);
+
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: { emailVerificado: true, emailVerificadoEn: new Date() },
+      $unset: { emailTokenHash: '', emailTokenExpires: '' }
+    }
+  );
+
+  return { ok: true, nombre: user.nombre, email: user.email };
+};
+
+/**
+ * Reenvía el correo de verificación.
+ *
+ * Responde siempre igual exista o no la cuenta, por el mismo motivo que
+ * `requestPasswordReset`: si distinguiera, serviría para enumerar correos
+ * registrados.
+ */
+exports.reenviarVerificacionEmail = async ({ email }) => {
+  const respuestaNeutra = {
+    ok: true,
+    message: 'Si el correo corresponde a una cuenta pendiente de verificar, te hemos enviado un enlace nuevo.'
+  };
+
+  if (!email) throw new AppError('El correo es requerido', 400);
+
+  const emailLimpio = String(email).trim().toLowerCase();
+  const user = await User.findOne({ email: emailLimpio }).select('+emailUltimoEnvio');
+
+  if (!user) return respuestaNeutra;
+  if (VerificacionEmail.estaVerificado(user)) return respuestaNeutra;
+  if (getEstado(user) !== ESTADOS.ACTIVO) return respuestaNeutra;
+
+  const espera = VerificacionEmail.segundosParaReenviar(user);
+  if (espera > 0) {
+    throw new AppError(`Espera ${espera} segundos antes de pedir otro correo`, 429);
+  }
+
+  await exports.enviarVerificacionEmail(user);
+  return respuestaNeutra;
 };
 
 /**
@@ -197,6 +334,18 @@ exports.login = async ({ cedula, pasaporte, password }) => {
   // cuenta bloqueada o dada de baja sin conocer las credenciales.
   assertCuentaOperativa(user);
 
+  // Correo sin verificar. Solo bloquea si REQUIRE_EMAIL_VERIFIED=true; mientras
+  // esté desactivado se deja entrar y el frontend muestra el aviso, para no dejar
+  // fuera a quien no recibió el correo (spam, proveedor sin configurar).
+  if (VerificacionEmail.debeBloquearAcceso(user)) {
+    const error = new AppError(
+      'Tienes que confirmar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada o pide un enlace nuevo.',
+      403
+    );
+    error.codigoEstado = 'EMAIL_NO_VERIFICADO';
+    throw error;
+  }
+
   const roleNormalized = String(user.role || 'user').toLowerCase();
   const payload = {
     id: user._id,
@@ -211,7 +360,14 @@ exports.login = async ({ cedula, pasaporte, password }) => {
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
 
-  return { token, role: roleNormalized };
+  // `emailVerificado` viaja en la respuesta para que el frontend pueda mostrar el
+  // aviso de «confirma tu correo» sin tener que pedir el perfil aparte.
+  return {
+    token,
+    role: roleNormalized,
+    emailVerificado: VerificacionEmail.estaVerificado(user),
+    email: user.email || null
+  };
 };
 
 /**

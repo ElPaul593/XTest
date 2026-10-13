@@ -257,6 +257,37 @@ exports.renderResetForm = ({ token, nombre, appName, minutosValidez, frontendUrl
   return layout({ title: `${appName} · Restablecer contraseña`, body, nonce });
 };
 
+/**
+ * Resultado de la verificación del correo electrónico.
+ * Es el destino del enlace del correo de registro, así que la abre el usuario
+ * directamente en su navegador: tiene que explicarse sola.
+ */
+exports.renderVerifyEmailResult = ({ exito, nombre, appName, frontendUrl, nonce }) => {
+  const body = exito
+    ? `
+<div class="brand">${escapeHtml(appName)}</div>
+<h1>Correo confirmado</h1>
+<div class="alert alert-ok" role="status">
+  ${nombre ? `Listo, ${escapeHtml(nombre)}. ` : ''}Tu dirección de correo ha quedado verificada.
+</div>
+<p class="lead">Ya puedes recibir tus boletos electrónicos y recuperar la contraseña si alguna vez la olvidas.</p>
+<a class="btn" href="${escapeHtml(frontendUrl)}/login" style="text-decoration:none">Iniciar sesión</a>`.trim()
+    : `
+<div class="brand">${escapeHtml(appName)}</div>
+<h1>Enlace no válido</h1>
+<div class="alert alert-error" role="alert">
+  Este enlace de verificación ya caducó, fue utilizado o no es correcto.
+</div>
+<p class="lead">Cada enlace sirve una sola vez y durante un tiempo limitado. Inicia sesión y pide uno nuevo desde el aviso que verás en pantalla.</p>
+<a class="btn" href="${escapeHtml(frontendUrl)}/login" style="text-decoration:none">Ir a iniciar sesión</a>`.trim();
+
+  return layout({
+    title: `${appName} · ${exito ? 'Correo confirmado' : 'Enlace no válido'}`,
+    body,
+    nonce
+  });
+};
+
 /** Pantalla para un enlace caducado, ya usado o manipulado. */
 exports.renderInvalidToken = ({ appName, frontendUrl, nonce }) => {
   const body = `
