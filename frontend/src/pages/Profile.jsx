@@ -103,10 +103,14 @@ export default function Profile() {
     
     try {
       setError(null);
-      await deleteCurrentUser();
-      // Si se elimina exitosamente, limpiar token y redirigir
+      const result = await deleteCurrentUser();
       localStorage.removeItem('token');
-      alert('Tu cuenta ha sido eliminada exitosamente');
+      if (result?.blocked) {
+        alert(result.message);
+        navigate('/login');
+        return;
+      }
+      alert(result?.message || 'Tu cuenta ha sido eliminada exitosamente');
       navigate('/demo');
     } catch (err) {
       setError('Error al eliminar cuenta: ' + err.message);

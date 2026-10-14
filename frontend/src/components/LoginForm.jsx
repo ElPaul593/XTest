@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/auth';
 import { setSession, homePathForRole } from '../services/session';
 
@@ -158,13 +158,14 @@ export default function LoginForm() {
             />
             {passwordError && <div className="error">{passwordError}</div>}
             <div className="forgot-password">
-              <button 
-                type="button" 
-                className="forgot-link"
-                onClick={() => alert('Función de recuperar contraseña - Aquí se implementaría el flujo de recuperación')}
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                <button type="button" className="forgot-link" onClick={() => navigate('/recuperar-contrasena')}>
+                  Recuperar contraseña
+                </button>
+                <button type="button" className="forgot-link" onClick={() => navigate('/recuperar-cuenta')}>
+                  Recuperar cuenta
+                </button>
+              </div>
             </div>
           </div>
 
@@ -172,7 +173,7 @@ export default function LoginForm() {
             Entrar
           </button>
 
-          {error && <div className="error">{error}</div>}
+          {error && <div className="error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}
         </form>
       </div>
     </main>

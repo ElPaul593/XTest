@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { listUsers, createUser, updateUser, deleteUser } from '../../services/users';
+import { listUsers, createUser, updateUser, deleteUser, restoreUser } from '../../services/users';
 import { getRutas } from '../../services/rutas';
 
 const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
@@ -11,6 +11,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
   const [form, setForm] = useState(emptyCreate);
   const [editingId, setEditingId] = useState(null);
@@ -91,10 +92,24 @@ export default function AdminUsers() {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este usuario?')) return;
     try {
-      await deleteUser(id);
+      setFeedback(null);
+      const result = await deleteUser(id);
+      if (result?.message) setFeedback({ type: result.blocked ? 'warning' : 'success', text: result.message });
       load();
     } catch (e) {
-      alert(e.message);
+      setError(e.message);
+    }
+  };
+
+  const handleRestore = async (id) => {
+    if (!window.confirm('¿Restaurar esta cuenta? Sus datos e historial se conservarán.')) return;
+    try {
+      setFeedback(null);
+      const result = await restoreUser(id);
+      setFeedback({ type: 'success', text: result.message });
+      load();
+    } catch (e) {
+      setError(e.message);
     }
   };
 
@@ -141,6 +156,11 @@ export default function AdminUsers() {
         </div>
 
         {error && <div className="error-message">{error}</div>}
+        {feedback && (
+          <div className={feedback.type === 'warning' ? 'error-message' : 'success-message'} role="status">
+            {feedback.text}
+          </div>
+        )}
         {loading ? (
           <div className="loading-spinner"></div>
         ) : users.length === 0 ? (
@@ -150,7 +170,7 @@ export default function AdminUsers() {
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Teléfono</th><th>Provincia</th><th>Rol</th><th>Acciones</th>
+                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Teléfono</th><th>Provincia</th><th>Estado</th><th>Rol</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,6 +185,19 @@ export default function AdminUsers() {
                       <td>{editing ? <input className="input" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} /> : (u.email || '—')}</td>
                       <td>{editing ? <input className="input" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} /> : u.telefono}</td>
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 8px',
+                          borderRadius: '999px',
+                          background: u.isDeleted ? '#fee2e2' : '#dcfce7',
+                          color: u.isDeleted ? '#b91c1c' : '#166534',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}>
+                          {u.isDeleted ? 'Bloqueada' : 'Activa'}
+                        </span>
+                      </td>
                       <td>
                         {editing
                           ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option></select>
@@ -199,7 +232,11 @@ export default function AdminUsers() {
                         ) : (
                           <div className="action-buttons">
                             <button className="btn btn-secondary" onClick={() => startEdit(u)}>Editar</button>
-                            <button className="btn btn-ghost" onClick={() => handleDelete(id)}>Eliminar</button>
+                            {u.isDeleted ? (
+                              <button className="btn btn-primary" onClick={() => handleRestore(id)}>Restaurar</button>
+                            ) : (
+                              <button className="btn btn-ghost" onClick={() => handleDelete(id)}>Eliminar</button>
+                            )}
                           </div>
                         )}
                       </td>

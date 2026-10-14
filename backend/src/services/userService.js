@@ -1,6 +1,10 @@
 const bcrypt = require('bcrypt');
 const UserRepo = require('../repositories/userRepo');
 const AuthService = require('./authService');
+const Reserva = require('../models/reservaModel');
+const Calificacion = require('../models/calificacionModel');
+const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
+const Hold = require('../models/holdModel');
 
 const PREFERENCIAS_VALIDAS = new Set(['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro']);
 
@@ -71,4 +75,35 @@ exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   return UserRepo.updateById(id, update);
 };
 
-exports.remove = async (id) => UserRepo.deleteById(id);
+/**
+ * Elimina físicamente una cuenta solo si nunca generó registros.
+ * Si existen reservas, calificaciones, recomendaciones o reservas temporales,
+ * conserva el historial y bloquea la cuenta para proteger la integridad.
+ */
+exports.remove = async (id) => {
+  const [reservas, calificaciones, recomendaciones, holds] = await Promise.all([
+    Reserva.exists({ user: id }),
+    Calificacion.exists({ usuario: id }),
+    LugaresRecomendados.exists({ usuario: id }),
+    Hold.exists({ userId: String(id) })
+  ]);
+
+  const hasHistory = Boolean(reservas || calificaciones || recomendaciones || holds);
+
+  if (hasHistory) {
+    const user = await UserRepo.markAsDeleted(
+      id,
+      'Cuenta bloqueada por existir historial o registros asociados'
+    );
+
+    return user ? { user, physicallyDeleted: false, blocked: true } : null;
+  }
+
+  const deleted = await UserRepo.deleteById(id);
+  return deleted ? { user: deleted, physicallyDeleted: true, blocked: false } : null;
+};
+
+exports.restore = async (id) => {
+  const user = await UserRepo.restore(id);
+  return user ? { user, restored: true } : null;
+};

@@ -89,7 +89,10 @@ const UserSchema = new mongoose.Schema({
 
   password: { type: String, required: true, minlength: 6 },
 
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date },
+  deletionReason: { type: String }
 });
 
 
