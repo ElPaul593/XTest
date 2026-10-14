@@ -2,6 +2,10 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+// `crypto` ya se importa arriba: ambas ramas lo añadieron por su cuenta y el
+// merge dejó la línea duplicada.
+const AccountRecovery = require('../models/accountRecoveryModel');
+const RecoveryEmailService = require('./accountRecoveryEmailService');
 const AppError = require('../utils/AppError');
 const { validarCedulaEcuatoriana } = require('../utils/cedulaValidator');
 const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
@@ -325,6 +329,9 @@ exports.login = async ({ cedula, pasaporte, password }) => {
     user = await User.findOne({ pasaporte: pasaporteLimpio });
   }
   if (!user) throw new AppError('Usuario o contraseña inválidos', 401);
+  if (user.isDeleted) {
+    throw new AppError('Las credenciales no son válidas o la cuenta no está disponible.\nSi necesitas recuperar el acceso, usa “Recuperar cuenta”.', 403);
+  }
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) throw new AppError('Usuario o contraseña inválidos', 401);
@@ -596,4 +603,110 @@ exports.loginConGoogle = async ({ credential }) => {
   }
 
   return emitirToken(user);
+};
+
+const GENERIC_RECOVERY_MESSAGE = 'Si los datos coinciden con una cuenta recuperable, recibirás instrucciones en el correo registrado.';
+const RECOVERY_TTL_MS = 10 * 60 * 1000;
+const MAX_RECOVERY_ATTEMPTS = 5;
+
+function hashRecoveryCode(code) {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+exports.requestRecovery = async ({ cedula, pasaporte, email, purpose = 'account' }) => {
+  const identifier = cedula
+    ? { cedula: String(cedula).replace(/\D/g, '') }
+    : { pasaporte: String(pasaporte).trim() };
+  /**
+   * ADAPTADO AL MODELO DE `estado` AL FUSIONAR RAMAS.
+   *
+   * La consulta original filtraba por `isDeleted: purpose === 'account'`. Ese
+   * campo desapareció al unificar las bajas en `estado`
+   * (ACTIVO / BLOQUEADO / ELIMINADO), así que se traduce:
+   *
+   *   purpose 'account'  → la cuenta NO está activa (bloqueada o dada de baja).
+   *                        Son las que tiene sentido «recuperar».
+   *   purpose 'password'  → la cuenta sí está activa; aquí solo se cambia la
+   *                        contraseña. Se acepta `estado` ausente para no dejar
+   *                        fuera a los usuarios anteriores a la migración.
+   */
+  const filtroEstado = purpose === 'account'
+    ? { estado: { $in: [ESTADOS.BLOQUEADO, ESTADOS.ELIMINADO] } }
+    : { estado: { $in: [ESTADOS.ACTIVO, null] } };
+
+  const user = await User.findOne({
+    ...identifier,
+    email: String(email).trim().toLowerCase(),
+    ...filtroEstado
+  });
+
+  if (!user) return { message: GENERIC_RECOVERY_MESSAGE };
+
+  await AccountRecovery.updateMany(
+    { user: user._id, usedAt: { $exists: false } },
+    { $set: { usedAt: new Date() } }
+  );
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  const recovery = await AccountRecovery.create({
+    user: user._id,
+    codeHash: hashRecoveryCode(code),
+    purpose,
+    expiresAt: new Date(Date.now() + RECOVERY_TTL_MS)
+  });
+
+  await RecoveryEmailService.sendCode(user.email, code);
+  return { message: GENERIC_RECOVERY_MESSAGE, recoveryId: recovery._id.toString() };
+};
+
+exports.confirmRecovery = async ({ recoveryId, code, password }) => {
+  const recovery = await AccountRecovery.findOne({
+    _id: recoveryId,
+    usedAt: { $exists: false },
+    expiresAt: { $gt: new Date() }
+  });
+
+  if (!recovery || recovery.attempts >= MAX_RECOVERY_ATTEMPTS) {
+    throw new AppError('Código inválido o expirado', 400);
+  }
+
+  const valid = crypto.timingSafeEqual(
+    Buffer.from(recovery.codeHash),
+    Buffer.from(hashRecoveryCode(code))
+  );
+
+  if (!valid) {
+    recovery.attempts += 1;
+    await recovery.save();
+    throw new AppError('Código inválido o expirado', 400);
+  }
+
+  const isAccountRecovery = recovery.purpose !== 'password';
+  const hash = await bcrypt.hash(password, 10);
+
+  // Mismo cambio que en `requestRecovery`: `isDeleted` se traduce a `estado`.
+  // Recuperar la cuenta la devuelve a ACTIVO y limpia el motivo del bloqueo, que
+  // ya no describe la situación.
+  const user = await User.findOneAndUpdate(
+    isAccountRecovery
+      ? { _id: recovery.user, estado: { $in: [ESTADOS.BLOQUEADO, ESTADOS.ELIMINADO] } }
+      : { _id: recovery.user },
+    isAccountRecovery
+      ? {
+          $set: {
+            password: hash,
+            estado: ESTADOS.ACTIVO,
+            estadoMotivo: null,
+            estadoCambiadoEn: new Date()
+          }
+        }
+      : { $set: { password: hash } },
+    { new: true }
+  );
+
+  if (!user) throw new AppError('Código inválido o expirado', 400);
+
+  recovery.usedAt = new Date();
+  await recovery.save();
+  return { message: 'Cuenta recuperada exitosamente' };
 };

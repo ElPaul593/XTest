@@ -93,7 +93,19 @@ export async function deleteUser(id) {
     });
     return response.data;
   } catch (err) {
-    const message = err?.response?.data?.message || err.message || 'Error al eliminar usuario';
+    const message = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Error al eliminar usuario';
+    throw new Error(message);
+  }
+}
+
+export async function restoreUser(id) {
+  try {
+    const response = await api.post(`/users/${id}/restore`, {}, {
+      headers: getAuthHeaders()
+    });
+    return response.data;
+  } catch (err) {
+    const message = err?.response?.data?.error || err.message || 'Error al restaurar usuario';
     throw new Error(message);
   }
 }

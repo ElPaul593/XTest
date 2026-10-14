@@ -196,3 +196,21 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 
   res.json({ ok: true, message: result.message });
 });
+
+/**
+ * Recuperación de cuenta por CÓDIGO (flujo aportado en la rama remota).
+ *
+ * Es distinto del reseteo de contraseña por enlace: aquí el usuario cuya cuenta
+ * quedó bloqueada o dada de baja pide un código y lo confirma para recuperar el
+ * acceso. La lógica vive en `services/accountRecoveryEmailService.js` y
+ * `models/accountRecoveryModel.js`.
+ */
+exports.requestRecovery = asyncHandler(async (req, res) => {
+  const result = await AuthService.requestRecovery(req.body);
+  res.json({ message: result.message, recoveryId: result.recoveryId });
+});
+
+exports.confirmRecovery = asyncHandler(async (req, res) => {
+  const result = await AuthService.confirmRecovery(req.body);
+  res.json(result);
+});

@@ -108,6 +108,8 @@ router.post('/register', validate(authSchemas.register, 'body'), authController.
  *                 role: { type: string }
  */
 router.post('/login', validate(authSchemas.login, 'body'), authController.login);
+router.post('/recovery/request', validate(authSchemas.recoveryRequest, 'body'), authController.requestRecovery);
+router.post('/recovery/confirm', validate(authSchemas.recoveryConfirm, 'body'), authController.confirmRecovery);
 
 /**
  * @swagger

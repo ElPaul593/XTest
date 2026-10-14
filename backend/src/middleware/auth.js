@@ -32,6 +32,9 @@ exports.authenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+    if (user.isDeleted) {
+      return res.status(403).json({ error: 'Esta cuenta está bloqueada' });
+    }
 
     // El estado de la cuenta se revisa en CADA petición, no solo en el login: los
     // JWT viven 8 horas, así que si solo se comprobara al entrar, una cuenta

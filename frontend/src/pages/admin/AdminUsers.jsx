@@ -55,6 +55,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
   const [form, setForm] = useState(emptyCreate);
   const [editingId, setEditingId] = useState(null);
@@ -242,6 +243,11 @@ export default function AdminUsers() {
         </div>
 
         {error && <div className="error-message">{error}</div>}
+        {feedback && (
+          <div className={feedback.type === 'warning' ? 'error-message' : 'success-message'} role="status">
+            {feedback.text}
+          </div>
+        )}
         {loading ? (
           <div className="loading-spinner"></div>
         ) : users.length === 0 ? (
@@ -267,6 +273,19 @@ export default function AdminUsers() {
                       <td>{editing ? <input className="input" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} /> : (u.email || '—')}</td>
                       <td>{editing ? <input className="input" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} /> : u.telefono}</td>
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
+                      <td>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 8px',
+                          borderRadius: '999px',
+                          background: u.isDeleted ? '#fee2e2' : '#dcfce7',
+                          color: u.isDeleted ? '#b91c1c' : '#166534',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}>
+                          {u.isDeleted ? 'Bloqueada' : 'Activa'}
+                        </span>
+                      </td>
                       <td>
                         {editing
                           ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option></select>

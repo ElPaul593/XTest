@@ -125,3 +125,28 @@ exports.countByEstado = async () => {
     return acc;
   }, { ACTIVO: 0, BLOQUEADO: 0, ELIMINADO: 0 });
 };
+
+exports.markAsDeleted = async (id, deletionReason) => {
+  return User.findByIdAndUpdate(
+    id,
+    {
+      $set: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletionReason
+      }
+    },
+    { new: true, select: selectNoPassword }
+  ).lean();
+};
+
+exports.restore = async (id) => {
+  return User.findOneAndUpdate(
+    { _id: id, isDeleted: true },
+    {
+      $set: { isDeleted: false },
+      $unset: { deletedAt: 1, deletionReason: 1 }
+    },
+    { new: true, select: selectNoPassword }
+  ).lean();
+};

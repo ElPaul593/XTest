@@ -291,13 +291,26 @@ export default function LoginForm() {
               required
             />
             {passwordError && <div className="error">{passwordError}</div>}
-            <div className="forgot-password">
+            {/* Dos caminos distintos, a propósito:
+                · «¿Olvidaste tu contraseña?» abre la ventana emergente y envía un
+                  ENLACE al correo (flujo de esta rama).
+                · «Recuperar mi cuenta» lleva a la pantalla de código de 6 dígitos
+                  que vino de la rama remota, pensada para cuando la cuenta está
+                  bloqueada o dada de baja y no basta con cambiar la contraseña. */}
+            <div className="forgot-password" style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
               <button
                 type="button"
                 className="forgot-link"
                 onClick={abrirReset}
               >
                 ¿Olvidaste tu contraseña?
+              </button>
+              <button
+                type="button"
+                className="forgot-link"
+                onClick={() => navigate('/recuperar-cuenta')}
+              >
+                Recuperar mi cuenta
               </button>
             </div>
           </div>
@@ -306,7 +319,7 @@ export default function LoginForm() {
             Entrar
           </button>
 
-          {error && <div className="error">{error}</div>}
+          {error && <div className="error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}
         </form>
 
         {/* Acceso con Google. El componente no renderiza nada si el servidor no

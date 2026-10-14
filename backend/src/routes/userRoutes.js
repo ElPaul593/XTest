@@ -72,6 +72,7 @@ router.get('/me', authenticateToken, (req, res) => {
  *         description: No autorizado
  */
 router.put('/me', authenticateToken, validate(userSchemas.update, 'body'), userController.updateMe);
+router.delete('/me', authenticateToken, userController.removeMe);
 
 /**
  * @swagger
@@ -239,6 +240,7 @@ router.post('/', authenticateToken, requireAdminAccess, validate(userSchemas.cre
  *         description: Usuario no encontrado
  */
 router.put('/:id', authenticateToken, requireAdminAccess, validate(userSchemas.update, 'body'), userController.update);
+router.post('/:id/restore', authenticateToken, requireAdminAccess, userController.restore);
 
 /**
  * @swagger

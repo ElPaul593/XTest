@@ -56,6 +56,22 @@ const authSchemas = {
       'string.min': 'La contraseña debe tener al menos 6 caracteres',
       'any.required': 'La contraseña es requerida'
     })
+  }),
+
+  // Recuperación de cuenta por CÓDIGO de 6 dígitos (aportado en la rama remota).
+  // Es un flujo distinto del reseteo por enlace: sirve para recuperar el acceso a
+  // una cuenta bloqueada o dada de baja, no solo para cambiar la contraseña.
+  recoveryRequest: Joi.object({
+    cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional(),
+    pasaporte: Joi.string().min(6).max(20).optional(),
+    email: Joi.string().email().required(),
+    purpose: Joi.string().valid('account', 'password').default('account')
+  }).or('cedula', 'pasaporte'),
+
+  recoveryConfirm: Joi.object({
+    recoveryId: Joi.string().required(),
+    code: Joi.string().length(6).pattern(/^\d+$/).required(),
+    password: Joi.string().min(6).required()
   })
 };
 
@@ -164,7 +180,7 @@ const rutaSchemas = {
     from: Joi.string().required().min(2).max(50),
     to: Joi.string().required().min(2).max(50),
     price: Joi.number().min(3).max(20).required(),
-    duration: Joi.string().required(),
+    duration: Joi.number().strict().min(1).max(16).required(),
     horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
     seats: Joi.number().integer().min(1).max(80).optional(),
   }),

@@ -38,6 +38,15 @@ export async function createRuta(data) {
   }
 }
 
+export async function updateRuta(id, data) {
+  try {
+    const response = await api.put(`/rutas/${id}`, data);
+    return response.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.response?.data?.error || err.message || 'Error al actualizar la ruta');
+  }
+}
+
 /**
  * Elimina una ruta por ID (Admin).
  */

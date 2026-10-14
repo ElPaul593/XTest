@@ -143,6 +143,42 @@ exports.removeMe = async (req, res) => {
  * PATCH /api/users/:id/estado — bloquear, reactivar o dar de baja una cuenta (Admin).
  * Sustituye al borrado físico como herramienta de moderación.
  */
+/**
+ * PATCH/POST /api/users/:id/restore — reactivar una cuenta (Admin).
+ *
+ * Viene de la rama remota, que modelaba las bajas con `isDeleted`. Al unificar
+ * en el campo `estado` (ACTIVO / BLOQUEADO / ELIMINADO), «restaurar» es
+ * exactamente volver a ACTIVO, así que esto es un alias de `cambiarEstado` y no
+ * una segunda forma de hacer lo mismo. Se conserva el nombre y la forma de la
+ * respuesta para no romper su ruta, su test ni el frontend que ya los usa.
+ */
+exports.restore = async (req, res) => {
+  try {
+    const updated = await UserService.cambiarEstado(req.params.id, 'ACTIVO', {
+      actorId: req.user?._id || null
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'La cuenta no existe' });
+    }
+
+    res.json({
+      message: 'Cuenta restaurada exitosamente. Sus datos e historial fueron conservados.',
+      restored: true,
+      user: updated
+    });
+  } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    // 409 = ya estaba activa. Para «restaurar» eso no es un fallo.
+    if (err.statusCode === 409) {
+      return res.status(409).json({ error: 'La cuenta ya está activa' });
+    }
+    res.status(err.statusCode || 400).json({ error: err.message || 'No se pudo restaurar la cuenta' });
+  }
+};
+
 exports.cambiarEstado = async (req, res) => {
   try {
     const { estado, motivo } = req.body;

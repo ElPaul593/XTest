@@ -16,6 +16,7 @@ import ValidarCedula from './pages/ValidarCedula';
 import SeatBooking from './pages/SeatBooking';
 import LugaresTuristicos from './pages/LugaresTuristicos';
 import Agente from './pages/Agente';
+import AccountRecovery from './pages/AccountRecovery';
 
 export default function App() {
   return (
@@ -25,6 +26,8 @@ export default function App() {
         <Route path="/" element={<Navigate to="/demo" replace />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/recuperar-cuenta" element={<AccountRecovery />} />
+        <Route path="/recuperar-contrasena" element={<AccountRecovery purpose="password" />} />
         <Route path="/register" element={<Register />} />
 
         {/* Administración (solo rol admin) */}
