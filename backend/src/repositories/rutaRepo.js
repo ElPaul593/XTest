@@ -55,4 +55,10 @@ exports.create = async (data) => {
   return r.save();
 };
 
+exports.updateById = async (id, data) => Ruta.findByIdAndUpdate(
+  id,
+  { $set: data },
+  { new: true, runValidators: true }
+).lean();
+
 exports.deleteById = async (id) => Ruta.findByIdAndDelete(id).lean();

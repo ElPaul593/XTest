@@ -101,6 +101,7 @@ router.get('/:id', rutaController.getById);
  *         description: Acceso denegado (solo admin)
  */
 router.post('/', authenticateToken, requireAdminAccess, validate(rutaSchemas.create, 'body'), rutaController.create);
+router.put('/:id', authenticateToken, requireAdminAccess, validate(rutaSchemas.create, 'body'), rutaController.update);
 
 /**
  * @swagger

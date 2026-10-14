@@ -40,6 +40,17 @@ exports.create = async (req, res) => {
   }
 };
 
+exports.update = async (req, res) => {
+  try {
+    const ruta = await RutaService.update(req.params.id, req.body);
+    if (!ruta) return res.status(404).json({ error: 'Ruta no encontrada' });
+    res.json(ruta);
+  } catch (err) {
+    if (err.name === 'CastError') return res.status(400).json({ error: 'ID inválido' });
+    res.status(400).json({ error: err.message });
+  }
+};
+
 exports.remove = async (req, res) => {
   try {
     const deleted = await RutaService.remove(req.params.id);
