@@ -22,10 +22,20 @@ export default function GoogleSignInButton({ onCredential, onError, texto = 'sig
   const contenedorRef = useRef(null);
   const [estado, setEstado] = useState('cargando'); // cargando | listo | deshabilitado | error
 
-  // Se guarda en una ref para que el callback que registra GIS use siempre la
-  // versión más reciente sin tener que volver a inicializar el botón.
+  /**
+   * Ambos callbacks van en refs, y NINGUNO en las dependencias del efecto.
+   *
+   * `LoginForm` pasa `onError` como función en línea (`onError={(m) => ...}`),
+   * así que su identidad cambia en cada render. Tenerlo en el array de
+   * dependencias hacía que el efecto se volviera a ejecutar continuamente: cada
+   * pasada marcaba la anterior como cancelada, y como `setEstado('listo')` solo
+   * corre si no está cancelada, el componente podía quedarse dando vueltas sin
+   * llegar a mostrar el botón.
+   */
   const onCredentialRef = useRef(onCredential);
+  const onErrorRef = useRef(onError);
   useEffect(() => { onCredentialRef.current = onCredential; }, [onCredential]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
     let cancelado = false;
@@ -73,7 +83,7 @@ export default function GoogleSignInButton({ onCredential, onError, texto = 'sig
             if (respuesta?.credential) {
               onCredentialRef.current?.(respuesta.credential);
             } else {
-              onError?.('Google no devolvió ninguna credencial.');
+              onErrorRef.current?.('Google no devolvió ninguna credencial.');
             }
           }
         });
@@ -92,20 +102,28 @@ export default function GoogleSignInButton({ onCredential, onError, texto = 'sig
         if (cancelado) return;
         console.error('[GoogleSignInButton]', err);
         setEstado('error');
-        onError?.('No se pudo cargar el acceso con Google.');
+        onErrorRef.current?.('No se pudo cargar el acceso con Google.');
       }
     })();
 
     return () => { cancelado = true; };
-  }, [texto, onError]);
+  }, [texto]);
 
   if (estado === 'deshabilitado') return null;
 
   return (
     <div className="google-signin">
-      {estado === 'cargando' && (
-        <div className="google-signin-placeholder">Cargando acceso con Google…</div>
-      )}
+      {/* El separador vive AQUÍ, no en el formulario que usa el componente.
+          Estaba fuera y se quedaba colgado: cuando Google no está configurado el
+          componente devuelve null, pero el «o» seguía pintándose con un hueco
+          vacío debajo. Al estar dentro, separador y botón aparecen y desaparecen
+          juntos. */}
+      {/* Mientras se consulta si Google está configurado no se pinta NADA
+          visible: si después resulta que no lo está, el separador y el texto de
+          «Cargando…» desaparecían y el formulario daba un salto. El contenedor
+          del botón sí tiene que existir desde el principio, porque Google
+          inyecta su botón dentro. */}
+      {estado !== 'cargando' && <div className="auth-divider"><span>o</span></div>}
       {estado === 'error' && (
         <div className="error">
           No se pudo cargar el acceso con Google. Puedes entrar con tu cédula o pasaporte.

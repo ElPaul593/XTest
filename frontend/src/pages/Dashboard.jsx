@@ -4,7 +4,7 @@ import { getUserReservations, cancelReserva, createMultiSeatReserva } from '../s
 import { getRutas } from '../services/rutas';
 import BusSeatSelector from '../components/BusSeatSelector';
 import BoletoQR from '../components/BoletoQR';
-import { AlertPopup, ConfirmPopup } from '../components/Popup';
+import Popup, { AlertPopup, ConfirmPopup } from '../components/Popup';
 import useFeedback from '../hooks/useFeedback';
 
 /**
@@ -238,48 +238,75 @@ export default function Dashboard() {
           <p>Gestiona tus reservas de viaje</p>
         </div>
 
-        <div className="quick-action-bar" style={{ marginBottom: '20px', padding: '20px', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', borderRadius: '12px', textAlign: 'center' }}>
-          <h3 style={{ color: 'white', margin: '0 0 10px' }}>¿Quieres hacer una nueva reserva?</h3>
-          <button
-            onClick={() => setShowQuickReserve(true)}
-            style={{ background: 'white', color: '#11998e', border: 'none', padding: '12px 24px', borderRadius: '25px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}
-          >
-            🚌 Reserva Rápida
+        {/* Antes: banner con degradado verde en línea, fuera de la paleta. */}
+        <div className="quick-action">
+          <div>
+            <h3>¿Quieres hacer una nueva reserva?</h3>
+            <p>Elige ruta y fecha y selecciona tu asiento en el mapa del bus.</p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={() => setShowQuickReserve(true)}>
+            🚌 Reserva rápida
           </button>
         </div>
 
-        {showQuickReserve && !showSeatSelector && (
-          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div className="modal-content" style={{ background: 'white', borderRadius: '16px', padding: '30px', maxWidth: '500px', width: '90%', position: 'relative' }}>
-              <button onClick={() => setShowQuickReserve(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>✕</button>
-              <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>🚌 Reserva Rápida</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Selecciona tu ruta:</label>
-                  <select value={selectedRuta} onChange={e => setSelectedRuta(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd' }}>
-                    <option value="">-- Elige una ruta --</option>
-                    {rutas.map(r => (
-                      <option key={r._id || r.id} value={r._id || r.id}>
-                        {r.from} ➜ {r.to} (${r.price})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Fecha de viaje:</label>
-                  <input type="date" value={selectedFecha} onChange={e => setSelectedFecha(e.target.value)} min={today} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '2px solid #ddd' }} />
-                </div>
-                <button onClick={handleStartSeatSelection} disabled={!selectedRuta || !selectedFecha} style={{ background: '#11998e', color: 'white', padding: '15px', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  Ver Asientos Disponibles
-                </button>
-              </div>
-            </div>
+        {/* Antes era un div con fondo blanco y `zIndex: 1000` en línea: el mismo
+            valor que la barra superior, que por eso quedaba por encima del
+            diálogo (#32BUG). Ahora usa la ventana emergente común, que se monta
+            con un portal en la capa de modales. */}
+        <Popup
+          open={showQuickReserve && !showSeatSelector}
+          onClose={() => setShowQuickReserve(false)}
+          title="Reserva rápida"
+          subtitle="Elige la ruta y el día del viaje."
+          icon="🚌"
+        >
+          <div className="field">
+            <label htmlFor="qr-ruta">Ruta</label>
+            <select
+              id="qr-ruta"
+              className="input"
+              value={selectedRuta}
+              onChange={e => setSelectedRuta(e.target.value)}
+            >
+              <option value="">— Elige una ruta —</option>
+              {rutas.map(r => (
+                <option key={r._id || r.id} value={r._id || r.id}>
+                  {r.from} ➜ {r.to} (${r.price})
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+          <div className="field">
+            <label htmlFor="qr-fecha">Fecha de viaje</label>
+            <input
+              id="qr-fecha"
+              className="input"
+              type="date"
+              value={selectedFecha}
+              onChange={e => setSelectedFecha(e.target.value)}
+              min={today}
+            />
+          </div>
+          <div className="popup-footer">
+            <button type="button" className="btn btn-secondary" onClick={() => setShowQuickReserve(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleStartSeatSelection}
+              disabled={!selectedRuta || !selectedFecha}
+            >
+              Ver asientos disponibles
+            </button>
+          </div>
+        </Popup>
 
+        {/* zIndex 2000: por encima de la barra superior (1000). Con 1000 empataban
+            y la barra se pintaba encima del selector (#32BUG). */}
         {showSeatSelector && (
-          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: 'white', borderRadius: '16px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
+          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+            <div style={{ maxWidth: '760px', width: '100%', maxHeight: '90vh', overflow: 'auto', borderRadius: '28px' }}>
               <BusSeatSelector
                 rutaId={changingSeatFor?.rutaId ? String(changingSeatFor.rutaId) : (selectedRuta ? String(selectedRuta) : '')}
                 fecha={changingSeatFor?.fecha || selectedFecha}
@@ -345,15 +372,18 @@ export default function Dashboard() {
                   </div>
                   <div className="boleto-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
                       onClick={() => setQrReserva(reserva)}
-                      style={{ backgroundColor: '#2d3a8c', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}
+                      style={{ marginTop: '10px' }}
                     >
                       🎫 Ver QR
                     </button>
                     <button
-                      className="change-seat-btn"
+                      type="button"
+                      className="btn btn-secondary btn-sm change-seat-btn"
                       onClick={() => handleChangeSeat(reserva)}
-                      style={{ backgroundColor: '#11998e', color: 'white', padding: '8px 16px', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}
+                      style={{ marginTop: '10px' }}
                     >
                       🔄 Cambiar Asiento
                     </button>

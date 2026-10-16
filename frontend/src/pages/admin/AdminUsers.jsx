@@ -274,19 +274,6 @@ export default function AdminUsers() {
                       <td>{editing ? <input className="input" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} /> : u.telefono}</td>
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
                       <td>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 8px',
-                          borderRadius: '999px',
-                          background: u.isDeleted ? '#fee2e2' : '#dcfce7',
-                          color: u.isDeleted ? '#b91c1c' : '#166534',
-                          fontSize: '12px',
-                          fontWeight: 600
-                        }}>
-                          {u.isDeleted ? 'Bloqueada' : 'Activa'}
-                        </span>
-                      </td>
-                      <td>
                         {editing
                           ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option></select>
                           : (u.role || 'USER').toUpperCase()}

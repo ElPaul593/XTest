@@ -1,5 +1,19 @@
 # Catálogo de fallas documentadas (`#NBUG`)
 
+> **Estado actualizado.** Este catálogo se escribió cuando las fallas solo se
+> documentaban. Después se corrigieron muchas; el comentario de cada una en el código
+> dice «CORREGIDO» cuando aplica.
+>
+> | Estado | Marcas |
+> |---|---|
+> | Corregidas | `#2`–`#17`, `#35` |
+> | Corregidas en el rediseño | `#32` (diálogos por debajo de la barra) en «Mis reservas» |
+> | Diagnóstico corregido | `#27`: el archivo **no** estaba muerto |
+> | Pendientes de borrado (bloqueado por permisos) | `#1`, `#18`–`#20`, `#26`, `#30`, `#31` |
+> | Pendientes | `#21`–`#25`, `#28`, `#29`, `#33`, `#34` |
+>
+> El registro completo de cambios está en [CAMBIOS.md](CAMBIOS.md).
+
 Índice de las fallas detectadas en el proyecto. Cada entrada está marcada **en el
 código** con un comentario `#NBUG` que explica el problema, su consecuencia real y
 cómo se verificó.

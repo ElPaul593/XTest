@@ -48,6 +48,20 @@
   --glass-backdrop: rgba(0, 0, 0, 0.62);
 
   /* ------------------------------------------------------------------
+     Fondo de la aplicación
+     Hoy es negro con dos manchas amarillas difusas. Para poner una
+     imagen más adelante NO hay que tocar ningún componente: basta
+     definir --app-bg-image aquí con una url(...) y ajustar
+     --app-bg-overlay para que el texto siga legible encima.
+       --app-bg-image: url('/fondo.jpg');
+     La capa de velo existe desde ya, así que la imagen entrará
+     atenuada y el cristal se seguirá leyendo.
+     ------------------------------------------------------------------ */
+  --app-bg-image: none;
+  --app-bg-overlay: rgba(10, 10, 10, 0.82);
+  --app-bg-blur: 0px;
+
+  /* ------------------------------------------------------------------
      Capas (z-index)
      Centralizadas para que las ventanas emergentes queden SIEMPRE por
      encima del navbar fijo, que vive en la capa 1000.
@@ -64,10 +78,19 @@
   --spacing-lg: 16px;
   --spacing-xl: 24px;
   
-  /* Bordes */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* ------------------------------------------------------------------
+     Bordes
+     Radios generosos: es lo que más separa visualmente una aplicación
+     actual de una plantilla antigua. Se suben los tres existentes (antes
+     6/8/12) y se añaden dos tamaños mayores para tarjetas y diálogos.
+     Al estar centralizados, basta tocar esto para cambiar el carácter de
+     toda la interfaz.
+     ------------------------------------------------------------------ */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
   
   /* Tipografía */
   --font-size-sm: 12px;

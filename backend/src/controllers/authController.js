@@ -132,15 +132,21 @@ exports.googleConfig = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/auth/forgot-password
- * Solicita el enlace de recuperación. Responde siempre 200 con el mismo mensaje
- * exista o no el correo, para no revelar qué cuentas están registradas.
+ *
+ * Acepta correo, cédula o pasaporte. Los dos últimos existen para quien no
+ * recuerda con qué dirección se registró: se localiza la cuenta y el enlace sale
+ * al correo que tenga guardado, devolviendo una pista enmascarada de cuál es.
+ *
+ * Responde 200 exista o no la cuenta, para no revelar qué datos están registrados.
  */
 exports.forgotPassword = asyncHandler(async (req, res) => {
-  const result = await AuthService.requestPasswordReset({ email: req.body.email });
+  const { email, cedula, pasaporte } = req.body;
+  const result = await AuthService.requestPasswordReset({ email, cedula, pasaporte });
 
   res.json({
     ok: true,
-    message: result.message
+    message: result.message,
+    destinoEnmascarado: result.destinoEnmascarado || null
   });
 });
 

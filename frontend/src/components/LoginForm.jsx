@@ -189,25 +189,51 @@ export default function LoginForm() {
     e.preventDefault();
     setResetError(null);
 
-    const email = resetEmail.trim();
-    if (!email) {
-      setResetError('Introduce el correo con el que te registraste.');
+    const valor = resetEmail.trim();
+    if (!valor) {
+      setResetError('Escribe tu correo, tu cédula o tu pasaporte.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setResetError('Ese correo no tiene un formato válido.');
-      return;
+
+    /**
+     * Se deduce qué escribió el usuario, para no obligarle a elegir en un
+     * selector. La regla es simple y predecible:
+     *   · lleva "@"        -> correo
+     *   · solo dígitos     -> cédula
+     *   · cualquier otra   -> pasaporte
+     * Así quien olvidó con qué correo se registró puede poner su cédula y el
+     * enlace sale igualmente a la dirección que tenga guardada.
+     */
+    let cuerpo;
+    if (valor.includes('@')) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) {
+        setResetError('Ese correo no tiene un formato válido.');
+        return;
+      }
+      cuerpo = { email: valor };
+    } else if (/^\d+$/.test(valor)) {
+      if (valor.length < 6 || valor.length > 10) {
+        setResetError('La cédula debe tener entre 6 y 10 dígitos.');
+        return;
+      }
+      cuerpo = { cedula: valor };
+    } else {
+      if (valor.length < 6 || valor.length > 20) {
+        setResetError('El pasaporte debe tener entre 6 y 20 caracteres.');
+        return;
+      }
+      cuerpo = { pasaporte: valor };
     }
 
     try {
       setResetEnviando(true);
-      const resultado = await requestPasswordReset(email);
+      const resultado = await requestPasswordReset(cuerpo);
 
       setResetOpen(false);
       setResetEmail('');
       mostrarExito(
         resultado?.message ||
-          'Si el correo corresponde a una cuenta registrada, recibirás un enlace para restablecer tu contraseña.',
+          'Si los datos corresponden a una cuenta registrada, recibirás un enlace para restablecer tu contraseña.',
         'Revisa tu correo'
       );
     } catch (err) {
@@ -303,7 +329,7 @@ export default function LoginForm() {
                 className="forgot-link"
                 onClick={abrirReset}
               >
-                ¿Olvidaste tu contraseña?
+                ¿Olvidaste tu contraseña o tu correo?
               </button>
               <button
                 type="button"
@@ -322,11 +348,9 @@ export default function LoginForm() {
           {error && <div className="error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}
         </form>
 
-        {/* Acceso con Google. El componente no renderiza nada si el servidor no
-            tiene GOOGLE_CLIENT_ID configurado, así que el formulario de cédula
-            sigue funcionando igual sin él. */}
-        <div className="auth-divider"><span>o</span></div>
-
+        {/* Acceso con Google. Si el servidor no tiene GOOGLE_CLIENT_ID, el
+            componente no renderiza NADA (separador incluido) y el formulario de
+            cédula sigue funcionando igual. */}
         <GoogleSignInButton
           onCredential={handleGoogleCredential}
           onError={(msg) => mostrarError(msg, 'Acceso con Google')}
@@ -338,7 +362,7 @@ export default function LoginForm() {
       <Popup
         open={resetOpen}
         onClose={cerrarReset}
-        title="Recuperar contraseña"
+        title="¿Olvidaste tu contraseña o tu correo?"
         subtitle="Te enviaremos un enlace para crear una contraseña nueva."
         variant="info"
         icon="✉"
@@ -347,18 +371,25 @@ export default function LoginForm() {
       >
         <form onSubmit={handleResetSubmit} noValidate>
           <div className="field">
-            <label htmlFor="reset-email">Correo electrónico de tu cuenta</label>
+            <label htmlFor="reset-identificador">Correo, cédula o pasaporte</label>
+            {/* `type="text"` y no `type="email"`: el campo acepta los tres
+                identificadores y el navegador rechazaría una cédula como correo
+                mal formado antes de que llegue a enviarse. */}
             <input
-              id="reset-email"
+              id="reset-identificador"
               className="input"
-              type="email"
-              autoComplete="email"
+              type="text"
+              autoComplete="username"
               value={resetEmail}
               onChange={(e) => setResetEmail(e.target.value)}
-              placeholder="tucorreo@ejemplo.com"
+              placeholder="tucorreo@ejemplo.com  ·  1723456789"
               disabled={resetEnviando}
               required
             />
+            <small style={{ display: 'block', marginTop: 'var(--spacing-sm)', color: 'var(--text-muted)' }}>
+              Si no recuerdas con qué correo te registraste, escribe tu cédula o
+              pasaporte: te diremos a qué dirección enviamos el enlace.
+            </small>
           </div>
 
           <div className="popup-note">

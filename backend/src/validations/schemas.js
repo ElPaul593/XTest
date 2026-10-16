@@ -43,12 +43,27 @@ const authSchemas = {
   }),
 
   // Solicitud del enlace de recuperación de contraseña.
+  /**
+   * Solicitud del enlace de recuperación.
+   *
+   * Acepta CUALQUIERA de los tres identificadores. Antes exigía el correo, lo que
+   * dejaba sin salida justo al usuario que más lo necesita: el que no recuerda con
+   * qué dirección se registró. Con la cédula o el pasaporte se localiza la cuenta
+   * y el enlace se envía al correo que tenga guardado.
+   */
   forgotPassword: Joi.object({
-    email: Joi.string().email().required().messages({
-      'string.email': 'Introduce un correo electrónico válido',
-      'any.required': 'El correo es requerido'
-    })
-  }),
+    email: Joi.string().email().optional().messages({
+      'string.email': 'Introduce un correo electrónico válido'
+    }),
+    cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional().messages({
+      'string.pattern.base': 'La cédula debe contener solo dígitos'
+    }),
+    pasaporte: Joi.string().min(6).max(20).optional()
+  })
+    .or('email', 'cedula', 'pasaporte')
+    .messages({
+      'object.missing': 'Indica tu correo, tu cédula o tu pasaporte'
+    }),
 
   // Nueva contraseña. El token viaja en la URL, no en el cuerpo.
   resetPassword: Joi.object({

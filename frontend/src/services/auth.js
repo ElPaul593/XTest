@@ -32,9 +32,13 @@ export async function register(payload) {
  * Responde siempre con el mismo mensaje exista o no una cuenta con ese correo,
  * para que el endpoint no sirva como lista de usuarios registrados.
  */
-export async function requestPasswordReset(email) {
+export async function requestPasswordReset(datos) {
   try {
-    const resp = await api.post('/auth/forgot-password', { email });
+    // Acepta `{ email }`, `{ cedula }` o `{ pasaporte }`. Se admite también una
+    // cadena suelta por compatibilidad con las llamadas antiguas, que pasaban
+    // solo el correo.
+    const cuerpo = typeof datos === 'string' ? { email: datos } : datos;
+    const resp = await api.post('/auth/forgot-password', cuerpo);
     return resp.data;
   } catch (err) {
     const message =

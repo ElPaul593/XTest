@@ -126,27 +126,8 @@ exports.countByEstado = async () => {
   }, { ACTIVO: 0, BLOQUEADO: 0, ELIMINADO: 0 });
 };
 
-exports.markAsDeleted = async (id, deletionReason) => {
-  return User.findByIdAndUpdate(
-    id,
-    {
-      $set: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletionReason
-      }
-    },
-    { new: true, select: selectNoPassword }
-  ).lean();
-};
-
-exports.restore = async (id) => {
-  return User.findOneAndUpdate(
-    { _id: id, isDeleted: true },
-    {
-      $set: { isDeleted: false },
-      $unset: { deletedAt: 1, deletionReason: 1 }
-    },
-    { new: true, select: selectNoPassword }
-  ).lean();
-};
+/*
+ * Eliminados tras la fusión con la rama remota: `markAsDeleted` y `restore`
+ * escribían `isDeleted`, un campo que ya no existe en el modelo, y nadie los
+ * llamaba. La baja y la reactivación van por `updateEstadoById`.
+ */

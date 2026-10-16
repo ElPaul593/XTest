@@ -47,3 +47,6 @@
 /* 5 · Acabado: glassmorphism y ventanas emergentes */
 @import './components/glass.css';
 @import './components/modal.css';
+
+/* 6 · Tema final: identidad visual completa. Va el último a propósito. */
+@import './theme/app.css';

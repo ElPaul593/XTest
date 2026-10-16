@@ -11,10 +11,10 @@
             "id": "ad7b33985b6b2dea",
             "type": "leaf",
             "state": {
-              "type": "empty",
+              "type": "graph",
               "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
             }
           }
         ]
@@ -186,9 +186,9 @@
   },
   "active": "ad7b33985b6b2dea",
   "lastOpenFiles": [
+    "contextos/01-arquitectura-general.md",
     "wiki/glosario-tecnologico.md",
     "prompts/historial-prompts.md",
-    "contextos/01-arquitectura-general.md",
     "Untitled.canvas"
   ]
 }

@@ -240,3 +240,68 @@ describe('Recuperación de contraseña', () => {
     });
   });
 });
+
+/**
+ * Recuperación cuando el usuario NO recuerda su correo.
+ *
+ * Es el caso que motivó aceptar cédula y pasaporte: antes el endpoint exigía el
+ * correo, así que justo quien lo había olvidado se quedaba sin salida.
+ */
+describe('Recuperación por cédula o pasaporte', () => {
+  test('acepta la cédula y envía el enlace al correo guardado', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ cedula: USUARIO.cedula })
+      .expect(200);
+
+    expect(MailerService.enviarCorreo).toHaveBeenCalledTimes(1);
+    expect(MailerService.enviarCorreo.mock.calls[0][0].to).toBe(USUARIO.email);
+
+    // Se devuelve la pista enmascarada para saber en qué bandeja mirar,
+    // sin revelar la dirección completa.
+    expect(res.body.destinoEnmascarado).toBeTruthy();
+    expect(res.body.destinoEnmascarado).toContain('@');
+    expect(res.body.destinoEnmascarado).not.toBe(USUARIO.email);
+    expect(res.body.destinoEnmascarado).toContain('*');
+  });
+
+  test('el token generado por cédula sirve para cambiar la contraseña', async () => {
+    await request(app).post('/api/auth/forgot-password').send({ cedula: USUARIO.cedula });
+    const token = tokenDelUltimoCorreo();
+    expect(token).toMatch(/^[a-f0-9]{64}$/);
+
+    await request(app)
+      .post(`/api/auth/reset-password/${token}`)
+      .send({ password: 'otraClave999' })
+      .expect(200);
+
+    await request(app)
+      .post('/api/auth/login')
+      .send({ cedula: USUARIO.cedula, password: 'otraClave999' })
+      .expect(200);
+  });
+
+  test('una cédula inexistente responde igual y no envía nada', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ cedula: '1710034065' })
+      .expect(200);
+
+    expect(MailerService.enviarCorreo).not.toHaveBeenCalled();
+    expect(res.body.destinoEnmascarado).toBeNull();
+  });
+
+  test('sin ningún identificador responde 400', async () => {
+    await request(app).post('/api/auth/forgot-password').send({}).expect(400);
+    expect(MailerService.enviarCorreo).not.toHaveBeenCalled();
+  });
+
+  test('cuando se escribe el correo NO se devuelve la pista (ya se sabe cuál es)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: USUARIO.email })
+      .expect(200);
+
+    expect(res.body.destinoEnmascarado).toBeNull();
+  });
+});

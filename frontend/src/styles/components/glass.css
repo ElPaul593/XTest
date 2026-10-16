@@ -23,6 +23,30 @@
 body {
   position: relative;
   overflow-x: hidden;
+  background-color: var(--bg);
+}
+
+/**
+ * Imagen de fondo: preparada, inactiva por ahora.
+ *
+ * Mientras `--app-bg-image` valga `none`, lo único que se pinta es el gradiente
+ * del velo sobre el negro, que no se nota. Para poner una foto basta definir la
+ * variable en `base/variables.css`; no hay que tocar ningún componente ni añadir
+ * marcado.
+ *
+ * El velo se declara como primera capa del mismo `background-image`, por delante
+ * de la foto. Sin él, una imagen clara dejaría ilegible el texto blanco y el
+ * cristal perdería todo el contraste.
+ */
+body {
+  background-image:
+    linear-gradient(var(--app-bg-overlay), var(--app-bg-overlay)),
+    var(--app-bg-image);
+  background-size: cover;
+  background-position: center;
+  /* `fixed` para que la foto no se desplace con el scroll. */
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 body::before,
@@ -110,7 +134,7 @@ body::after {
 .card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
@@ -119,7 +143,7 @@ body::after {
 .item-card {
   background: var(--glass-bg-soft);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
   backdrop-filter: blur(10px) saturate(140%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.32), var(--glass-highlight);
@@ -143,7 +167,7 @@ body::after {
 .empty-state {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
@@ -381,6 +405,202 @@ select option {
   background: rgba(40, 167, 69, 0.14);
   border-color: rgba(40, 167, 69, 0.4);
   color: #ccf3d6;
+}
+
+/* --------------------------------------------------------------------------
+   Redondeo general
+   Lo que más distingue una interfaz actual de una plantilla antigua. Se aplica
+   a los elementos que NO pasan por las clases de arriba y que, si no, quedarían
+   con esquinas vivas en medio de superficies redondeadas.
+   -------------------------------------------------------------------------- */
+.table-container,
+.users-table,
+.profile-info,
+.info-group,
+.danger-zone,
+.stats-grid > *,
+.pagination,
+.loading-container,
+.empty-state {
+  border-radius: var(--radius-lg);
+}
+
+/* La tabla necesita `overflow: hidden` para que las celdas de las esquinas se
+   recorten; sin esto el redondeo del contenedor no se ve. */
+.table-container {
+  overflow: hidden;
+}
+
+.users-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.users-table thead th:first-child { border-top-left-radius: var(--radius-lg); }
+.users-table thead th:last-child  { border-top-right-radius: var(--radius-lg); }
+
+/* Imágenes de tarjeta: deben seguir la curva del contenedor. */
+.item-card-image {
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.item-card-image img {
+  border-radius: inherit;
+}
+
+/* Elementos pequeños en forma de píldora: etiquetas, contadores, badges. */
+.badge,
+.tag,
+.chip,
+.tipo,
+.estado-badge {
+  border-radius: var(--radius-pill);
+}
+
+/* Zona de peligro del perfil: separada visualmente del resto de la tarjeta. */
+.danger-zone {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: rgba(255, 68, 68, 0.06);
+  border: 1px solid rgba(255, 68, 68, 0.22);
+}
+
+/* --------------------------------------------------------------------------
+   Pantalla de recuperación de cuenta
+   -------------------------------------------------------------------------- */
+.recovery-lead {
+  margin: 0 0 var(--spacing-lg);
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+/* Indicador de los tres pasos. */
+.recovery-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0 0 var(--spacing-xl);
+  padding: 0;
+  list-style: none;
+}
+
+.recovery-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+/* Línea que une un paso con el siguiente. */
+.recovery-step:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+}
+
+.recovery-step-num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+}
+
+.recovery-step-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recovery-step.is-active .recovery-step-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.recovery-step.is-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.recovery-step.is-done .recovery-step-num {
+  background: var(--glass-accent);
+  border-color: var(--glass-accent-border);
+  color: var(--accent);
+}
+
+/* En móvil solo caben los números. */
+@media (max-width: 460px) {
+  .recovery-step-text { display: none; }
+}
+
+.recovery-footer {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--glass-border);
+  text-align: center;
+}
+
+/* Campo del código: dígitos grandes y separados, que es como se leen. */
+.input-code {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Texto de ayuda bajo un campo. */
+.field-hint {
+  display: block;
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Enlaces
+   Sin esto heredan el azul/morado por defecto del navegador, que es justo lo
+   que desentonaba en la pantalla de recuperación.
+   -------------------------------------------------------------------------- */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.18s, opacity 0.18s;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.forgot-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
 
 /* --------------------------------------------------------------------------

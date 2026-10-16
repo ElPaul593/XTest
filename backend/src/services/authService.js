@@ -329,9 +329,6 @@ exports.login = async ({ cedula, pasaporte, password }) => {
     user = await User.findOne({ pasaporte: pasaporteLimpio });
   }
   if (!user) throw new AppError('Usuario o contraseña inválidos', 401);
-  if (user.isDeleted) {
-    throw new AppError('Las credenciales no son válidas o la cuenta no está disponible.\nSi necesitas recuperar el acceso, usa “Recuperar cuenta”.', 403);
-  }
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) throw new AppError('Usuario o contraseña inválidos', 401);
@@ -387,27 +384,83 @@ exports.login = async ({ cedula, pasaporte, password }) => {
  * El correo NO se envía por SMTP desde aquí: se delega en la API consumidora
  * (ver services/mailerService.js).
  */
-exports.requestPasswordReset = async ({ email }) => {
+/**
+ * Enmascara un correo para poder decirle al usuario A DÓNDE se envió el enlace
+ * sin revelar la dirección completa.
+ *
+ *   pablo.escobar@gmail.com  ->  pa**********@g****.com
+ *
+ * Hace falta cuando alguien pide la recuperación con su cédula precisamente
+ * porque no recuerda qué correo usó: sin esta pista tendría que adivinar en qué
+ * bandeja mirar.
+ *
+ * El compromiso, consciente: devolver la pista solo cuando la cuenta existe
+ * permite deducir que una cédula está registrada. Se acepta porque sin ella la
+ * función no sirve para su propósito, y porque se enmascara lo suficiente para
+ * que no identifique a nadie que no reconozca ya su propia dirección. Si se
+ * prefiere neutralidad total, basta con dejar de incluir `destinoEnmascarado` en
+ * la respuesta: el resto del flujo no depende de él.
+ */
+function enmascararEmail(email) {
+  const texto = String(email || '');
+  const [usuario, dominio] = texto.split('@');
+  if (!usuario || !dominio) return null;
+
+  const visible = usuario.slice(0, Math.min(2, usuario.length));
+  const usuarioOculto = visible + '*'.repeat(Math.max(1, usuario.length - visible.length));
+
+  const partes = dominio.split('.');
+  const tld = partes.length > 1 ? partes.pop() : '';
+  const nombreDominio = partes.join('.');
+  const dominioOculto = nombreDominio.slice(0, 1) + '*'.repeat(Math.max(1, nombreDominio.length - 1));
+
+  return `${usuarioOculto}@${dominioOculto}${tld ? '.' + tld : ''}`;
+}
+
+/**
+ * @param {object} datos
+ * @param {string} [datos.email]      Correo de la cuenta.
+ * @param {string} [datos.cedula]     Alternativa si no recuerda el correo.
+ * @param {string} [datos.pasaporte]  Alternativa para usuarios extranjeros.
+ */
+exports.requestPasswordReset = async ({ email, cedula, pasaporte }) => {
   const respuestaNeutra = {
     ok: true,
-    message: 'Si el correo corresponde a una cuenta registrada, recibirás un enlace para restablecer tu contraseña.'
+    message: 'Si los datos corresponden a una cuenta registrada, recibirás un enlace para restablecer tu contraseña.'
   };
 
-  if (!email) {
-    throw new AppError('El correo es requerido', 400);
+  // Se busca por el identificador que haya llegado. Permitir cédula o pasaporte
+  // es lo que da salida a quien no recuerda con qué correo se registró.
+  let filtro = null;
+  if (email) {
+    filtro = { email: String(email).trim().toLowerCase() };
+  } else if (cedula) {
+    filtro = { cedula: String(cedula).replace(/\D/g, '') };
+  } else if (pasaporte) {
+    filtro = { pasaporte: String(pasaporte).trim() };
   }
 
-  const emailLimpio = String(email).trim().toLowerCase();
-  const user = await User.findOne({ email: emailLimpio });
+  if (!filtro) {
+    throw new AppError('Indica tu correo, tu cédula o tu pasaporte', 400);
+  }
+
+  const user = await User.findOne(filtro);
 
   if (!user) {
+    return respuestaNeutra;
+  }
+
+  // Sin correo guardado no hay a dónde enviar el enlace. Pasa con cuentas
+  // antiguas creadas antes de que el correo fuera obligatorio.
+  if (!user.email) {
+    console.warn(`[authService] Reseteo solicitado para una cuenta sin correo: ${user._id}`);
     return respuestaNeutra;
   }
 
   // Una cuenta bloqueada o dada de baja no puede recuperar su acceso por sí sola:
   // reactivarla es una decisión administrativa, no un cambio de contraseña.
   if (getEstado(user) !== ESTADOS.ACTIVO) {
-    console.warn(`[authService] Reseteo solicitado para una cuenta en estado ${getEstado(user)}: ${emailLimpio}`);
+    console.warn(`[authService] Reseteo solicitado para una cuenta en estado ${getEstado(user)}: ${user.email}`);
     return respuestaNeutra;
   }
 
@@ -445,6 +498,16 @@ exports.requestPasswordReset = async ({ email }) => {
       'No se pudo enviar el correo de recuperación en este momento. Inténtalo de nuevo en unos minutos.',
       502
     );
+  }
+
+  // La pista del destino solo se añade cuando el usuario NO escribió el correo:
+  // si lo escribió él, ya sabe dónde mirar y repetírselo no aporta nada.
+  if (!email) {
+    return {
+      ...respuestaNeutra,
+      message: `Hemos enviado el enlace a ${enmascararEmail(user.email)}. Revisa esa bandeja de entrada y la carpeta de spam.`,
+      destinoEnmascarado: enmascararEmail(user.email)
+    };
   }
 
   return respuestaNeutra;

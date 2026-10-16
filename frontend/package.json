@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "start": "serve dist -s -l 3000"
+    "start": "serve dist -s -l 3001"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
