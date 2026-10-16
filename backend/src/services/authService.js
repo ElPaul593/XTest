@@ -1,6 +1,9 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+const crypto = require('crypto');
+const AccountRecovery = require('../models/accountRecoveryModel');
+const RecoveryEmailService = require('./accountRecoveryEmailService');
 const AppError = require('../utils/AppError');
 const { validarCedulaEcuatoriana } = require('../utils/cedulaValidator');
 const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
@@ -171,6 +174,9 @@ exports.login = async ({ cedula, pasaporte, password }) => {
     user = await User.findOne({ pasaporte: pasaporteLimpio });
   }
   if (!user) throw new AppError('Usuario o contraseña inválidos', 401);
+  if (user.isDeleted) {
+    throw new AppError('Las credenciales no son válidas o la cuenta no está disponible.\nSi necesitas recuperar el acceso, usa “Recuperar cuenta”.', 403);
+  }
 
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) throw new AppError('Usuario o contraseña inválidos', 401);
@@ -190,4 +196,82 @@ exports.login = async ({ cedula, pasaporte, password }) => {
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
 
   return { token, role: roleNormalized };
+};
+
+const GENERIC_RECOVERY_MESSAGE = 'Si los datos coinciden con una cuenta recuperable, recibirás instrucciones en el correo registrado.';
+const RECOVERY_TTL_MS = 10 * 60 * 1000;
+const MAX_RECOVERY_ATTEMPTS = 5;
+
+function hashRecoveryCode(code) {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+exports.requestRecovery = async ({ cedula, pasaporte, email, purpose = 'account' }) => {
+  const identifier = cedula
+    ? { cedula: String(cedula).replace(/\D/g, '') }
+    : { pasaporte: String(pasaporte).trim() };
+  const user = await User.findOne({
+    ...identifier,
+    email: String(email).trim().toLowerCase(),
+    isDeleted: purpose === 'account'
+  });
+
+  if (!user) return { message: GENERIC_RECOVERY_MESSAGE };
+
+  await AccountRecovery.updateMany(
+    { user: user._id, usedAt: { $exists: false } },
+    { $set: { usedAt: new Date() } }
+  );
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  const recovery = await AccountRecovery.create({
+    user: user._id,
+    codeHash: hashRecoveryCode(code),
+    purpose,
+    expiresAt: new Date(Date.now() + RECOVERY_TTL_MS)
+  });
+
+  await RecoveryEmailService.sendCode(user.email, code);
+  return { message: GENERIC_RECOVERY_MESSAGE, recoveryId: recovery._id.toString() };
+};
+
+exports.confirmRecovery = async ({ recoveryId, code, password }) => {
+  const recovery = await AccountRecovery.findOne({
+    _id: recoveryId,
+    usedAt: { $exists: false },
+    expiresAt: { $gt: new Date() }
+  });
+
+  if (!recovery || recovery.attempts >= MAX_RECOVERY_ATTEMPTS) {
+    throw new AppError('Código inválido o expirado', 400);
+  }
+
+  const valid = crypto.timingSafeEqual(
+    Buffer.from(recovery.codeHash),
+    Buffer.from(hashRecoveryCode(code))
+  );
+
+  if (!valid) {
+    recovery.attempts += 1;
+    await recovery.save();
+    throw new AppError('Código inválido o expirado', 400);
+  }
+
+  const isAccountRecovery = recovery.purpose !== 'password';
+  const user = await User.findOneAndUpdate(
+    { _id: recovery.user, isDeleted: isAccountRecovery },
+    isAccountRecovery
+      ? {
+          $set: { password: await bcrypt.hash(password, 10), isDeleted: false },
+          $unset: { deletedAt: 1, deletionReason: 1 }
+        }
+      : { $set: { password: await bcrypt.hash(password, 10) } },
+    { new: true }
+  );
+
+  if (!user) throw new AppError('Código inválido o expirado', 400);
+
+  recovery.usedAt = new Date();
+  await recovery.save();
+  return { message: 'Cuenta recuperada exitosamente' };
 };

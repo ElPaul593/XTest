@@ -60,7 +60,19 @@ export async function deleteUser(id) {
     });
     return response.data;
   } catch (err) {
-    const message = err?.response?.data?.message || err.message || 'Error al eliminar usuario';
+    const message = err?.response?.data?.message || err?.response?.data?.error || err.message || 'Error al eliminar usuario';
+    throw new Error(message);
+  }
+}
+
+export async function restoreUser(id) {
+  try {
+    const response = await api.post(`/users/${id}/restore`, {}, {
+      headers: getAuthHeaders()
+    });
+    return response.data;
+  } catch (err) {
+    const message = err?.response?.data?.error || err.message || 'Error al restaurar usuario';
     throw new Error(message);
   }
 }
@@ -113,10 +125,7 @@ export async function updateCurrentUser(userData) {
 
 export async function deleteCurrentUser() {
   try {
-    // Primero obtenemos el usuario actual para obtener su ID
-    const currentUser = await getCurrentUser();
-    // Luego eliminamos usando el ID
-    const response = await api.delete(`/users/${currentUser._id}`, { 
+    const response = await api.delete('/users/me', {
       headers: getAuthHeaders() 
     });
     return response.data;

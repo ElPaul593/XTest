@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getRutas, createRuta, deleteRuta } from '../../services/rutas';
+import { getRutas, createRuta, updateRuta, deleteRuta } from '../../services/rutas';
 
 const emptyForm = { from: '', to: '', price: '', duration: '', horaSalida: '08:00', seats: 40 };
 
@@ -8,6 +8,7 @@ export default function AdminRutas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -27,19 +28,36 @@ export default function AdminRutas() {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      await createRuta({
+      const payload = {
         from: form.from.trim(),
         to: form.to.trim(),
         price: Number(form.price),
-        duration: form.duration.trim(),
+        duration: Number(form.duration),
         horaSalida: form.horaSalida.trim(),
         seats: Number(form.seats) || 40
-      });
+      };
+      if (editingId) await updateRuta(editingId, payload);
+      else await createRuta(payload);
       setForm(emptyForm);
+      setEditingId(null);
       load();
     } catch (e) {
       alert(e.message);
     }
+  };
+
+  const startEdit = (ruta) => {
+    setEditingId(ruta._id || ruta.id);
+    const numericDuration = String(ruta.duration || '').match(/\d+(?:\.\d+)?/)?.[0] || '';
+    setForm({
+      from: ruta.from || '',
+      to: ruta.to || '',
+      price: ruta.price ?? '',
+      duration: numericDuration,
+      horaSalida: ruta.horaSalida || '08:00',
+      seats: ruta.seats || 40
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id) => {
@@ -76,6 +94,7 @@ export default function AdminRutas() {
                   <td>{r.horaSalida || '08:00'}</td>
                   <td>{r.seats}</td>
                   <td>
+                    <button className="btn btn-secondary" onClick={() => startEdit(r)}>Editar</button>
                     <button className="btn btn-ghost" onClick={() => handleDelete(id)}>Eliminar</button>
                   </td>
                 </tr>
@@ -97,10 +116,11 @@ export default function AdminRutas() {
             <input className="input" placeholder="Origen" value={form.from} onChange={e => setForm({ ...form, from: e.target.value })} required />
             <input className="input" placeholder="Destino" value={form.to} onChange={e => setForm({ ...form, to: e.target.value })} required />
             <input className="input" type="number" min="3" max="20" step="0.5" placeholder="Precio (USD)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
-            <input className="input" placeholder="Duración (ej: 4 horas)" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} required />
+            <input className="input" type="number" min="1" max="16" step="0.5" placeholder="Duración (horas)" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} required />
             <input className="input" type="time" value={form.horaSalida} onChange={e => setForm({ ...form, horaSalida: e.target.value })} required />
             <input className="input" type="number" min="1" max="80" placeholder="Asientos" value={form.seats} onChange={e => setForm({ ...form, seats: e.target.value })} />
-            <button type="submit" className="btn btn-primary">Crear ruta</button>
+            <button type="submit" className="btn btn-primary">{editingId ? 'Guardar cambios' : 'Crear ruta'}</button>
+            {editingId && <button type="button" className="btn btn-secondary" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancelar</button>}
           </div>
         </form>
       </div>

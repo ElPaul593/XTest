@@ -22,7 +22,20 @@ const authSchemas = {
     cedula: Joi.string().optional(),
     pasaporte: Joi.string().optional(),
     password: Joi.string().required()
-  }).or('cedula', 'pasaporte')
+  }).or('cedula', 'pasaporte'),
+
+  recoveryRequest: Joi.object({
+    cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional(),
+    pasaporte: Joi.string().min(6).max(20).optional(),
+    email: Joi.string().email().required(),
+    purpose: Joi.string().valid('account', 'password').default('account')
+  }).or('cedula', 'pasaporte'),
+
+  recoveryConfirm: Joi.object({
+    recoveryId: Joi.string().required(),
+    code: Joi.string().length(6).pattern(/^\d+$/).required(),
+    password: Joi.string().min(6).required()
+  })
 };
 
 /**
@@ -117,7 +130,7 @@ const rutaSchemas = {
     from: Joi.string().required().min(2).max(50),
     to: Joi.string().required().min(2).max(50),
     price: Joi.number().min(3).max(20).required(),
-    duration: Joi.string().required(),
+    duration: Joi.number().strict().min(1).max(16).required(),
     horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
     seats: Joi.number().integer().min(1).max(80).optional(),
   }),

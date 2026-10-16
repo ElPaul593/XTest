@@ -30,11 +30,24 @@ exports.remove = async (id) => {
 
 exports.create = async (data) => {
   const payload = { ...data };
+  payload.duration = `${Number(payload.duration)} horas`;
   if (!payload.name && payload.from && payload.to) {
     payload.name = `${payload.from} - ${payload.to}`;
   }
   const ruta = await RutaRepo.create(payload);
   return MapsService.ensureRouteMapData(ruta);
+};
+
+exports.update = async (id, data) => {
+  const payload = { ...data };
+  if (payload.from && payload.to) {
+    payload.name = `${payload.from} - ${payload.to}`;
+  }
+  if (payload.duration !== undefined) {
+    payload.duration = `${Number(payload.duration)} horas`;
+  }
+  const ruta = await RutaRepo.updateById(id, payload);
+  return ruta ? MapsService.ensureRouteMapData(ruta) : null;
 };
 
 /**

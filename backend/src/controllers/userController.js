@@ -78,11 +78,51 @@ exports.updateMe = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    const deleted = await UserService.remove(req.params.id);
-    if (!deleted) {
+    const result = await UserService.remove(req.params.id);
+    if (!result) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ message: 'User deleted successfully' });
+    if (result.blocked) {
+      return res.json({
+        message: 'La cuenta fue bloqueada porque tiene registros o historial asociado. Sus datos se conservaron.',
+        blocked: true
+      });
+    }
+    res.json({ message: 'Usuario eliminado exitosamente', deleted: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.restore = async (req, res) => {
+  try {
+    const result = await UserService.restore(req.params.id);
+    if (!result) {
+      return res.status(404).json({ error: 'La cuenta no existe o no está bloqueada' });
+    }
+    res.json({
+      message: 'Cuenta restaurada exitosamente. Sus datos e historial fueron conservados.',
+      restored: true,
+      user: result.user
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'No se pudo restaurar la cuenta' });
+  }
+};
+
+exports.removeMe = async (req, res) => {
+  try {
+    const result = await UserService.remove(req.user.id.toString());
+    if (!result) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    if (result.blocked) {
+      return res.json({
+        message: 'La cuenta fue bloqueada porque tiene registros o historial asociado. Sus datos se conservaron.',
+        blocked: true
+      });
+    }
+    res.json({ message: 'Cuenta eliminada exitosamente', deleted: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -20,3 +20,13 @@ exports.login = asyncHandler(async (req, res) => {
     role: result.role  
   });
 });
+
+exports.requestRecovery = asyncHandler(async (req, res) => {
+  const result = await AuthService.requestRecovery(req.body);
+  res.json({ message: result.message, recoveryId: result.recoveryId });
+});
+
+exports.confirmRecovery = asyncHandler(async (req, res) => {
+  const result = await AuthService.confirmRecovery(req.body);
+  res.json(result);
+});

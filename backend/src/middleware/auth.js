@@ -32,6 +32,9 @@ exports.authenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
+    if (user.isDeleted) {
+      return res.status(403).json({ error: 'Esta cuenta está bloqueada' });
+    }
 
     // Normalizar role a minúsculas para comparaciones consistentes
     if (user && user.role) user.role = String(user.role).toLowerCase();
