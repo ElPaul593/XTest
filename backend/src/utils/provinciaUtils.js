@@ -83,6 +83,8 @@ const CIUDAD_PROVINCIA = {
   'Santa Rosa': 'El Oro',
   'Pasaje': 'El Oro',
   'Huaquillas': 'El Oro',
+  'Zaruma': 'El Oro',
+  'Piñas': 'El Oro',
   
   // Esmeraldas
   'Esmeraldas': 'Esmeraldas',
@@ -103,10 +105,12 @@ const CIUDAD_PROVINCIA = {
   'Quevedo': 'Los Ríos',
   'Ventanas': 'Los Ríos',
   'Valencia': 'Los Ríos',
+  'Vinces': 'Los Ríos',
   
   // Morona Santiago
   'Macas': 'Morona Santiago',
   'Gualaquiza': 'Morona Santiago',
+  'Limon Indanza': 'Morona Santiago',
   
   // Napo
   'Tena': 'Napo',
@@ -136,7 +140,8 @@ const CIUDAD_PROVINCIA = {
   
   // Santa Elena
   'Montañita': 'Santa Elena',
-  'Salinas': 'Santa Elena'
+  'Salinas': 'Santa Elena',
+  'Ayangue': 'Santa Elena'
 };
 
 /**
@@ -181,11 +186,24 @@ function getCiudadesDeProvincia(provincia) {
   return ciudades;
 }
 
+function getCiudadesRegistradas() {
+  return Object.keys(CIUDAD_PROVINCIA).sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function normalizarCiudadRegistrada(ciudad) {
+  if (!ciudad || typeof ciudad !== 'string') return null;
+  const valor = ciudad.trim();
+  return getCiudadesRegistradas().find(
+    (registrada) => registrada.localeCompare(valor, 'es', { sensitivity: 'base' }) === 0
+  ) || null;
+}
+
 module.exports = {
   PROVINCIAS,
   CIUDAD_PROVINCIA,
   getProvinciaFromCedula,
   getProvinciaFromCiudad,
-  getCiudadesDeProvincia
+  getCiudadesDeProvincia,
+  getCiudadesRegistradas,
+  normalizarCiudadRegistrada
 };
-

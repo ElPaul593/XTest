@@ -48,6 +48,15 @@ exports.findByOrigen = async (ciudadOrigen) => {
   }).lean();
 };
 
+exports.findByEndpoints = async (from, to, excludeId = null) => {
+  const query = {
+    from: { $regex: new RegExp(`^${from.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    to: { $regex: new RegExp(`^${to.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+  };
+  if (excludeId) query._id = { $ne: excludeId };
+  return Ruta.findOne(query).lean();
+};
+
 exports.findById = async (id) => Ruta.findById(id).lean();
 
 exports.create = async (data) => {

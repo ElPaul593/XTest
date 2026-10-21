@@ -27,6 +27,8 @@ export default function AdminLugares() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [search, setSearch] = useState('');
+  const [filterCity, setFilterCity] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +46,14 @@ export default function AdminLugares() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const ciudades = [...new Set(lugares.map((lugar) => lugar.ciudad).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  const filteredLugares = lugares.filter((lugar) => {
+    const matchesSearch = !search
+      || `${lugar.nombre} ${lugar.ciudad} ${lugar.tipo || ''}`.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch && (!filterCity || lugar.ciudad === filterCity);
+  });
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -139,12 +149,25 @@ export default function AdminLugares() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="dashboard-section">
-        <h2>Listado ({lugares.length})</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <h2>Listado ({filteredLugares.length} de {lugares.length})</h2>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <input className="input" placeholder="Buscar lugar..." value={search} onChange={e => setSearch(e.target.value)} />
+            <select className="input" value={filterCity} onChange={e => setFilterCity(e.target.value)} aria-label="Filtrar por ciudad">
+              <option value="">Todas las ciudades</option>
+              {ciudades.map((ciudad) => <option key={ciudad} value={ciudad}>{ciudad}</option>)}
+            </select>
+          </div>
+        </div>
         {loading ? (
           <div className="loading-spinner"></div>
         ) : lugares.length === 0 ? (
           <div className="empty-state">
             <p>No hay lugares turísticos registrados.</p>
+          </div>
+        ) : filteredLugares.length === 0 ? (
+          <div className="empty-state">
+            <p>No hay lugares que coincidan con los filtros.</p>
           </div>
         ) : (
           <div className="table-container">
@@ -160,7 +183,7 @@ export default function AdminLugares() {
                 </tr>
               </thead>
               <tbody>
-                {lugares.map((lugar) => {
+                {filteredLugares.map((lugar) => {
                   const id = lugar._id || lugar.id;
                   return (
                     <tr key={id}>

@@ -20,6 +20,10 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getCiudades = (req, res) => {
+  res.json(RutaService.getCiudadesRegistradas());
+};
+
 exports.getById = async (req, res) => {
   try {
     const ruta = await RutaService.getById(req.params.id);

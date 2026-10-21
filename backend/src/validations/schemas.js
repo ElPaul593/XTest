@@ -127,8 +127,8 @@ const boletoSchemas = {
 const rutaSchemas = {
   create: Joi.object({
     name: Joi.string().min(2).max(120).optional(),
-    from: Joi.string().required().min(2).max(50),
-    to: Joi.string().required().min(2).max(50),
+    from: Joi.string().trim().required().min(2).max(50),
+    to: Joi.string().trim().required().min(2).max(50),
     price: Joi.number().min(3).max(20).required(),
     duration: Joi.number().strict().min(1).max(16).required(),
     horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
