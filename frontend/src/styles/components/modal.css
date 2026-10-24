@@ -1,0 +1,382 @@
+/* ==========================================================================
+   Ventanas emergentes (pop-up) con glassmorphism
+   --------------------------------------------------------------------------
+   Reemplazan dos patrones anteriores:
+
+     a) los avisos en línea (`.error-message` / `.success-message`) que se
+        insertaban dentro del flujo del documento y empujaban el contenido, por
+        lo que aparecían pegados debajo del header en lugar de llamar la atención;
+
+     b) `window.alert()` y `window.confirm()`, que el navegador pinta con su
+        propio estilo y bloquean el hilo.
+
+   Clave del arreglo (ver #31BUG): el velo y el diálogo usan `--z-modal-backdrop`
+   y `--z-modal` (2000/2001), por encima del navbar fijo (`--z-navbar`, 1000). El
+   `.modal-overlay` que ya existía en `pages/destino.css` declara `z-index: 1000`,
+   el MISMO valor que el navbar, y al ir el navbar después en el orden del
+   documento quedaba pintado por encima del diálogo.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Velo de fondo
+   Cubre el viewport completo y desenfoca la página que queda detrás.
+   -------------------------------------------------------------------------- */
+.popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl) var(--container-padding);
+
+  background: var(--glass-backdrop);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+
+  animation: popup-backdrop-in 0.18s ease-out;
+}
+
+@keyframes popup-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Diálogo
+   -------------------------------------------------------------------------- */
+.popup-dialog {
+  position: relative;
+  z-index: var(--z-modal);
+
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 2 * var(--spacing-xl));
+  overflow-y: auto;
+
+  padding: var(--spacing-xl);
+  border-radius: 18px;
+
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(170%);
+  box-shadow: var(--glass-shadow-lg), var(--glass-highlight);
+
+  animation: popup-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popup-dialog-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.popup-dialog--wide { max-width: 620px; }
+.popup-dialog--narrow { max-width: 380px; }
+
+/* Franja de color superior según el tipo de aviso. */
+.popup-dialog::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 18px 18px 0 0;
+  background: var(--accent);
+}
+
+.popup-dialog--success::before { background: var(--success); }
+.popup-dialog--error::before   { background: var(--error); }
+.popup-dialog--warning::before { background: var(--warning); }
+.popup-dialog--danger::before  { background: var(--error); }
+
+/* --------------------------------------------------------------------------
+   Cabecera
+   -------------------------------------------------------------------------- */
+.popup-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.popup-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  border-radius: 12px;
+  background: var(--glass-accent);
+  border: 1px solid var(--glass-accent-border);
+}
+
+.popup-dialog--success .popup-icon {
+  background: rgba(40, 167, 69, 0.16);
+  border-color: rgba(40, 167, 69, 0.42);
+}
+
+.popup-dialog--error .popup-icon,
+.popup-dialog--danger .popup-icon {
+  background: rgba(255, 68, 68, 0.16);
+  border-color: rgba(255, 68, 68, 0.42);
+}
+
+.popup-dialog--warning .popup-icon {
+  background: rgba(255, 167, 38, 0.16);
+  border-color: rgba(255, 167, 38, 0.42);
+}
+
+.popup-titles { flex: 1; min-width: 0; }
+
+.popup-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.popup-subtitle {
+  margin: var(--spacing-xs) 0 0;
+  font-size: var(--font-size-base);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.popup-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  transition: background-color 0.18s, color 0.18s;
+}
+
+.popup-close:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text);
+}
+
+/* --------------------------------------------------------------------------
+   Cuerpo y pie
+   -------------------------------------------------------------------------- */
+.popup-body {
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+.popup-body p { margin: 0 0 var(--spacing-md); }
+.popup-body p:last-child { margin-bottom: 0; }
+
+.popup-body .field { margin-bottom: var(--spacing-lg); }
+
+.popup-body label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.popup-body .input { width: 100%; padding: 11px 13px; }
+
+/* Aviso destacado dentro del diálogo (consecuencias de una acción). */
+.popup-note {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+}
+
+.popup-note--warning {
+  background: rgba(255, 167, 38, 0.1);
+  border-color: rgba(255, 167, 38, 0.32);
+  color: #ffe2bd;
+}
+
+.popup-note--danger {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: rgba(255, 68, 68, 0.32);
+  color: #ffd4d4;
+}
+
+.popup-footer {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--glass-border);
+}
+
+.popup-footer .btn { min-width: 110px; }
+
+.popup-error {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  background: rgba(255, 68, 68, 0.14);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  color: #ffd4d4;
+}
+
+/* --------------------------------------------------------------------------
+   Móvil: el diálogo sube desde abajo y ocupa el ancho completo.
+   -------------------------------------------------------------------------- */
+@media (max-width: 520px) {
+  .popup-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .popup-dialog {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+    padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-xl);
+    animation: popup-sheet-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .popup-dialog::before { border-radius: 18px 18px 0 0; }
+
+  .popup-footer { flex-direction: column-reverse; }
+  .popup-footer .btn { width: 100%; }
+}
+
+@keyframes popup-sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popup-backdrop,
+  .popup-dialog {
+    animation: none;
+  }
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .popup-backdrop { background: rgba(0, 0, 0, 0.82); }
+  .popup-dialog { background: rgba(18, 18, 18, 0.99); }
+}
+
+/* ==========================================================================
+   Avisos flotantes (toasts)
+   Para confirmaciones breves que no requieren decisión del usuario y por tanto
+   no justifican un diálogo con botones.
+   ========================================================================== */
+.toast-stack {
+  position: fixed;
+  top: 84px; /* por debajo del navbar fijo */
+  right: var(--spacing-lg);
+  z-index: var(--z-toast);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+
+  width: min(380px, calc(100vw - 2 * var(--spacing-lg)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  pointer-events: auto;
+
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  box-shadow: var(--glass-shadow);
+
+  animation: toast-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.toast--success { border-left: 3px solid var(--success); }
+.toast--error   { border-left: 3px solid var(--error); }
+.toast--warning { border-left: 3px solid var(--warning); }
+.toast--info    { border-left: 3px solid var(--accent); }
+
+.toast-icon { flex-shrink: 0; font-size: 17px; line-height: 1.4; }
+
+.toast-content { flex: 1; min-width: 0; }
+
+.toast-title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.toast-message {
+  margin: 2px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  padding: 0 2px;
+  font-size: 15px;
+  line-height: 1.3;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+}
+
+.toast-close:hover { color: var(--text); }
+
+@media (max-width: 520px) {
+  .toast-stack {
+    top: auto;
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    right: var(--spacing-lg);
+    width: auto;
+  }
+
+  .toast { animation: toast-in-mobile 0.24s cubic-bezier(0.16, 1, 0.3, 1); }
+}
+
+@keyframes toast-in-mobile {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .toast { background: rgba(18, 18, 18, 0.99); }
+}

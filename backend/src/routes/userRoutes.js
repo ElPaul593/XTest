@@ -76,6 +76,31 @@ router.delete('/me', authenticateToken, userController.removeMe);
 
 /**
  * @swagger
+ * /api/users/me:
+ *   delete:
+ *     summary: Dar de baja mi propia cuenta
+ *     description: >
+ *       Baja LÓGICA solicitada por el titular. La cuenta pasa a estado `ELIMINADO`
+ *       y deja de poder iniciar sesión, pero el documento se conserva para que su
+ *       historial de reservas, boletos y calificaciones siga siendo consultable.
+ *       Reemplaza el flujo anterior, que llamaba a `DELETE /api/users/{id}` (ruta
+ *       restringida a administradores) y por tanto fallaba con 403 para un usuario
+ *       con rol USER.
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cuenta dada de baja correctamente
+ *       401:
+ *         description: No autorizado
+ *       409:
+ *         description: La cuenta ya estaba dada de baja
+ */
+router.delete('/me', authenticateToken, userController.removeMe);
+
+/**
+ * @swagger
  * /api/users:
  *   get:
  *     summary: Obtener todos los usuarios (Admin)
@@ -221,7 +246,13 @@ router.post('/:id/restore', authenticateToken, requireAdminAccess, userControlle
  * @swagger
  * /api/users/{id}:
  *   delete:
- *     summary: Eliminar un usuario (Admin)
+ *     summary: Dar de baja un usuario (Admin)
+ *     description: >
+ *       Baja LÓGICA, no física: la cuenta pasa a estado `ELIMINADO` y el documento
+ *       se conserva en la base de datos. De este modo las reservas, boletos y
+ *       calificaciones asociadas mantienen su referencia al usuario y no se pierde
+ *       el histórico. Para bloquear temporalmente sin dar de baja, usar
+ *       `PATCH /api/users/{id}/estado`.
  *     tags: [Usuarios]
  *     security:
  *       - bearerAuth: []
@@ -233,14 +264,71 @@ router.post('/:id/restore', authenticateToken, requireAdminAccess, userControlle
  *           type: string
  *     responses:
  *       200:
- *         description: Usuario eliminado exitosamente
+ *         description: Cuenta dada de baja correctamente
  *       401:
  *         description: No autorizado
  *       403:
  *         description: Acceso denegado (solo admin)
  *       404:
  *         description: Usuario no encontrado
+ *       409:
+ *         description: La cuenta ya estaba dada de baja
  */
 router.delete('/:id', authenticateToken, requireAdminAccess, userController.remove);
+
+/**
+ * @swagger
+ * /api/users/{id}/estado:
+ *   patch:
+ *     summary: Bloquear, reactivar o dar de baja una cuenta (Admin)
+ *     description: >
+ *       Sustituye al borrado de usuarios como herramienta de moderación.
+ *       `BLOQUEADO` impide iniciar sesión e invalida los tokens ya emitidos,
+ *       conservando todos los datos; `ACTIVO` reactiva la cuenta; `ELIMINADO`
+ *       la da de baja. Un administrador no puede bloquearse a sí mismo.
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [estado]
+ *             properties:
+ *               estado:
+ *                 type: string
+ *                 enum: [ACTIVO, BLOQUEADO, ELIMINADO]
+ *               motivo:
+ *                 type: string
+ *                 description: Texto que se muestra al usuario al intentar iniciar sesión.
+ *     responses:
+ *       200:
+ *         description: Estado actualizado
+ *       400:
+ *         description: Estado no válido o auto-bloqueo de administrador
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: Acceso denegado (solo admin)
+ *       404:
+ *         description: Usuario no encontrado
+ *       409:
+ *         description: La cuenta ya estaba en ese estado
+ */
+router.patch(
+  '/:id/estado',
+  authenticateToken,
+  requireAdminAccess,
+  validate(userSchemas.cambiarEstado, 'body'),
+  userController.cambiarEstado
+);
 
 module.exports = router;

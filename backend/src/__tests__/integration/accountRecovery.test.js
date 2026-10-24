@@ -36,7 +36,8 @@ async function createBlockedUser() {
     paisOrigen: 'Extranjero',
     password: 'password123'
   });
-  return User.findByIdAndUpdate(user._id, { isDeleted: true }, { new: true });
+  // Adaptado al modelo de `estado`: bloquear es poner BLOQUEADO, no isDeleted.
+  return User.findByIdAndUpdate(user._id, { estado: 'BLOQUEADO', estadoMotivo: 'Prueba' }, { new: true });
 }
 
 describe('Recuperación segura de cuenta', () => {
@@ -73,7 +74,7 @@ describe('Recuperación segura de cuenta', () => {
 
     expect(confirmation.message).toBe('Cuenta recuperada exitosamente');
     const restored = await User.findById(user._id).lean();
-    expect(restored.isDeleted).toBe(false);
+    expect(restored.estado).toBe('ACTIVO');
     expect(restored.deletedAt).toBeUndefined();
     await expect(AuthService.confirmRecovery({
       recoveryId: request.recoveryId,

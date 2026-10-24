@@ -14,8 +14,18 @@ const authSchemas = {
     paisOrigen: Joi.string().required().min(2).max(50),
     provincia: Joi.string().optional().max(50),
     preferencias: Joi.array().items(Joi.string().valid('Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro')).optional(),
-    password: Joi.string().required().min(6),
-    role: Joi.string().valid('ADMIN', 'USER').optional()
+    password: Joi.string().required().min(6)
+    // #13BUG CORREGIDO: se quitó `role` de este esquema.
+    //
+    // Es el esquema del registro PÚBLICO, y `AuthService.register` fuerza
+    // `role: 'USER'` sobre cualquier valor recibido. Declararlo aquí hacía creer
+    // —también a quien leyera el Swagger de la ruta— que un cliente podía
+    // registrarse como ADMIN.
+    //
+    // Quitarlo no rompe a ningún cliente: el middleware de validación usa
+    // `stripUnknown: true`, así que un `role` que llegue en el cuerpo se descarta
+    // en silencio en lugar de provocar un 400. El rol sí se puede asignar desde
+    // el alta administrativa (`userSchemas.create`), que es donde corresponde.
   }).or('cedula', 'pasaporte'),
 
   login: Joi.object({
@@ -24,6 +34,48 @@ const authSchemas = {
     password: Joi.string().required()
   }).or('cedula', 'pasaporte'),
 
+  // Inicio de sesión con Google. `credential` es el id_token que entrega
+  // Google Identity Services en el navegador.
+  google: Joi.object({
+    credential: Joi.string().required().messages({
+      'any.required': 'Falta el token de Google'
+    })
+  }),
+
+  // Solicitud del enlace de recuperación de contraseña.
+  /**
+   * Solicitud del enlace de recuperación.
+   *
+   * Acepta CUALQUIERA de los tres identificadores. Antes exigía el correo, lo que
+   * dejaba sin salida justo al usuario que más lo necesita: el que no recuerda con
+   * qué dirección se registró. Con la cédula o el pasaporte se localiza la cuenta
+   * y el enlace se envía al correo que tenga guardado.
+   */
+  forgotPassword: Joi.object({
+    email: Joi.string().email().optional().messages({
+      'string.email': 'Introduce un correo electrónico válido'
+    }),
+    cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional().messages({
+      'string.pattern.base': 'La cédula debe contener solo dígitos'
+    }),
+    pasaporte: Joi.string().min(6).max(20).optional()
+  })
+    .or('email', 'cedula', 'pasaporte')
+    .messages({
+      'object.missing': 'Indica tu correo, tu cédula o tu pasaporte'
+    }),
+
+  // Nueva contraseña. El token viaja en la URL, no en el cuerpo.
+  resetPassword: Joi.object({
+    password: Joi.string().required().min(6).messages({
+      'string.min': 'La contraseña debe tener al menos 6 caracteres',
+      'any.required': 'La contraseña es requerida'
+    })
+  }),
+
+  // Recuperación de cuenta por CÓDIGO de 6 dígitos (aportado en la rama remota).
+  // Es un flujo distinto del reseteo por enlace: sirve para recuperar el acceso a
+  // una cuenta bloqueada o dada de baja, no solo para cambiar la contraseña.
   recoveryRequest: Joi.object({
     cedula: Joi.string().min(6).max(10).pattern(/^\d+$/).optional(),
     pasaporte: Joi.string().min(6).max(20).optional(),
@@ -66,6 +118,19 @@ const userSchemas = {
     password: Joi.string().min(6).allow('').optional(),
     role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()
+  }),
+
+  /**
+   * Cambio de estado de la cuenta (bloqueo / reactivación / baja).
+   * El motivo es obligatorio al bloquear o dar de baja porque es el texto que ve
+   * el usuario cuando intenta iniciar sesión; al reactivar no aplica.
+   */
+  cambiarEstado: Joi.object({
+    estado: Joi.string().valid('ACTIVO', 'BLOQUEADO', 'ELIMINADO').required().messages({
+      'any.only': 'El estado debe ser ACTIVO, BLOQUEADO o ELIMINADO',
+      'any.required': 'El estado es requerido'
+    }),
+    motivo: Joi.string().max(300).allow('', null).optional()
   })
 };
 

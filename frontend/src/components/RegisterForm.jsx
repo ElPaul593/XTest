@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { register, login } from '../services/auth';
 import { validarCedula } from '../services/cedula';
 import { PAISES } from '../constants/paises';
@@ -30,6 +30,26 @@ export default function RegisterForm() {
   const [error, setError] = useState(null);
   const [touched, setTouched] = useState({});
   const navigate = useNavigate();
+  const location = useLocation();
+
+  /**
+   * Prellenado desde Google.
+   *
+   * Cuando alguien entra con Google y no tiene cuenta, `LoginForm` redirige aquí
+   * con el perfil ya verificado por el backend. Se rellenan nombre, apellido y
+   * correo, y solo queda pedir lo que Google no puede dar: cédula o pasaporte,
+   * teléfono y país. El correo llega verificado por Google, así que se deja en
+   * solo lectura para que no se cambie por otro distinto del que se validó.
+   */
+  const prefill = location.state?.prefill || null;
+  const vieneDeGoogle = location.state?.origen === 'google';
+
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.nombre) setNombre(prefill.nombre);
+    if (prefill.apellido) setApellido(prefill.apellido);
+    if (prefill.email) setEmail(prefill.email);
+  }, [prefill]);
 
   const cedulaDigits = cedula.replace(/\D/g, '');
 
@@ -315,6 +335,15 @@ export default function RegisterForm() {
     <main className="center-screen">
       <div className="card" role="dialog" aria-labelledby="reg-title" style={{maxWidth: 760}}>
         <h2 id="reg-title">Registro de usuario</h2>
+
+        {/* Aviso cuando se llega desde Google: explica por qué, pese a haberse
+            autenticado ya, todavía hay que rellenar datos. */}
+        {vieneDeGoogle && (
+          <div className="success-message" style={{ marginBottom: 'var(--spacing-lg)' }}>
+            {location.state?.aviso ||
+              'Tu cuenta de Google se verificó correctamente. Completa los datos que faltan para terminar el registro.'}
+          </div>
+        )}
         
         {/* Pestañas */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #e0e0e0' }}>

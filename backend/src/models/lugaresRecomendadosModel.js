@@ -1,6 +1,26 @@
 const mongoose = require('mongoose');
 
 /**
+ * #11BUG — CORREGIDO. Antes esta colección era de SOLO ESCRITURA: se escribía en
+ * cada petición de recomendaciones y nada de lo guardado se volvía a leer.
+ *
+ * Las dos causas y su arreglo:
+ *
+ *  1. Coste de escritura. `core/recommendationCore.js` hacía un `findOne` más un
+ *     `create`/`findByIdAndUpdate` por cada lugar: 2·N viajes a MongoDB por
+ *     petición. Ahora es un único `bulkWrite` con `upsert`.
+ *
+ *  2. Nadie leía. El único lector real, `getRecomendadosGuardados`, estaba
+ *     expuesto pero sin consumidor, y `getRecomendadosPorProvinciaYDestino` ni
+ *     siquiera tenía controlador (#12BUG). Ahora ambos tienen endpoint y la
+ *     colección funciona como lo que pretendía ser: una caché consultable de las
+ *     recomendaciones ya calculadas.
+ *
+ * Queda una limitación conocida y asumida: los campos `score`,
+ * `calificacionPromedio` y `fechaCalculo` envejecen en cuanto llega una
+ * calificación nueva, porque nada los invalida. Por eso los endpoints de lectura
+ * exponen `fechaCalculo`: quien consulta puede decidir si el dato le sirve.
+ *
  * Modelo de Lugares Recomendados (Colección Hija)
  * Combina: Usuario, Lugar Turístico y Ruta (destino)
  * Almacena las recomendaciones personalizadas por provincia de origen

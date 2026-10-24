@@ -1,13 +1,40 @@
-/* Importación principal de todos los estilos */
+/* ==========================================================================
+   Importación principal de todos los estilos
+
+   El orden importa: en CSS, a igualdad de especificidad gana la última regla.
+   Las capas van de lo más genérico a lo más específico y el glassmorphism se
+   aplica AL FINAL, como una capa de acabado.
+
+     1. base        variables, reset y estilos globales
+     2. utils       helpers de layout (flex, grid)
+     3. components  componentes base (botones, formularios, tarjetas, navbar)
+     4. pages       estilos propios de cada pantalla
+     5. skin        glass.css + modal.css  ← van últimos a propósito
+
+   Por qué `skin` cierra la lista: glass.css redefine los fondos de `.card`,
+   `.dashboard-section`, `.profile-card`, `.input`… reutilizando los mismos
+   selectores de las capas 3 y 4. Si se importara antes, `pages/profile.css`
+   (`background: var(--surface)`) y `pages/dashboard.css`
+   (`background: var(--surface-light)`) volverían a dejar esas superficies
+   opacas y el cristal no se vería.
+   ========================================================================== */
+
+/* 1 · Base */
 @import './base/variables.css';
 @import './base/reset.css';
 @import './base/global.css';
+
+/* 2 · Utilidades */
 @import './utils/flex.css';
 @import './utils/grid.css';
+
+/* 3 · Componentes */
 @import './components/buttons.css';
 @import './components/forms.css';
 @import './components/cards.css';
 @import './components/navbar.css';
+
+/* 4 · Páginas */
 @import './pages/boletos.css';
 @import './pages/demo.css';
 @import './pages/destino.css';
@@ -17,3 +44,9 @@
 @import './pages/rutas.css';
 @import './pages/lugares-turisticos.css';
 
+/* 5 · Acabado: glassmorphism y ventanas emergentes */
+@import './components/glass.css';
+@import './components/modal.css';
+
+/* 6 · Tema final: identidad visual completa. Va el último a propósito. */
+@import './theme/app.css';
