@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { isAuthenticated, isAdmin, isAgente, homePathForRole } from '../services/session';
 import { logout } from '../services/auth';
+import useTheme from '../hooks/useTheme';
 
 /**
  * Barra de navegación.
@@ -39,6 +40,7 @@ export default function Navbar() {
   const [conScroll, setConScroll] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const sesion = isAuthenticated();
   const admin = isAdmin();
@@ -93,6 +95,16 @@ export default function Navbar() {
         )}
 
         <div className="topbar-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
+            aria-pressed={theme === 'light'}
+            title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
+          >
+            <span aria-hidden="true">{theme === 'dark' ? '☀' : '🌙'}</span>
+          </button>
           {sesion ? (
             <>
               {!(agente && !admin) && (

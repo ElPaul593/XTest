@@ -18,7 +18,7 @@ export default function Admin() {
   const Active = TABS.find(t => t.key === active)?.Comp || AdminUsers;
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container admin-dashboard">
       <div className="container">
         <div className="dashboard-header">
           <h1>Panel de Administración</h1>
