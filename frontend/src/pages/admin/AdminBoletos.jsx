@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAllReservations } from '../../services/reservas';
 import { getBoletos, createBoleto } from '../../services/boletos';
+import useFeedback from '../../hooks/useFeedback';
 
 export default function AdminBoletos() {
   const [reservas, setReservas] = useState([]);
@@ -10,6 +11,7 @@ export default function AdminBoletos() {
 
   const [reservaId, setReservaId] = useState('');
   const [seatNumber, setSeatNumber] = useState('');
+  const { aviso, mostrarExito, mostrarError, mostrarInfo } = useFeedback();
 
   const load = useCallback(async () => {
     try {
@@ -65,17 +67,17 @@ export default function AdminBoletos() {
        *
        * NO se corrige aquí por indicación expresa: solo se documenta.
        */
-      alert('Selecciona una reserva y un asiento');
+      mostrarInfo('Selecciona una reserva y un asiento.', 'Datos incompletos');
       return;
     }
     try {
       await createBoleto({ reserva: reservaId, seatNumber: Number(seatNumber) });
       setReservaId('');
       setSeatNumber('');
-      alert('Boleto emitido correctamente');
+      mostrarExito('El boleto se emitió correctamente.', 'Boleto emitido');
       load();
     } catch (e) {
-      alert(e.message);
+      mostrarError(e, 'No se pudo emitir el boleto');
     }
   };
 
@@ -88,6 +90,12 @@ export default function AdminBoletos() {
 
   return (
     <div>
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+        </div>
+      )}
       <div className="dashboard-section">
         <h2>Emitir boleto</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>El precio se calcula automáticamente según la ruta y la estrategia de pricing.</p>

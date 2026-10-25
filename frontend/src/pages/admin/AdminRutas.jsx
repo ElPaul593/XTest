@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getRutas, getCiudadesRutas, createRuta, updateRuta, deleteRuta } from '../../services/rutas';
+import useFeedback from '../../hooks/useFeedback';
 
 const emptyForm = { from: '', to: '', price: '', duration: '', horaSalida: '08:00', seats: 40 };
 
@@ -11,6 +12,7 @@ const preventNonNumericKeys = (event) => {
 
 const onlyDecimalInput = (value) => value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
 const onlyIntegerInput = (value) => value.replace(/\D/g, '');
+const PAGE_SIZE = 10;
 
 export default function AdminRutas() {
   const [rutas, setRutas] = useState([]);
@@ -22,6 +24,8 @@ export default function AdminRutas() {
   const [search, setSearch] = useState('');
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
+  const [page, setPage] = useState(1);
+  const { aviso, mostrarExito, mostrarError } = useFeedback();
 
   const load = useCallback(async () => {
     try {
@@ -49,6 +53,9 @@ export default function AdminRutas() {
     const matchesTo = !filterTo || ruta.to === filterTo;
     return matchesSearch && matchesFrom && matchesTo;
   });
+  const totalPages = Math.max(1, Math.ceil(filteredRutas.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedRutas = filteredRutas.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -67,6 +74,7 @@ export default function AdminRutas() {
       setForm(emptyForm);
       setEditingId(null);
       load();
+      mostrarExito(editingId ? 'La ruta se actualizó correctamente.' : 'La ruta se creó correctamente.', editingId ? 'Ruta actualizada' : 'Ruta creada');
     } catch (e) {
       /**
        * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
@@ -93,7 +101,7 @@ export default function AdminRutas() {
        *
        * NO se corrige aquí por indicación expresa: solo se documenta.
        */
-      alert(e.message);
+      mostrarError(e, 'No se pudo guardar la ruta');
     }
   };
 
@@ -116,8 +124,9 @@ export default function AdminRutas() {
     try {
       await deleteRuta(id);
       load();
+      mostrarExito('La ruta se eliminó correctamente.', 'Ruta eliminada');
     } catch (e) {
-      alert(e.message);
+      mostrarError(e, 'No se pudo eliminar la ruta');
     }
   };
 
@@ -134,7 +143,7 @@ export default function AdminRutas() {
             <tr><th>Origen</th><th>Destino</th><th>Precio</th><th>Duración</th><th>Salida</th><th>Asientos</th><th>Acciones</th></tr>
           </thead>
           <tbody>
-            {filteredRutas.map(r => {
+            {paginatedRutas.map(r => {
               const id = r._id || r.id;
               return (
                 <tr key={id}>
@@ -159,6 +168,12 @@ export default function AdminRutas() {
 
   return (
     <div>
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+        </div>
+      )}
       <div className="dashboard-section">
         <h2>Nueva ruta</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>Precio en USD (entre 3 y 20). El nombre se genera como "Origen - Destino".</p>
@@ -204,12 +219,12 @@ export default function AdminRutas() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <h2>Rutas ({filteredRutas.length} de {rutas.length})</h2>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <input className="input" placeholder="Buscar ruta..." value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="input" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} aria-label="Filtrar por origen">
+            <input className="input" placeholder="Buscar ruta..." value={search} onChange={e => { setPage(1); setSearch(e.target.value); }} />
+            <select className="input" value={filterFrom} onChange={e => { setPage(1); setFilterFrom(e.target.value); }} aria-label="Filtrar por origen">
               <option value="">Todos los orígenes</option>
               {ciudades.map(ciudad => <option key={ciudad} value={ciudad}>{ciudad}</option>)}
             </select>
-            <select className="input" value={filterTo} onChange={e => setFilterTo(e.target.value)} aria-label="Filtrar por destino">
+            <select className="input" value={filterTo} onChange={e => { setPage(1); setFilterTo(e.target.value); }} aria-label="Filtrar por destino">
               <option value="">Todos los destinos</option>
               {ciudades.map(ciudad => <option key={ciudad} value={ciudad}>{ciudad}</option>)}
             </select>
@@ -219,6 +234,13 @@ export default function AdminRutas() {
         {filteredRutas.length === 0 && rutas.length > 0
           ? <div className="empty-state"><p>No hay rutas que coincidan con los filtros.</p></div>
           : tableContent}
+        {filteredRutas.length > PAGE_SIZE && (
+          <div className="pagination">
+            <button disabled={currentPage <= 1} onClick={() => setPage(value => value - 1)}>Anterior</button>
+            <span>Página {currentPage} de {totalPages}</span>
+            <button disabled={currentPage >= totalPages} onClick={() => setPage(value => value + 1)}>Siguiente</button>
+          </div>
+        )}
       </div>
     </div>
   );

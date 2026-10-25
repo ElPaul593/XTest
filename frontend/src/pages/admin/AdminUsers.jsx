@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { listUsers, createUser, updateUser, cambiarEstadoUsuario } from '../../services/users';
 import { getRutas } from '../../services/rutas';
-import { AlertPopup, ConfirmPopup } from '../../components/Popup';
+import { ConfirmPopup } from '../../components/Popup';
 import useFeedback from '../../hooks/useFeedback';
 
 const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
@@ -433,13 +433,13 @@ export default function AdminUsers() {
 
       {/* Avisos de resultado. Antes eran `alert()` del navegador: bloqueaban el
           hilo y no seguían la identidad visual del proyecto. */}
-      <AlertPopup
-        open={!!aviso}
-        variant={aviso?.variant}
-        title={aviso?.title}
-        message={aviso?.message}
-        onClose={cerrarAviso}
-      />
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+          <button type="button" className="admin-feedback__close" onClick={cerrarAviso} aria-label="Cerrar aviso">×</button>
+        </div>
+      )}
     </div>
   );
 }
