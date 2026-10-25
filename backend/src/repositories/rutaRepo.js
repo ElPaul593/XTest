@@ -31,22 +31,12 @@ exports.findByDestino = async (ciudadDestino) => {
   }).lean();
 };
 
-/**
- * PATRÓN REPOSITORY: Método especializado de búsqueda
- * Encapsula la lógica de búsqueda por origen con normalización y regex.
+/*
+ * #9BUG — CORREGIDO: se eliminó `findByOrigen`, que no se invocaba nunca.
+ * Su pareja `findByDestino` sí se usa (core/recommendationCore.js); la búsqueda
+ * por ciudad de ORIGEN se resuelve de otra forma: el core obtiene las rutas por
+ * destino y compara `r.from` en memoria contra las ciudades de la provincia.
  */
-exports.findByOrigen = async (ciudadOrigen) => {
-  const ciudadNormalizada = ciudadOrigen ? ciudadOrigen.trim() : '';
-  if (!ciudadNormalizada) {
-    return [];
-  }
-  
-  // Búsqueda case-insensitive
-  const ciudadEscapada = ciudadNormalizada.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return Ruta.find({ 
-    from: { $regex: new RegExp(`^${ciudadEscapada}$`, 'i') }
-  }).lean();
-};
 
 exports.findByEndpoints = async (from, to, excludeId = null) => {
   const query = {

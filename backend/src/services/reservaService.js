@@ -21,7 +21,8 @@ exports.getAll = async (options = {}) => {
  * La lógica de validación de disponibilidad estaría aquí.
  */
 exports.create = async (data) => {
-  // Business logic to validate availability, associate route and generate boleto would go here
+  // Business logic to validate availability, associate route and
+  //  generate boleto would go here
   return ReservaRepo.create(data);
 };
 

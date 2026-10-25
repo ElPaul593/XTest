@@ -5,6 +5,7 @@ import {
   getAllLugaresTuristicos,
   updateLugarTuristico,
 } from '../../services/lugaresTuristicosAdmin';
+import useFeedback from '../../hooks/useFeedback';
 
 const emptyForm = {
   nombre: '',
@@ -18,6 +19,7 @@ const emptyForm = {
 };
 
 const TIPOS_LUGAR = ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'];
+const PAGE_SIZE = 10;
 
 export default function AdminLugares() {
   const [lugares, setLugares] = useState([]);
@@ -29,6 +31,8 @@ export default function AdminLugares() {
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [filterCity, setFilterCity] = useState('');
+  const [page, setPage] = useState(1);
+  const { aviso, mostrarExito, mostrarError } = useFeedback();
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +58,9 @@ export default function AdminLugares() {
       || `${lugar.nombre} ${lugar.ciudad} ${lugar.tipo || ''}`.toLowerCase().includes(search.toLowerCase());
     return matchesSearch && (!filterCity || lugar.ciudad === filterCity);
   });
+  const totalPages = Math.max(1, Math.ceil(filteredLugares.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedLugares = filteredLugares.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -110,8 +117,10 @@ export default function AdminLugares() {
 
       closeModal();
       await load();
+      mostrarExito(editingId ? 'El lugar turístico se actualizó correctamente.' : 'El lugar turístico se creó correctamente.', editingId ? 'Lugar actualizado' : 'Lugar creado');
     } catch (e) {
       setError(e.message);
+      mostrarError(e, 'No se pudo guardar el lugar turístico');
     } finally {
       setSaving(false);
     }
@@ -119,19 +128,52 @@ export default function AdminLugares() {
 
   const handleDelete = async (lugar) => {
     const id = lugar._id || lugar.id;
+    /**
+     * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
+     * emergente de la aplicación.
+     *
+     * Esta pantalla usa 1 llamada nativa. Un `window.confirm` para borrar un lugar turístico, que además es un borrado físico.
+     *
+     * Tres problemas concretos:
+     *
+     *  1. `alert()` y `confirm()` bloquean el hilo principal: mientras el diálogo
+     *     está abierto, React no puede repintar ni se ejecutan los temporizadores.
+     *     En las pantallas de asientos eso congela el contador del hold.
+     *  2. El navegador los pinta con su propio estilo, ajeno al negro + amarillo del
+     *     proyecto, y antepone el dominio ("localhost:3000 dice…").
+     *  3. No admiten formato ni contenido enriquecido, así que los mensajes largos
+     *     se apelmazan y los saltos de línea con `\n` se ven de forma distinta en
+     *     cada navegador.
+     *
+     * Sustitución disponible: `components/Popup.jsx` (`AlertPopup` para avisar,
+     * `ConfirmPopup` para confirmar) junto al hook `hooks/useFeedback.js`. Se
+     * renderizan con `createPortal` sobre `document.body` y en la capa `--z-modal`,
+     * por encima del navbar fijo. Ya están aplicados en `LoginForm`, `Profile`,
+     * `Dashboard` y `admin/AdminUsers` y pueden servir de referencia.
+     *
+     * NO se corrige aquí por indicación expresa: solo se documenta.
+     */
     if (!window.confirm(`¿Eliminar el lugar "${lugar.nombre}"?`)) return;
 
     try {
       setError(null);
       await deleteLugarTuristico(id);
       await load();
+      mostrarExito('El lugar turístico se eliminó correctamente.', 'Lugar eliminado');
     } catch (e) {
       setError(e.message);
+      mostrarError(e, 'No se pudo eliminar el lugar turístico');
     }
   };
 
   return (
     <div>
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+        </div>
+      )}
       <div className="dashboard-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
           <div>
@@ -152,8 +194,8 @@ export default function AdminLugares() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <h2>Listado ({filteredLugares.length} de {lugares.length})</h2>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <input className="input" placeholder="Buscar lugar..." value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="input" value={filterCity} onChange={e => setFilterCity(e.target.value)} aria-label="Filtrar por ciudad">
+            <input className="input" placeholder="Buscar lugar..." value={search} onChange={e => { setPage(1); setSearch(e.target.value); }} />
+            <select className="input" value={filterCity} onChange={e => { setPage(1); setFilterCity(e.target.value); }} aria-label="Filtrar por ciudad">
               <option value="">Todas las ciudades</option>
               {ciudades.map((ciudad) => <option key={ciudad} value={ciudad}>{ciudad}</option>)}
             </select>
@@ -183,7 +225,7 @@ export default function AdminLugares() {
                 </tr>
               </thead>
               <tbody>
-                {filteredLugares.map((lugar) => {
+                {paginatedLugares.map((lugar) => {
                   const id = lugar._id || lugar.id;
                   return (
                     <tr key={id}>
@@ -221,6 +263,13 @@ export default function AdminLugares() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {filteredLugares.length > PAGE_SIZE && (
+          <div className="pagination">
+            <button disabled={currentPage <= 1} onClick={() => setPage(value => value - 1)}>Anterior</button>
+            <span>Página {currentPage} de {totalPages}</span>
+            <button disabled={currentPage >= totalPages} onClick={() => setPage(value => value + 1)}>Siguiente</button>
           </div>
         )}
       </div>

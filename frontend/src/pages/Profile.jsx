@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, deleteCurrentUser, updateCurrentUser } from '../services/users';
+import { logout } from '../services/auth';
+import { AlertPopup, ConfirmPopup } from '../components/Popup';
+import useFeedback from '../hooks/useFeedback';
 
 export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
+
+  // Ventana emergente de confirmación de baja de cuenta.
+  const [bajaOpen, setBajaOpen] = useState(false);
+  const [bajaEnCurso, setBajaEnCurso] = useState(false);
+  const [bajaError, setBajaError] = useState(null);
+
+  const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
   
   // Datos de ejemplo del usuario
 
@@ -56,9 +64,8 @@ export default function Profile() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    
+    cerrarAviso();
+
     try {
       // Preparar los datos para actualizar (solo enviar password si no está vacío)
       const updateData = {
@@ -86,36 +93,53 @@ export default function Profile() {
         password: ''
       });
       
-      setSuccess('Perfil actualizado exitosamente');
+      mostrarExito('Tus datos se han guardado correctamente.', 'Perfil actualizado');
       setEditing(false);
     } catch (err) {
-      setError('Error al actualizar perfil: ' + err.message);
+      mostrarError(err, 'No se pudo actualizar el perfil');
       console.error('Error al actualizar perfil:', err);
     }
   };
 
+  /**
+   * Baja de la cuenta.
+   *
+   * La confirmación se hace con una ventana emergente propia en lugar de
+   * `window.confirm()`: el diálogo del navegador no admite dar formato al texto,
+   * y aquí hace falta explicar algo que no es obvio: la baja NO borra el
+   * historial. El texto anterior ("Esta acción no se puede deshacer") describía
+   * un borrado físico que ya no es lo que ocurre.
+   */
   const handleDeleteAccount = async () => {
-    const confirmDelete = window.confirm(
-      '¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.'
-    );
-    
-    if (!confirmDelete) return;
-    
     try {
-      setError(null);
-      const result = await deleteCurrentUser();
-      localStorage.removeItem('token');
-      if (result?.blocked) {
-        alert(result.message);
-        navigate('/login');
-        return;
-      }
-      alert(result?.message || 'Tu cuenta ha sido eliminada exitosamente');
-      navigate('/demo');
+      setBajaEnCurso(true);
+      setBajaError(null);
+
+      await deleteCurrentUser();
+
+      // La cuenta queda en estado ELIMINADO: el token sigue siendo válido
+      // criptográficamente, pero el backend lo rechazará en la siguiente
+      // petición. Se cierra la sesión localmente para no dejarla a medias.
+      logout();
+      setBajaOpen(false);
+      setBajaEnCurso(false);
+
+      mostrarExito(
+        'Tu cuenta ha sido dada de baja y ya no podrás iniciar sesión con ella. Tu historial de reservas se conserva: si necesitas recuperar el acceso, contacta con el administrador.',
+        'Cuenta dada de baja'
+      );
     } catch (err) {
-      setError('Error al eliminar cuenta: ' + err.message);
-      console.error('Error al eliminar cuenta:', err);
+      setBajaEnCurso(false);
+      setBajaError(err.message);
+      console.error('Error al dar de baja la cuenta:', err);
     }
+  };
+
+  /** Al cerrar el aviso posterior a la baja, se sale de la aplicación. */
+  const handleCerrarAviso = () => {
+    const eraBaja = aviso?.title === 'Cuenta dada de baja';
+    cerrarAviso();
+    if (eraBaja) navigate('/demo');
   };
 
   const handleCancelEdit = () => {
@@ -127,8 +151,7 @@ export default function Profile() {
       telefono: user.telefono || '',
       password: ''
     });
-    setError(null);
-    setSuccess(null);
+    cerrarAviso();
   };
 
   if (!token) {
@@ -170,8 +193,9 @@ export default function Profile() {
           </div>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">{success}</div>}
+        {/* Los avisos ya no se insertan aquí (quedaban pegados bajo el header y
+            desplazaban el contenido): ahora se muestran como ventana emergente
+            centrada, al final de este componente. */}
 
         {!editing ? (
           <div className="profile-info">
@@ -312,16 +336,44 @@ export default function Profile() {
         )}
 
         <div className="danger-zone">
-          <h3>Zona de Peligro</h3>
-          <p>Una vez que elimines tu cuenta, no hay vuelta atrás.</p>
-          <button 
-            className="btn-delete" 
-            onClick={handleDeleteAccount}
+          <h3>Baja de la cuenta</h3>
+          <p>
+            Tu cuenta dejará de poder iniciar sesión. Tu historial de reservas y
+            boletos se conserva, así que la baja es reversible: solo un
+            administrador puede reactivarla.
+          </p>
+          <button
+            className="btn btn-danger"
+            onClick={() => { setBajaError(null); setBajaOpen(true); }}
           >
-            Eliminar Cuenta
+            Dar de baja mi cuenta
           </button>
         </div>
       </div>
+
+      {/* Confirmación de baja */}
+      <ConfirmPopup
+        open={bajaOpen}
+        onCancel={() => setBajaOpen(false)}
+        onConfirm={handleDeleteAccount}
+        title="¿Dar de baja tu cuenta?"
+        message="Perderás el acceso de inmediato y no podrás volver a iniciar sesión con esta cédula o pasaporte."
+        note="Tus reservas, boletos y calificaciones NO se borran: se conservan asociados a tu cuenta para mantener el histórico. Si más adelante quieres volver, un administrador puede reactivarla."
+        confirmLabel="Sí, dar de baja"
+        cancelLabel="Conservar mi cuenta"
+        destructive
+        loading={bajaEnCurso}
+        error={bajaError}
+      />
+
+      {/* Avisos de resultado */}
+      <AlertPopup
+        open={!!aviso}
+        variant={aviso?.variant}
+        title={aviso?.title}
+        message={aviso?.message}
+        onClose={handleCerrarAviso}
+      />
     </div>
   );
 }

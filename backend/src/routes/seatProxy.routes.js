@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { EXTERNAL_API_URL } = require("../config/externalApis");
+const { seatApiUrl } = require("../config/externalApis");
 
 // Helper: fetch con timeout de 4 segundos
 async function fetchWithTimeout(url, options = {}) {
@@ -62,12 +62,8 @@ router.get("/disponibles", async (req, res) => {
             return res.status(400).json({ ok: false, error: "Falta rutaId o fecha" });
         }
 
-        const base = EXTERNAL_API_URL;
-
-        // Construir URL con parámetros
-        const url = `${base}/api/asientos/disponibles?rutaId=${encodeURIComponent(
-            rutaId
-        )}&fecha=${encodeURIComponent(fecha)}`;
+                // Construir URL con parámetros
+        const url = `${seatApiUrl('disponibles')}?rutaId=${encodeURIComponent(rutaId)}&fecha=${encodeURIComponent(fecha)}`;
 
         const r = await fetchWithTimeout(url);
 
@@ -125,9 +121,7 @@ router.get("/disponibles", async (req, res) => {
  */
 router.post("/reservar", async (req, res) => {
     try {
-        const base = EXTERNAL_API_URL;
-
-        const r = await fetchWithTimeout(`${base}/api/asientos/reservar`, {
+                const r = await fetchWithTimeout(seatApiUrl('reservar'), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req.body),
@@ -171,9 +165,7 @@ router.post("/reservar", async (req, res) => {
  */
 router.delete("/holds", async (req, res) => {
     try {
-        const base = EXTERNAL_API_URL;
-
-        const r = await fetchWithTimeout(`${base}/api/asientos/holds`, {
+                const r = await fetchWithTimeout(seatApiUrl('holds'), {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req.body),
@@ -220,9 +212,7 @@ router.delete("/holds", async (req, res) => {
  */
 router.post("/reservar-definitivo", async (req, res) => {
     try {
-        const base = EXTERNAL_API_URL;
-
-        const r = await fetchWithTimeout(`${base}/api/asientos/reservar-definitivo`, {
+                const r = await fetchWithTimeout(seatApiUrl('reservarDefinitivo'), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(req.body),
@@ -249,9 +239,7 @@ router.post("/reservar-definitivo", async (req, res) => {
  */
 router.get("/holds", async (req, res) => {
     try {
-        const base = EXTERNAL_API_URL;
-
-        const r = await fetchWithTimeout(`${base}/api/asientos/holds`);
+                const r = await fetchWithTimeout(seatApiUrl('holds'));
         const data = await r.json();
         return res.status(r.status).json(data);
     } catch (e) {

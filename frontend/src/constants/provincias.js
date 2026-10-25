@@ -1,3 +1,21 @@
+/**
+ * ============================================================================
+ * #26BUG — ARCHIVO DE CONSTANTES MUERTO: nada de aquí se importa.
+ * ============================================================================
+ *
+ * Los tres exports (`PROVINCIAS`, `PROVINCIAS_ARRAY`, `getProvinciaByCodigo`)
+ * no se usan en ninguna pantalla.
+ *
+ * Verificado: 0 importaciones en `pages/`, `components/` y `services/`.
+ *
+ * La deducción de la provincia a partir de la cédula se hace ÍNTEGRAMENTE en el
+ * backend (`backend/src/utils/provinciaUtils.js`), que mantiene su propio mapa de
+ * códigos. Resultado: la misma tabla de 24 provincias duplicada en dos lenguajes
+ * y dos repositorios de código, con el riesgo de que divergan y nadie lo note,
+ * porque esta copia no se ejecuta nunca.
+ * ============================================================================
+ */
+
 // Códigos de provincias de Ecuador según los primeros 2 dígitos de la cédula
 export const PROVINCIAS = {
   '01': 'Azuay',

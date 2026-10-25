@@ -1,3 +1,15 @@
+/**
+ * #28BUG — Constante muerta: `BOLETOS_SAMPLE` no se importa en ninguna pantalla.
+ *
+ * Son datos de maqueta (rutas Quito–Guayaquil con precios y empresas inventadas)
+ * de cuando la vista de boletos no tenía backend. Hoy `pages/Boletos.jsx` carga
+ * las rutas reales con `getRutas()`, así que estos registros no se muestran nunca.
+ *
+ * Verificado: 0 importaciones de `BOLETOS_SAMPLE` en `pages/` y `components/`.
+ *
+ * Conviene no confundirlos con datos reales al leer el proyecto: las fechas que
+ * contienen ('2025-10-15' y siguientes) ya están en el pasado.
+ */
 // Datos de ejemplo de boletos disponibles
 export const BOLETOS_SAMPLE = [
   {

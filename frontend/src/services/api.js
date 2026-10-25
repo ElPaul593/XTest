@@ -27,6 +27,44 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const data = error?.response?.data;
 
+    /**
+     * Cuenta bloqueada o dada de baja.
+     *
+     * El backend revisa el estado de la cuenta en CADA petición (no solo al
+     * iniciar sesión), porque los JWT viven 8 horas: si un administrador bloquea
+     * una cuenta, su token sigue siendo criptográficamente válido. En ese caso
+     * responde 403 (BLOQUEADO) o 410 (ELIMINADO) con el campo `estado`.
+     *
+     * Se trata por separado del token inválido porque el mensaje no contiene la
+     * palabra "token" y la comprobación de abajo no lo reconocería: el usuario se
+     * quedaría con una sesión abierta que falla en todas las peticiones.
+     */
+    const estadoCuenta = data?.estado;
+    if (estadoCuenta === 'BLOQUEADO' || estadoCuenta === 'ELIMINADO') {
+      console.warn(`[API] Cuenta en estado ${estadoCuenta} - cerrando sesión`);
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('user');
+
+      // El motivo se guarda para que la pantalla de login pueda explicar por qué
+      // se cerró la sesión en lugar de limitarse a expulsar al usuario.
+      if (data?.error) {
+        try {
+          sessionStorage.setItem('authEstadoMensaje', data.error);
+        } catch {
+          // Modo privado o almacenamiento bloqueado: el cierre de sesión es lo
+          // importante, el mensaje es un extra.
+        }
+      }
+
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+
+      return Promise.reject(error);
+    }
+
     // Si el token es inválido o expiró, cerrar sesión automáticamente
     if (status === 401 || status === 403) {
       const isTokenError =

@@ -7,7 +7,13 @@ export default defineConfig({
     server: {
         host: true,
         allowedHosts: true,
-        port: 3000,
+        // 3001 y no 3000: es el origen que ya esta autorizado en Google Cloud
+
+        // Console. Google compara el origen EXACTO, puerto incluido; con 3000
+
+        // el boton renderiza pero al pulsarlo devuelve origin_mismatch.
+
+        port: 3001,
         proxy: {
             // Todas las rutas /api van al backend local (puerto 5000)
             // Vite evalúa las rutas en orden: las más específicas primero

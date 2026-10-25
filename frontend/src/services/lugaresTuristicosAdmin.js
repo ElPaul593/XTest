@@ -1,3 +1,21 @@
+/**
+ * ============================================================================
+ * #20BUG — ARCHIVO HUÉRFANO: la vista que debía consumirlo usa otro servicio.
+ * ============================================================================
+ *
+ * Ninguna pantalla importa este módulo. Por el nombre debería alimentar
+ * `pages/admin/AdminLugares.jsx`, pero esa vista importa de
+ * `services/lugaresTuristicos.js`, de modo que estas funciones quedaron sin uso.
+ *
+ * Verificado: 0 importaciones de `lugaresTuristicosAdmin` en `pages/` y
+ * `components/`.
+ *
+ * El riesgo real es la duplicación: hay dos servicios que atacan los mismos
+ * endpoints de `/lugares-turisticos` con distinto manejo de errores, y no hay
+ * forma de saber cuál es el bueno sin rastrear las importaciones.
+ * ============================================================================
+ */
+
 import api from './api';
 
 function getErrorMessage(err, fallback) {
