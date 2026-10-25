@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
+const { buildEstadoError, getEstado } = require('../utils/estadoCuenta');
 
 /**
  * PATRÓN DE DISEÑO: Middleware Pattern
@@ -8,9 +9,8 @@ const User = require('../models/userModel');
  * 
  * PRINCIPIO SOLID: Single Responsibility Principle (SRP)
  * Cada middleware tiene una responsabilidad única:
- * - authenticateToken: autenticación de tokens
+ * - authenticateToken: autenticación de tokens y verificación del estado de la cuenta
  * - requireAdminAccess: verificación de rol admin
- * - requireDashboardAccess: verificación de acceso al dashboard
  * - authorizeRole: autorización genérica por rol
  * - authorizeOwnerOrAdmin: autorización por propiedad o rol
  */
@@ -32,8 +32,16 @@ exports.authenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
-    if (user.isDeleted) {
-      return res.status(403).json({ error: 'Esta cuenta está bloqueada' });
+
+    // El estado de la cuenta se revisa en CADA petición, no solo en el login: los
+    // JWT viven 8 horas, así que si solo se comprobara al entrar, una cuenta
+    // bloqueada seguiría operando durante el resto de la vida de su token.
+    const estadoError = buildEstadoError(user);
+    if (estadoError) {
+      return res.status(estadoError.statusCode).json({
+        error: estadoError.message,
+        estado: getEstado(user)
+      });
     }
 
     // Normalizar role a minúsculas para comparaciones consistentes
@@ -57,17 +65,19 @@ exports.requireAdminAccess = (req, res, next) => {
   next();
 };
 
-/**
- * PATRÓN MIDDLEWARE: Verificación de acceso al dashboard
- * PRINCIPIO SOLID: Single Responsibility Principle (SRP)
- * Responsabilidad única: verificar acceso al dashboard por cédula/pasaporte o rol admin.
+/*
+ * #10BUG — CORREGIDO: se eliminó `requireDashboardAccess`.
+ *
+ * Tenía dos problemas: no estaba montado en ninguna ruta, y su nombre mentía.
+ * Decía "verificar acceso al dashboard por cédula/pasaporte o rol admin", pero su
+ * cuerpo era idéntico a `requireAdminAccess` (exigía rol admin y nada más). Si
+ * alguien lo hubiera montado confiando en el nombre, habría dejado el dashboard de
+ * usuario accesible solo a administradores.
+ *
+ * El acceso al dashboard de usuario se controla en el frontend
+ * (`components/RouteGuards.jsx` → `ProtectedRoute`). Para exigir rol admin en el
+ * backend se usa `requireAdminAccess`; para otros roles, `authorizeRole`.
  */
-exports.requireDashboardAccess = (req, res, next) => {
-  if (!req.user) return res.status(401).json({ error: 'Usuario no autenticado' });
-  const role = req.user.role ? String(req.user.role).toLowerCase() : '';
-  if (role !== 'admin') return res.status(403).json({ error: 'Acceso denegado.' });
-  next();
-};
 
 /**
  * PATRÓN DE DISEÑO: Factory Pattern

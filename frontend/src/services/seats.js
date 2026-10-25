@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * #18BUG — ARCHIVO HUÉRFANO: ninguna pantalla importa este servicio.
+ * ============================================================================
+ *
+ * Las tres funciones que exporta (`getAvailableSeats`, `holdSeat`,
+ * `confirmReservation`) no se usan en ningún sitio. La selección de asientos
+ * real la resuelven `components/BusSeatSelector.jsx` y `pages/SeatBooking.jsx`,
+ * que llaman a `/api/asientos/...` por su cuenta.
+ *
+ * Verificado: 0 importaciones de `services/seats` en `pages/` y `components/`.
+ *
+ * Además apunta a un prefijo distinto del que usa el resto de la aplicación
+ * (`/seat/...` en vez de `/api/asientos/...`), así que es una tercera forma de
+ * hablar con la misma API externa: `seatProxy.routes.js` y `asientosRoutes.js`
+ * en el backend ya duplicaban ese proxy.
+ * ============================================================================
+ */
+
 import api from './api';
 
 /**

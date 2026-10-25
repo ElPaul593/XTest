@@ -1,0 +1,1814 @@
+/* ==========================================================================
+   TEMA CulturalTrip — glassmorphism sobre negro
+   --------------------------------------------------------------------------
+   Esta hoja se importa la ÚLTIMA (ver styles/index.css) y define el aspecto
+   final de toda la aplicación. Reutiliza las clases que ya usan las pantallas
+   (`dashboard-section`, `info-item`, `users-table`, `*-header`…), de modo que
+   todas cambian de aspecto sin tocar su lógica ni su JSX.
+
+   Índice
+     1. Tokens
+     2. Base y tipografía
+     3. Estructura de la aplicación
+     4. Barra superior
+     5. Botones
+     6. Formularios
+     7. Pantallas de acceso
+     8. Cabeceras y contenedores de página
+     9. Tarjetas, secciones, listas
+    10. Tablas
+    11. Estados (carga, vacío, mensajes)
+    12. Portada
+    13. Modales heredados
+    14. Responsive
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Tokens
+   ========================================================================== */
+:root {
+  --bg: #07070a;
+  --surface: #121216;
+  --surface-light: #18181d;
+  --text: #f5f5f7;
+  --text-muted: #a1a1aa;
+  --text-dim: #71717a;
+  --accent: #ffd60a;
+  --accent-hover: #ffe347;
+  --accent-ink: #0b0b0d;
+  --border: rgba(255, 255, 255, 0.08);
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 26px;
+  --font-size-2xl: 34px;
+  --font-size-hero: clamp(36px, 6vw, 64px);
+
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-strong: rgba(20, 20, 26, 0.72);
+  --glass-bg-soft: rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --glass-shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6);
+  --glass-blur: 20px;
+  --glass-blur-strong: 28px;
+
+  --topbar-h: 68px;
+  --page-max: 1180px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ==========================================================================
+   2. Base y tipografía
+   ========================================================================== */
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* reset.css reservaba 70px para el navbar antiguo; ahora lo hace .app-main. */
+  padding-top: 0 !important;
+}
+
+/* Manchas de luz del fondo: más suaves y repartidas que antes. */
+body::before {
+  width: 640px;
+  height: 640px;
+  top: -260px;
+  left: -200px;
+  background: radial-gradient(circle, rgba(255, 214, 10, 0.16), transparent 65%);
+  filter: blur(40px);
+}
+
+body::after {
+  width: 560px;
+  height: 560px;
+  bottom: -240px;
+  right: -180px;
+  background: radial-gradient(circle, rgba(255, 170, 0, 0.09), transparent 65%);
+  filter: blur(40px);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-sans);
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h1 { font-size: var(--font-size-2xl); font-weight: 800; }
+h2 { font-size: var(--font-size-xl); font-weight: 700; }
+h3 { font-size: var(--font-size-md); font-weight: 700; }
+
+p { color: var(--text-muted); }
+
+::selection { background: rgba(255, 214, 10, 0.3); color: #fff; }
+
+/* Barra de desplazamiento discreta (Chromium / Edge / Safari). */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); }
+
+.text-accent { color: var(--accent); }
+.text-success { color: #4ade80; }
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   3. Estructura de la aplicación
+   ========================================================================== */
+.app-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+.app-main {
+  padding-top: calc(var(--topbar-h) + 28px);
+  padding-bottom: 64px;
+  min-height: 100vh;
+}
+
+/* Las pantallas de acceso centran su contenido en toda la altura. */
+.app-shell--auth .app-main {
+  padding-top: var(--topbar-h);
+  padding-bottom: 0;
+}
+
+.app-shell--landing .app-main {
+  padding-top: var(--topbar-h);
+}
+
+/* ==========================================================================
+   4. Barra superior
+   ========================================================================== */
+.topbar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: var(--z-navbar, 1000);
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: rgba(7, 7, 10, 0.45);
+  border-bottom: 1px solid transparent;
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  transition: background-color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+
+.topbar--scrolled {
+  background: rgba(7, 7, 10, 0.82);
+  border-bottom-color: var(--glass-border);
+}
+
+.topbar-inner {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none !important;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  box-shadow: 0 6px 20px rgba(255, 214, 10, 0.3);
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brand-name span { color: var(--accent); }
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+}
+
+.topbar-link {
+  display: block;
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: 999px;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.topbar-link:hover { color: var(--text); background: var(--glass-bg-hover); }
+
+.topbar-link.is-active {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  border-radius: 999px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  text-decoration: none !important;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.topbar-avatar:hover,
+.topbar-avatar.is-active {
+  border-color: var(--accent);
+  background: rgba(255, 214, 10, 0.1);
+}
+
+.topbar-burger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.topbar-burger span {
+  width: 16px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: transform 0.25s var(--ease), opacity 0.2s;
+}
+
+.topbar-burger.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.topbar-burger.is-open span:nth-child(2) { opacity: 0; }
+.topbar-burger.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.topbar-drawer {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 12px;
+  right: 12px;
+  padding: 12px;
+  border-radius: var(--radius-xl);
+  background: rgba(14, 14, 18, 0.94);
+  border: 1px solid var(--glass-border-strong);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--glass-shadow-lg);
+  animation: drawer-in 0.22s var(--ease);
+}
+
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.topbar-drawer ul {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none !important;
+}
+
+.drawer-link:hover { background: var(--glass-bg-hover); }
+.drawer-link.is-active { background: rgba(255, 214, 10, 0.12); color: var(--accent); }
+
+/* La barra antigua ya no se usa; por si quedara algún resto en caché. */
+.navbar { display: none !important; }
+
+/* ==========================================================================
+   5. Botones (clases Bootstrap del proyecto)
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-decoration: none !important;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s var(--ease), background-color 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+
+.btn-sm { height: 36px; padding: 0 14px; font-size: 13px; }
+.btn-lg { height: 52px; padding: 0 28px; font-size: 15px; }
+.btn-full { width: 100%; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink) !important;
+  box-shadow: 0 8px 24px rgba(255, 214, 10, 0.22);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 12px 32px rgba(255, 214, 10, 0.32);
+}
+
+.btn-secondary {
+  background: var(--glass-bg-soft);
+  border-color: var(--glass-border-strong);
+  color: var(--text) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--glass-border);
+  color: var(--text) !important;
+}
+
+.btn-ghost:hover:not(:disabled) { background: var(--glass-bg-soft); }
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Botones sueltos sin clase .btn que usan algunas pantallas antiguas
+   (`btn-edit`, `btn-save`, `btn-ruta`…): se alinean con el sistema. */
+.btn-edit, .btn-save, .btn-cancel, .btn-ruta, .btn-calificar,
+.pagination button, .cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-bg-soft);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.btn-save, .btn-ruta, .btn-calificar {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.btn-edit:hover, .btn-cancel:hover, .pagination button:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+}
+
+.btn-save:hover, .btn-ruta:hover, .btn-calificar:hover { background: var(--accent-hover); }
+
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ==========================================================================
+   6. Formularios
+   ========================================================================== */
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.input,
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="date"], input[type="time"],
+input[type="tel"], input[type="search"], select, textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+textarea { min-height: 110px; resize: vertical; }
+
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+
+.input:focus, input:focus, select:focus, textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 214, 10, 0.55);
+  box-shadow: 0 0 0 4px rgba(255, 214, 10, 0.12);
+}
+
+/* Autorrelleno del navegador: Chrome pinta el campo de azul claro (se veía en
+   la contraseña del login). Se neutraliza con una sombra interior del color
+   del campo. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px #15151a inset;
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+/* Icono del calendario/reloj visible sobre fondo oscuro. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+  cursor: pointer;
+}
+
+.field, .form-group { margin-bottom: 18px; }
+
+.form-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #fca5a5;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* Mensaje de error a nivel de formulario (no de campo). */
+form > .error:last-child {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+/* ==========================================================================
+   7. Pantallas de acceso (login, registro, recuperación)
+   ========================================================================== */
+.center-screen {
+  min-height: calc(100vh - var(--topbar-h));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.center-screen > .card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  padding: 36px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(160%);
+  box-shadow: var(--glass-shadow-lg), var(--glass-highlight);
+  animation: card-in 0.4s var(--ease);
+}
+
+/* El registro tiene más campos y necesita más ancho. */
+.center-screen > .card[style*="760"] { max-width: 760px; }
+
+/* Filo de luz en la parte superior de la tarjeta. */
+.center-screen > .card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 214, 10, 0.6), transparent);
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.center-screen > .card h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.center-screen > .card h2 + * { margin-top: 0; }
+
+/* Selector Cédula / Pasaporte del login como control segmentado. */
+.center-screen .flex.gap-sm {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px !important;
+  padding: 4px;
+  margin: 18px 0 22px !important;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+}
+
+.center-screen .flex.gap-sm > .btn {
+  height: 38px;
+  box-shadow: none;
+}
+
+.center-screen .flex.gap-sm > .btn-secondary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted) !important;
+}
+
+.forgot-password {
+  margin-top: 10px;
+}
+
+.forgot-link {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-divider {
+  margin: 26px 0 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.auth-divider::before,
+.auth-divider::after { background: var(--glass-border); }
+
+.google-signin > div[style] { width: 100%; }
+
+/* ==========================================================================
+   8. Cabeceras y contenedores de página
+   ========================================================================== */
+.dashboard-container, .profile-container, .boletos-container, .rutas-container,
+.destino-container, .recomendados-container, .lugares-container,
+.booking-container, .admin-container {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 20px !important;
+  min-height: auto !important;
+  background: transparent !important;
+}
+
+/* El contenedor interno heredado no debe volver a limitar ni rellenar. */
+.dashboard-container > .container,
+.boletos-container > .container,
+.rutas-container > .container { padding: 0; max-width: none; }
+
+.dashboard-header, .profile-header, .boletos-header, .rutas-header,
+.destino-header, .recomendados-header, .lugares-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 28px !important;
+  padding: 0 0 22px !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  background: none !important;
+  text-align: left !important;
+}
+
+.dashboard-header h1, .profile-header h1, .boletos-header h1, .rutas-header h1,
+.destino-header h1, .recomendados-header h1, .lugares-header h1 {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 36px) !important;
+  font-weight: 800;
+  color: var(--text) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.dashboard-header p, .boletos-header p, .rutas-header p,
+.destino-header p, .recomendados-header p, .lugares-header p {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: var(--text-muted) !important;
+}
+
+.section-title {
+  margin: 0 0 18px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   9. Tarjetas, secciones y listas
+   ========================================================================== */
+.dashboard-section, .profile-card, .stats-card, .boleto-card, .ruta-card,
+.recomendado-card, .reserva-card, .rutas-section, .filter-section, .search-section {
+  position: relative;
+  padding: 26px !important;
+  margin-bottom: 22px;
+  border-radius: var(--radius-xl) !important;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--glass-shadow), var(--glass-highlight) !important;
+}
+
+.boleto-card, .ruta-card, .recomendado-card, .reserva-card, .item-card {
+  transition: transform 0.25s var(--ease), border-color 0.25s, box-shadow 0.25s;
+}
+
+.boleto-card:hover, .ruta-card:hover, .recomendado-card:hover,
+.reserva-card:hover, .item-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 214, 10, 0.35) !important;
+}
+
+.dashboard-section h2, .profile-card h2, .boleto-card h3, .ruta-card h3 {
+  margin-top: 0;
+}
+
+/* Rejillas de tarjetas */
+.reservas-grid, .boletos-grid, .rutas-grid, .recomendados-grid, .items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+/* Pares etiqueta / valor (perfil, reservas, rutas). */
+.info-group, .info-item, .ruta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: none !important;
+  border-radius: 0 !important;
+}
+
+.info-group:last-child, .info-item:last-child, .ruta-item:last-child { border-bottom: 0; }
+
+.info-group label, .info-item .label, .ruta-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.info-group span, .info-item .value, .ruta-value {
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Estadísticas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.stat-item {
+  padding: 22px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.action-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Precio destacado en tarjetas.
+   OJO: boletos.css pinta .precio con fondo amarillo. Si aquí solo se cambiaba el
+   color del texto a amarillo, quedaba amarillo sobre amarillo e invisible (se veía
+   un recuadro vacío en «Comprar boletos»). Se define fondo y texto juntos. */
+.precio {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px !important;
+  font-weight: 800;
+  color: var(--accent) !important;
+  background: rgba(255, 214, 10, 0.12) !important;
+  border: 1px solid rgba(255, 214, 10, 0.3);
+  border-radius: 999px !important;
+}
+
+.price { font-weight: 800; color: var(--accent); }
+
+/* Pestañas de páginas como Destino y Admin */
+.tabs, .admin-tabs, .destino-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 24px;
+  background: var(--glass-bg-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+}
+
+.tabs button, .admin-tabs button, .destino-tabs button {
+  height: 38px;
+  padding: 0 18px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.tabs button.active, .admin-tabs button.active, .destino-tabs button.active,
+.tabs button.is-active, .admin-tabs button.is-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Perfil: zona de baja */
+.danger-zone h3 { margin-top: 0; color: #fca5a5; }
+
+/* ==========================================================================
+   10. Tablas
+   ========================================================================== */
+.table-container {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  overflow-x: auto;
+}
+
+.users-table, .table-container table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: transparent !important;
+  font-size: 14px;
+}
+
+.users-table th, .table-container th {
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-bottom: 1px solid var(--glass-border);
+  white-space: nowrap;
+}
+
+.users-table td, .table-container td {
+  padding: 14px 16px;
+  color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.users-table tbody tr:last-child td,
+.table-container tbody tr:last-child td { border-bottom: 0; }
+
+.users-table tbody tr:hover td,
+.table-container tbody tr:hover td { background: rgba(255, 255, 255, 0.025); }
+
+.users-table td .input, .table-container td .input { min-height: 38px; padding: 8px 12px; }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  background: none;
+  border: 0;
+}
+
+/* ==========================================================================
+   11. Estados
+   ========================================================================== */
+.loading-container, .loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 40vh;
+  color: var(--text-muted);
+  background: none !important;
+  border: 0 !important;
+}
+
+.loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(255, 255, 255, 0.08);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.empty-state {
+  padding: 48px 24px !important;
+  text-align: center;
+  color: var(--text-muted);
+  border-style: dashed !important;
+}
+
+.error-message, .success-message {
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  border-radius: var(--radius-md);
+}
+
+.error-message { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.28); color: #fecaca; }
+.success-message { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.28); color: #bbf7d0; }
+
+/* Esqueleto de carga */
+.skeleton {
+  min-height: 150px;
+  background:
+    linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%) 0 0 / 200% 100%,
+    var(--glass-bg) !important;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton {
+  to { background-position: -200% 0, 0 0; }
+}
+
+/* ==========================================================================
+   12. Portada
+   ========================================================================== */
+.landing {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 48px;
+  /* min() y no solo 100vh: en pantallas muy altas el hero se comía toda la
+     altura y empujaba el resto de secciones fuera de la vista. */
+  min-height: min(calc(100vh - var(--topbar-h)), 760px);
+  padding: 40px 0 60px;
+}
+
+.landing-title {
+  margin: 0 0 20px;
+  font-size: var(--font-size-hero);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.landing-lead {
+  max-width: 520px;
+  margin: 0 0 32px;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.landing-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.landing-hero-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 10, 0.28), transparent 65%);
+  filter: blur(30px);
+  z-index: 0;
+}
+
+.ticket-preview {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  padding: 26px;
+  border-radius: var(--radius-xl);
+  transform: rotate(-3deg);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: rotate(-3deg) translateY(0); }
+  50%      { transform: rotate(-3deg) translateY(-10px); }
+}
+
+.ticket-preview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.ticket-chip {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(255, 214, 10, 0.12);
+  border: 1px solid rgba(255, 214, 10, 0.3);
+  border-radius: 999px;
+}
+
+.ticket-qr { font-size: 30px; color: var(--text-muted); }
+
+.ticket-preview-route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 22px;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed var(--glass-border-strong);
+}
+
+.ticket-preview small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.ticket-preview strong { font-size: 22px; font-weight: 800; }
+.ticket-arrow { font-size: 22px; color: var(--accent); }
+
+.ticket-preview-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.ticket-preview-meta strong { font-size: 15px; }
+
+.landing-section { padding: 64px 0; }
+
+.section-head { max-width: 560px; margin-bottom: 32px; }
+.section-head h2 { margin: 0; font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.feature {
+  padding: 26px;
+  border-radius: var(--radius-xl);
+  transition: transform 0.25s var(--ease), border-color 0.25s;
+}
+
+.feature:hover { transform: translateY(-4px); border-color: rgba(255, 214, 10, 0.3); }
+
+.feature-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  font-size: 22px;
+  border-radius: 14px;
+  background: rgba(255, 214, 10, 0.1);
+  border: 1px solid rgba(255, 214, 10, 0.22);
+}
+
+.feature h3 { margin: 0 0 8px; font-size: 17px; }
+.feature p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+.route-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.route-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  transition: transform 0.25s var(--ease), border-color 0.25s;
+}
+
+.route-tile:hover { transform: translateY(-3px); border-color: rgba(255, 214, 10, 0.3); }
+
+.route-tile-cities {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.route-tile-line {
+  flex: 1;
+  height: 2px;
+  min-width: 20px;
+  background: linear-gradient(90deg, var(--accent), rgba(255, 214, 10, 0.1));
+  border-radius: 2px;
+}
+
+.route-tile-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-muted); }
+
+.route-tile-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.route-tile-price small { font-size: 12px; color: var(--text-dim); }
+.route-tile-price strong { font-size: 22px; font-weight: 800; color: var(--accent); }
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step { padding: 26px; border-radius: var(--radius-xl); }
+
+.step-n {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 214, 10, 0.7);
+}
+
+.step h3 { margin: 0 0 8px; font-size: 17px; }
+.step p { margin: 0; font-size: 14px; }
+
+.cta-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 214, 10, 0.16), transparent 55%),
+    var(--glass-bg-strong) !important;
+}
+
+.cta-banner h2 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 32px); }
+.cta-banner p { margin: 0; }
+
+.landing-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--glass-border);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ==========================================================================
+   13. Modales heredados (.modal-overlay de destino.css)
+   Se alinean con las ventanas emergentes nuevas y, sobre todo, se colocan por
+   encima de la barra superior (ver #32BUG).
+   ========================================================================== */
+.modal-overlay {
+  z-index: var(--z-modal-backdrop, 2000) !important;
+  background: rgba(0, 0, 0, 0.62) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+}
+
+.modal-content {
+  border-radius: var(--radius-xl) !important;
+  background: var(--glass-bg-strong) !important;
+  border: 1px solid var(--glass-border-strong) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+  backdrop-filter: blur(var(--glass-blur-strong));
+  box-shadow: var(--glass-shadow-lg) !important;
+}
+
+.popup-dialog { border-radius: var(--radius-xl); }
+
+/* ==========================================================================
+   14. Responsive
+   ========================================================================== */
+@media (max-width: 1080px) {
+  .topbar-links { display: none; }
+  .topbar-burger { display: inline-flex; }
+}
+
+@media (max-width: 860px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding-top: 48px;
+    text-align: left;
+  }
+  .landing-hero-visual { min-height: 280px; order: -1; }
+  .landing-section { padding: 44px 0; }
+}
+
+@media (max-width: 560px) {
+  :root { --topbar-h: 62px; }
+  .topbar { padding: 0 14px; }
+  .topbar-desktop { display: none !important; }
+  .brand-name { font-size: 16px; }
+  .center-screen { padding: 24px 14px; }
+  .center-screen > .card { padding: 26px 20px; }
+  .dashboard-section, .profile-card { padding: 20px !important; }
+  .landing-lead { font-size: 16px; }
+  .landing-cta .btn { width: 100%; }
+  .cta-banner { padding: 28px 22px; }
+  .info-group, .info-item, .ruta-item { flex-direction: column; gap: 4px; }
+  .info-group span, .info-item .value, .ruta-value { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-preview, .center-screen > .card, .topbar-drawer { animation: none; }
+  .feature, .route-tile, .boleto-card, .ruta-card, .item-card { transition: none; }
+}
+
+/* ==========================================================================
+   15. Pantallas que traían su propia paleta
+   Varias hojas de página definían degradados morados (#667eea → #764ba2) o
+   verdes (#11998e → #38ef7d) y fondos blancos, ajenos a la identidad del
+   proyecto. Aquí se reconducen al negro + amarillo con cristal.
+   ========================================================================== */
+
+/* --- Reserva de asientos (SeatBooking.css) --- */
+.seat-booking-page {
+  background: transparent !important;
+  min-height: auto;
+}
+
+.booking-header h1 { color: var(--text) !important; }
+.booking-header p { color: var(--text-muted) !important; }
+
+.booking-container,
+.booking-form {
+  border-radius: var(--radius-xl) !important;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow) !important;
+}
+
+.booking-form { padding: 26px !important; }
+
+.form-group label { color: var(--text-muted) !important; }
+
+.info-preview {
+  background: rgba(255, 214, 10, 0.06) !important;
+  border-left: 3px solid var(--accent) !important;
+  border-radius: var(--radius-md);
+}
+
+.info-preview p { color: var(--text-muted) !important; }
+
+.btn-reservar-ahora {
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 24px rgba(255, 214, 10, 0.22) !important;
+}
+
+.btn-reservar-ahora:hover:not(:disabled) { background: var(--accent-hover) !important; }
+.btn-reservar-ahora:disabled { background: rgba(255, 255, 255, 0.08) !important; color: var(--text-dim) !important; box-shadow: none !important; }
+
+.error-banner {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  color: #fecaca !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* --- Mapa de asientos (BusSeatSelector.css) ---
+   El selector era una tarjeta blanca con el bus en degradado gris claro. Se pasa
+   a cristal oscuro. Los colores de los asientos se conservan porque significan
+   algo (libre / tuyo / de otro / ocupado), solo se ajustan al fondo oscuro. */
+.bus-seat-selector {
+  background: var(--glass-bg-strong) !important;
+  color: var(--text);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-xl) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+  backdrop-filter: blur(var(--glass-blur-strong));
+  box-shadow: var(--glass-shadow-lg) !important;
+}
+
+.selector-header { border-bottom-color: var(--glass-border) !important; }
+.selector-header h2 { color: var(--text) !important; }
+.selector-header p { color: var(--text-muted) !important; }
+.btn-close { color: var(--text-muted) !important; }
+
+.bus-container {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl) !important;
+}
+
+.driver-section {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--text-muted) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.seat {
+  border-radius: 10px !important;
+  border-width: 1px !important;
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
+.seat-available  { background: rgba(34, 197, 94, 0.18) !important; border-color: rgba(34, 197, 94, 0.55) !important; color: #bbf7d0 !important; }
+.seat-heldByMe   { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--accent-ink) !important; }
+.seat-heldByOther{ background: rgba(249, 115, 22, 0.2) !important; border-color: rgba(249, 115, 22, 0.55) !important; color: #fed7aa !important; }
+.seat-reserved   { background: rgba(255, 255, 255, 0.06) !important; border-color: rgba(255, 255, 255, 0.12) !important; color: var(--text-dim) !important; }
+
+.legend {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg) !important;
+}
+
+.legend-item { color: var(--text-muted) !important; }
+.dot.available { background: #22c55e !important; }
+.dot.heldByMe { background: var(--accent) !important; }
+
+/* --- Comprar boletos: botón «Ver recomendados» (boletos.css) --- */
+.link-recomendados {
+  background: rgba(255, 214, 10, 0.12) !important;
+  color: var(--accent) !important;
+  border: 1px solid rgba(255, 214, 10, 0.3) !important;
+}
+
+.link-recomendados:hover { background: rgba(255, 214, 10, 0.2) !important; }
+
+.link-destino, .link-recomendados {
+  border-radius: var(--radius-md) !important;
+  font-weight: 700;
+}
+
+/* --- Recomendados (recomendados.css): tarjetas moradas --- */
+.recomendado-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 214, 10, 0.1), transparent 55%),
+    var(--glass-bg) !important;
+}
+
+/* --- Mis reservas: banner de reserva rápida (antes verde en línea) --- */
+.quick-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 22px 26px;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 214, 10, 0.16), transparent 60%),
+    var(--glass-bg);
+  border: 1px solid rgba(255, 214, 10, 0.22);
+}
+
+.quick-action h3 { margin: 0 0 4px; font-size: 18px; }
+.quick-action p { margin: 0; font-size: 14px; }
+
+/* --- Admin: formulario de alta en rejilla, no en una columna eterna --- */
+.user-form .form-row {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px !important;
+}
+
+.user-form .form-row .btn { align-self: end; }
+
+/* La vacía dentro de una sección ya es una tarjeta: no hace falta otro marco. */
+.dashboard-section .empty-state {
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Control de tema inspirado en el proyecto de referencia. */
+.theme-toggle {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg-soft);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Tema claro
+   --------------------------------------------------------------------------
+   Paleta basada en el proyecto de referencia: fondo lavanda, superficies
+   blancas, texto azul marino y sombras suaves.
+   ========================================================================== */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eaeefc;
+  --surface: #ffffff;
+  --surface-light: #f7f9ff;
+  --text: #0f1733;
+  --text-muted: rgba(15, 23, 51, 0.68);
+  --text-dim: rgba(15, 23, 51, 0.45);
+  --border: rgba(79, 70, 229, 0.18);
+  --accent-ink: #0f1733;
+  --glass-bg: rgba(255, 255, 255, 0.94);
+  --glass-bg-strong: rgba(255, 255, 255, 0.98);
+  --glass-bg-soft: rgba(255, 255, 255, 0.9);
+  --glass-bg-hover: #ffffff;
+  --glass-border: rgba(79, 70, 229, 0.2);
+  --glass-border-strong: rgba(79, 70, 229, 0.22);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 10px 40px rgba(49, 46, 129, 0.12);
+  --glass-shadow-lg: 0 24px 70px rgba(49, 46, 129, 0.16);
+  --glass-backdrop: rgba(15, 23, 51, 0.24);
+  --app-bg-overlay: rgba(234, 238, 252, 0.28);
+}
+
+:root[data-theme='light'] body {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--app-bg-overlay), var(--app-bg-overlay)),
+    var(--app-bg-image);
+}
+
+:root[data-theme='light'] body::before {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.28), transparent 65%);
+}
+
+:root[data-theme='light'] body::after {
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.24), transparent 65%);
+}
+
+:root[data-theme='light'] .topbar {
+  background: rgba(234, 238, 252, 0.62);
+}
+
+:root[data-theme='light'] .topbar--scrolled {
+  background: rgba(234, 238, 252, 0.9);
+}
+
+:root[data-theme='light'] .topbar-drawer {
+  background: rgba(255, 255, 255, 0.94);
+}
+
+:root[data-theme='light'] .dashboard-section,
+:root[data-theme='light'] .profile-card,
+:root[data-theme='light'] .stats-card,
+:root[data-theme='light'] .boleto-card,
+:root[data-theme='light'] .ruta-card,
+:root[data-theme='light'] .recomendado-card,
+:root[data-theme='light'] .reserva-card,
+:root[data-theme='light'] .rutas-section,
+:root[data-theme='light'] .filter-section,
+:root[data-theme='light'] .search-section,
+:root[data-theme='light'] .table-container,
+:root[data-theme='light'] .empty-state {
+  background: #ffffff !important;
+  border-color: rgba(79, 70, 229, 0.2) !important;
+  box-shadow: 0 12px 34px rgba(49, 46, 129, 0.12) !important;
+  color: var(--text);
+}
+
+:root[data-theme='light'] .dashboard-section + .dashboard-section {
+  margin-top: 28px;
+}
+
+:root[data-theme='light'] .dashboard-section h2,
+:root[data-theme='light'] .dashboard-section h3,
+:root[data-theme='light'] .dashboard-section p,
+:root[data-theme='light'] .dashboard-section label,
+:root[data-theme='light'] .profile-card h2,
+:root[data-theme='light'] .boleto-card h3,
+:root[data-theme='light'] .ruta-card h3 {
+  color: var(--text);
+}
+
+:root[data-theme='light'] .dashboard-section p,
+:root[data-theme='light'] .dashboard-section label,
+:root[data-theme='light'] .ruta-label,
+:root[data-theme='light'] .info-group label,
+:root[data-theme='light'] .info-item .label {
+  color: var(--text-muted);
+}
+
+:root[data-theme='light'] .dashboard-section > div:first-child {
+  gap: 18px !important;
+}
+
+:root[data-theme='light'] .dashboard-section > div:first-child > div {
+  gap: 14px !important;
+}
+
+:root[data-theme='light'] .input,
+:root[data-theme='light'] input[type='text'],
+:root[data-theme='light'] input[type='email'],
+:root[data-theme='light'] input[type='password'],
+:root[data-theme='light'] input[type='number'],
+:root[data-theme='light'] input[type='date'],
+:root[data-theme='light'] input[type='time'],
+:root[data-theme='light'] input[type='tel'],
+:root[data-theme='light'] input[type='search'],
+:root[data-theme='light'] select,
+:root[data-theme='light'] textarea {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+}
+
+:root[data-theme='light'] .input:focus,
+:root[data-theme='light'] input:focus,
+:root[data-theme='light'] select:focus,
+:root[data-theme='light'] textarea:focus {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+:root[data-theme='light'] .table-container {
+  overflow-x: auto;
+}
+
+:root[data-theme='light'] .users-table,
+:root[data-theme='light'] .table-container table {
+  background: #ffffff !important;
+  color: var(--text);
+}
+
+:root[data-theme='light'] .users-table th,
+:root[data-theme='light'] .table-container th {
+  background: #f3f6ff !important;
+  color: #4b5878;
+  border-bottom-color: rgba(79, 70, 229, 0.16);
+}
+
+:root[data-theme='light'] .users-table td,
+:root[data-theme='light'] .table-container td {
+  color: var(--text);
+  border-bottom-color: rgba(79, 70, 229, 0.1);
+}
+
+:root[data-theme='light'] .users-table tbody tr:hover td,
+:root[data-theme='light'] .table-container tbody tr:hover td {
+  background: #f8faff;
+}
+
+:root[data-theme='light'] .action-buttons {
+  min-width: max-content;
+}
+
+:root[data-theme='light'] .users-table th:last-child,
+:root[data-theme='light'] .users-table td:last-child,
+:root[data-theme='light'] .table-container table th:last-child,
+:root[data-theme='light'] .table-container table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  min-width: 150px;
+  background: #ffffff !important;
+  box-shadow: -8px 0 14px rgba(49, 46, 129, 0.08);
+}
+
+:root[data-theme='light'] .users-table th:last-child,
+:root[data-theme='light'] .table-container table th:last-child {
+  background: #f3f6ff !important;
+  z-index: 2;
+}
+
+:root[data-theme='light'] .btn-secondary,
+:root[data-theme='light'] .btn-ghost {
+  color: var(--text) !important;
+  background: #f4f6ff;
+  border-color: rgba(79, 70, 229, 0.22);
+}
+
+:root[data-theme='light'] .btn-secondary:hover:not(:disabled),
+:root[data-theme='light'] .btn-ghost:hover:not(:disabled) {
+  background: #e8edff;
+}
+
+:root[data-theme='light'] .btn-danger {
+  background: #fee2e2;
+  color: #991b1b !important;
+  border-color: #fca5a5;
+}
+
+:root[data-theme='light'] .btn-danger:hover:not(:disabled) {
+  background: #fecaca;
+  color: #7f1d1d !important;
+  border-color: #f87171;
+}
+
+:root[data-theme='light'] .btn-warning {
+  background: #ffedd5;
+  color: #92400e !important;
+  border-color: #fdba74;
+}
+
+:root[data-theme='light'] .btn-warning:hover:not(:disabled) {
+  background: #fed7aa;
+  color: #78350f !important;
+  border-color: #fb923c;
+}
+
+:root[data-theme='light'] .danger-zone h3 {
+  color: #b42318 !important;
+}
+
+:root[data-theme='light'] .error-message {
+  color: #991b1b;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+:root[data-theme='light'] .success-message {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+:root[data-theme='light'] ::selection {
+  background: rgba(2, 132, 199, 0.22);
+  color: var(--text);
+}
+
+/* El panel administrativo conserva la misma geometría en ambos temas. */
+.admin-dashboard .dashboard-section {
+  padding: 22px !important;
+}
+
+.admin-dashboard .table-container {
+  overflow-x: hidden;
+}
+
+.admin-dashboard .users-table {
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.admin-dashboard .users-table th,
+.admin-dashboard .users-table td {
+  padding: 11px 10px;
+  overflow-wrap: anywhere;
+}
+
+.admin-dashboard .users-table th:last-child,
+.admin-dashboard .users-table td:last-child {
+  width: 132px;
+  min-width: 132px;
+  position: static;
+  box-shadow: none;
+}
+
+.admin-dashboard .users-table td:last-child .action-buttons {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.admin-dashboard .users-table td:last-child .action-buttons .btn {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+
+.admin-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin: 0 0 18px;
+  padding: 13px 16px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.admin-feedback strong {
+  flex: 0 0 auto;
+}
+
+.admin-feedback span {
+  flex: 1;
+}
+
+.admin-feedback--success {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.admin-feedback--error {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.admin-feedback--info {
+  color: #075985;
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.admin-feedback__close {
+  margin: -3px -4px -3px 4px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+:root:not([data-theme='light']) .admin-feedback--success {
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+:root:not([data-theme='light']) .admin-feedback--error {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(248, 113, 113, 0.52);
+}
+
+:root:not([data-theme='light']) .admin-feedback--info {
+  color: #bae6fd;
+  background: rgba(14, 165, 233, 0.16);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+@media (max-width: 900px) {
+  .admin-dashboard .users-table {
+    font-size: 12px;
+  }
+
+  .admin-dashboard .users-table th,
+  .admin-dashboard .users-table td {
+    padding: 9px 7px;
+  }
+
+  .admin-dashboard .users-table th:last-child,
+  .admin-dashboard .users-table td:last-child {
+    width: 116px;
+    min-width: 116px;
+  }
+}

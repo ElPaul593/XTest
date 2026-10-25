@@ -13,6 +13,15 @@ export async function getRutas() {
   }
 }
 
+export async function getCiudadesRutas() {
+  try {
+    const response = await api.get('/rutas/ciudades');
+    return response.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.error || err.message || 'Error al obtener ciudades');
+  }
+}
+
 /**
  * Obtiene una ruta por ID (hace fetch fresco al backend)
  */

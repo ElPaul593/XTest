@@ -1,6 +1,7 @@
 jest.mock('../../repositories/rutaRepo', () => ({
   create: jest.fn(),
-  updateById: jest.fn()
+  updateById: jest.fn(),
+  findByEndpoints: jest.fn()
 }));
 
 jest.mock('../../services/mapsService', () => ({
@@ -13,6 +14,7 @@ const RutaService = require('../../services/rutaService');
 describe('RutaService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    RutaRepo.findByEndpoints.mockResolvedValue(null);
   });
 
   test('crea una ruta guardando la duración con formato de horas', async () => {
@@ -62,5 +64,23 @@ describe('RutaService', () => {
       to: 'Cuenca',
       duration: 4
     })).resolves.toBeNull();
+  });
+
+  test('rechaza una ruta duplicada', async () => {
+    RutaRepo.findByEndpoints.mockResolvedValue({ _id: 'existing-route' });
+
+    await expect(RutaService.create({
+      from: 'Quito',
+      to: 'Cuenca',
+      price: 10,
+      duration: 4
+    })).rejects.toThrow('Ya existe una ruta con ese origen y destino');
+  });
+
+  test('rechaza ciudades no registradas y el mismo origen y destino', async () => {
+    await expect(RutaService.create({ from: 'Ciudad X', to: 'Quito', duration: 4 }))
+      .rejects.toThrow('ciudades registradas');
+    await expect(RutaService.create({ from: 'Quito', to: 'quito', duration: 4 }))
+      .rejects.toThrow('deben ser diferentes');
   });
 });

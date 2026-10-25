@@ -7,9 +7,10 @@ const UserService = require('../services/userService');
 
 exports.getAll = async (req, res) => {
   try {
-    const { page, limit, search } = req.query;
+    const { page, limit, search, estado } = req.query;
     // Retrocompatible: sin page/limit devuelve un array; con ellos, { data, pagination }.
-    const result = await UserService.getAll({ page, limit, search });
+    // `estado` es opcional: sin él se listan todas las cuentas (activas, bloqueadas y de baja).
+    const result = await UserService.getAll({ page, limit, search, estado });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -76,54 +77,130 @@ exports.updateMe = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /api/users/:id — baja de cuenta.
+ *
+ * Mantiene el verbo y la ruta DELETE (el frontend y Postman ya los usan), pero la
+ * semántica es baja lógica: la cuenta pasa a estado ELIMINADO y el documento se
+ * conserva para no romper el histórico de reservas y boletos.
+ */
 exports.remove = async (req, res) => {
   try {
-    const result = await UserService.remove(req.params.id);
+    const result = await UserService.softDelete(req.params.id, {
+      motivo: req.body?.motivo || null,
+      actorId: req.user?._id || null
+    });
+
     if (!result) {
       return res.status(404).json({ error: 'User not found' });
     }
-    if (result.blocked) {
-      return res.json({
-        message: 'La cuenta fue bloqueada porque tiene registros o historial asociado. Sus datos se conservaron.',
-        blocked: true
-      });
-    }
-    res.json({ message: 'Usuario eliminado exitosamente', deleted: true });
+
+    res.json({
+      message: 'Cuenta dada de baja correctamente',
+      estado: result.estado,
+      data: result
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    const status = err.statusCode || 400;
+    res.status(status).json({ error: err.message });
   }
 };
 
+/**
+ * DELETE /api/users/me — el usuario da de baja su propia cuenta.
+ *
+ * #17BUG (documentado y corregido con esta ruta) — Antes el frontend
+ * (`services/users.js` → `deleteCurrentUser`) resolvía la baja propia pidiendo
+ * `/users/me` para sacar el `_id` y llamando después a `DELETE /api/users/:id`.
+ * Pero esa ruta está protegida con `requireAdminAccess`, así que para un usuario
+ * con rol USER devolvía siempre 403 "Acceso administrativo requerido": el botón
+ * "Eliminar Cuenta" del perfil NUNCA funcionó para un usuario normal (solo un
+ * administrador podía darse de baja a sí mismo). Además gastaba dos peticiones
+ * para algo que el token ya identifica.
+ */
+exports.removeMe = async (req, res) => {
+  try {
+    const result = await UserService.softDelete(req.user._id.toString(), {
+      motivo: 'Baja solicitada por el titular desde su perfil',
+      actorId: req.user._id
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      message: 'Tu cuenta ha sido dada de baja. Tu historial de reservas se conserva.',
+      estado: result.estado
+    });
+  } catch (err) {
+    const status = err.statusCode || 400;
+    res.status(status).json({ error: err.message });
+  }
+};
+
+/**
+ * PATCH /api/users/:id/estado — bloquear, reactivar o dar de baja una cuenta (Admin).
+ * Sustituye al borrado físico como herramienta de moderación.
+ */
+/**
+ * PATCH/POST /api/users/:id/restore — reactivar una cuenta (Admin).
+ *
+ * Viene de la rama remota, que modelaba las bajas con `isDeleted`. Al unificar
+ * en el campo `estado` (ACTIVO / BLOQUEADO / ELIMINADO), «restaurar» es
+ * exactamente volver a ACTIVO, así que esto es un alias de `cambiarEstado` y no
+ * una segunda forma de hacer lo mismo. Se conserva el nombre y la forma de la
+ * respuesta para no romper su ruta, su test ni el frontend que ya los usa.
+ */
 exports.restore = async (req, res) => {
   try {
-    const result = await UserService.restore(req.params.id);
-    if (!result) {
-      return res.status(404).json({ error: 'La cuenta no existe o no está bloqueada' });
+    const updated = await UserService.cambiarEstado(req.params.id, 'ACTIVO', {
+      actorId: req.user?._id || null
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'La cuenta no existe' });
     }
+
     res.json({
       message: 'Cuenta restaurada exitosamente. Sus datos e historial fueron conservados.',
       restored: true,
-      user: result.user
+      user: updated
     });
   } catch (err) {
-    res.status(400).json({ error: err.message || 'No se pudo restaurar la cuenta' });
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    // 409 = ya estaba activa. Para «restaurar» eso no es un fallo.
+    if (err.statusCode === 409) {
+      return res.status(409).json({ error: 'La cuenta ya está activa' });
+    }
+    res.status(err.statusCode || 400).json({ error: err.message || 'No se pudo restaurar la cuenta' });
   }
 };
 
-exports.removeMe = async (req, res) => {
+exports.cambiarEstado = async (req, res) => {
   try {
-    const result = await UserService.remove(req.user.id.toString());
-    if (!result) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+    const { estado, motivo } = req.body;
+
+    const updated = await UserService.cambiarEstado(req.params.id, estado, {
+      motivo: motivo || null,
+      actorId: req.user?._id || null
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found' });
     }
-    if (result.blocked) {
-      return res.json({
-        message: 'La cuenta fue bloqueada porque tiene registros o historial asociado. Sus datos se conservaron.',
-        blocked: true
-      });
-    }
-    res.json({ message: 'Cuenta eliminada exitosamente', deleted: true });
+
+    res.json({
+      message: `Cuenta actualizada a estado ${updated.estado}`,
+      data: updated
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'ID inválido' });
+    }
+    const status = err.statusCode || 400;
+    res.status(status).json({ error: err.message });
   }
 };

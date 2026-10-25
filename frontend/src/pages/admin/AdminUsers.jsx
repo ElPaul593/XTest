@@ -1,8 +1,52 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { listUsers, createUser, updateUser, deleteUser, restoreUser } from '../../services/users';
+import { listUsers, createUser, updateUser, cambiarEstadoUsuario } from '../../services/users';
 import { getRutas } from '../../services/rutas';
+import { ConfirmPopup } from '../../components/Popup';
+import useFeedback from '../../hooks/useFeedback';
 
 const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
+
+/**
+ * Presentación de los estados de cuenta.
+ *
+ * Las cuentas no se borran: se bloquean o se dan de baja. Así las reservas,
+ * boletos y calificaciones conservan su referencia al usuario y el histórico
+ * sigue siendo consultable.
+ */
+const ESTADOS_UI = {
+  ACTIVO: { etiqueta: 'Activo', color: 'var(--success)', icono: '●' },
+  BLOQUEADO: { etiqueta: 'Bloqueado', color: 'var(--warning)', icono: '⊘' },
+  ELIMINADO: { etiqueta: 'De baja', color: 'var(--error)', icono: '✕' }
+};
+
+/** Los usuarios creados antes de la baja lógica no tienen el campo `estado`. */
+const estadoDe = (usuario) => String(usuario?.estado || 'ACTIVO').toUpperCase();
+
+function EstadoBadge({ estado }) {
+  const info = ESTADOS_UI[estado] || ESTADOS_UI.ACTIVO;
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '3px 10px',
+        fontSize: '12px',
+        fontWeight: 600,
+        borderRadius: '999px',
+        color: info.color,
+        background: 'rgba(255, 255, 255, 0.06)',
+        border: `1px solid ${info.color}`,
+        whiteSpace: 'nowrap'
+      }}
+      title={info.etiqueta}
+    >
+      <span aria-hidden="true">{info.icono}</span>
+      {info.etiqueta}
+    </span>
+  );
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -17,6 +61,15 @@ export default function AdminUsers() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ email: '', nombre: '', apellido: '', telefono: '', provincia: '', role: 'USER', password: '', assignedRutas: [] });
   const [rutas, setRutas] = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState('');
+
+  /**
+   * Cambio de estado pendiente de confirmar.
+   * Forma: { usuario, estado, motivo, enCurso, error }
+   */
+  const [cambioEstado, setCambioEstado] = useState(null);
+
+  const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
 
   useEffect(() => {
     getRutas().then((r) => setRutas(Array.isArray(r) ? r : (r?.data || []))).catch(() => setRutas([]));
@@ -26,7 +79,12 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       setError(null);
-      const res = await listUsers({ page, limit: 10, search: search || undefined });
+      const res = await listUsers({
+        page,
+        limit: 10,
+        search: search || undefined,
+        estado: filtroEstado || undefined
+      });
       if (Array.isArray(res)) {
         setUsers(res);
         setPagination({ page: 1, totalPages: 1 });
@@ -39,7 +97,7 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, filtroEstado]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -53,8 +111,9 @@ export default function AdminUsers() {
       await createUser(payload);
       setForm(emptyCreate);
       load();
+      mostrarExito('El usuario se ha creado correctamente.', 'Usuario creado');
     } catch (e) {
-      alert(e.message);
+      mostrarError(e, 'No se pudo crear el usuario');
     }
   };
 
@@ -84,32 +143,46 @@ export default function AdminUsers() {
       await updateUser(id, payload);
       setEditingId(null);
       load();
+      mostrarExito('Los cambios se han guardado.', 'Usuario actualizado');
     } catch (e) {
-      alert(e.message);
+      mostrarError(e, 'No se pudo actualizar el usuario');
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este usuario?')) return;
-    try {
-      setFeedback(null);
-      const result = await deleteUser(id);
-      if (result?.message) setFeedback({ type: result.blocked ? 'warning' : 'success', text: result.message });
-      load();
-    } catch (e) {
-      setError(e.message);
-    }
+  /**
+   * Abre la confirmación de cambio de estado.
+   *
+   * Sustituye al borrado de usuarios: ninguna de las tres operaciones elimina
+   * datos. BLOQUEADO corta el acceso conservando todo; ELIMINADO marca la baja;
+   * ACTIVO reactiva la cuenta.
+   */
+  const pedirCambioEstado = (usuario, estado) => {
+    setCambioEstado({ usuario, estado, motivo: '', enCurso: false, error: null });
   };
 
-  const handleRestore = async (id) => {
-    if (!window.confirm('¿Restaurar esta cuenta? Sus datos e historial se conservarán.')) return;
+  const confirmarCambioEstado = async () => {
+    if (!cambioEstado) return;
+
+    const { usuario, estado, motivo } = cambioEstado;
+    const id = usuario._id || usuario.id;
+
     try {
-      setFeedback(null);
-      const result = await restoreUser(id);
-      setFeedback({ type: 'success', text: result.message });
+      setCambioEstado((prev) => ({ ...prev, enCurso: true, error: null }));
+      await cambiarEstadoUsuario(id, estado, motivo.trim() || undefined);
+
+      setCambioEstado(null);
       load();
+
+      const nombre = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || 'La cuenta';
+      const textos = {
+        BLOQUEADO: `${nombre} ya no puede iniciar sesión. Sus datos y su historial se conservan intactos.`,
+        ELIMINADO: `${nombre} ha quedado dada de baja. Sus reservas y boletos siguen en el sistema.`,
+        ACTIVO: `${nombre} vuelve a tener acceso con normalidad.`
+      };
+
+      mostrarExito(textos[estado], 'Estado actualizado');
     } catch (e) {
-      setError(e.message);
+      setCambioEstado((prev) => ({ ...prev, enCurso: false, error: e.message }));
     }
   };
 
@@ -146,13 +219,27 @@ export default function AdminUsers() {
       <div className="dashboard-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <h2>Usuarios</h2>
-          <input
-            className="input"
-            placeholder="Buscar por nombre/cédula…"
-            value={search}
-            onChange={e => { setPage(1); setSearch(e.target.value); }}
-            style={{ maxWidth: '280px' }}
-          />
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <select
+              className="input"
+              value={filtroEstado}
+              onChange={e => { setPage(1); setFiltroEstado(e.target.value); }}
+              aria-label="Filtrar por estado de cuenta"
+              style={{ maxWidth: '190px' }}
+            >
+              <option value="">Todos los estados</option>
+              <option value="ACTIVO">Solo activos</option>
+              <option value="BLOQUEADO">Solo bloqueados</option>
+              <option value="ELIMINADO">Solo dados de baja</option>
+            </select>
+            <input
+              className="input"
+              placeholder="Buscar por nombre/cédula…"
+              value={search}
+              onChange={e => { setPage(1); setSearch(e.target.value); }}
+              style={{ maxWidth: '280px' }}
+            />
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -170,13 +257,14 @@ export default function AdminUsers() {
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Teléfono</th><th>Provincia</th><th>Estado</th><th>Rol</th><th>Acciones</th>
+                  <th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Correo</th><th>Teléfono</th><th>Provincia</th><th>Rol</th><th>Estado</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map(u => {
                   const id = u._id || u.id;
                   const editing = editingId === id;
+                  const estado = estadoDe(u);
                   return (
                     <tr key={id}>
                       <td>{u.cedula || u.pasaporte || '—'}</td>
@@ -185,19 +273,6 @@ export default function AdminUsers() {
                       <td>{editing ? <input className="input" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} /> : (u.email || '—')}</td>
                       <td>{editing ? <input className="input" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} /> : u.telefono}</td>
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
-                      <td>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 8px',
-                          borderRadius: '999px',
-                          background: u.isDeleted ? '#fee2e2' : '#dcfce7',
-                          color: u.isDeleted ? '#b91c1c' : '#166534',
-                          fontSize: '12px',
-                          fontWeight: 600
-                        }}>
-                          {u.isDeleted ? 'Bloqueada' : 'Activa'}
-                        </span>
-                      </td>
                       <td>
                         {editing
                           ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option></select>
@@ -224,18 +299,66 @@ export default function AdminUsers() {
                         )}
                       </td>
                       <td>
+                        <EstadoBadge estado={estado} />
+                        {u.estadoMotivo && (
+                          <div
+                            style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', maxWidth: '180px' }}
+                            title={u.estadoMotivo}
+                          >
+                            {u.estadoMotivo}
+                          </div>
+                        )}
+                      </td>
+                      <td>
                         {editing ? (
                           <div className="action-buttons">
                             <button className="btn btn-primary" onClick={() => saveEdit(id)}>Guardar</button>
                             <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Cancelar</button>
                           </div>
                         ) : (
-                          <div className="action-buttons">
+                          /* Las acciones dependen del estado actual. Ya no hay
+                             "Eliminar": el borrado físico dejaba huérfanas las
+                             reservas y boletos del usuario. */
+                          <div className="action-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button className="btn btn-secondary" onClick={() => startEdit(u)}>Editar</button>
-                            {u.isDeleted ? (
-                              <button className="btn btn-primary" onClick={() => handleRestore(id)}>Restaurar</button>
-                            ) : (
-                              <button className="btn btn-ghost" onClick={() => handleDelete(id)}>Eliminar</button>
+
+                            {estado === 'ACTIVO' && (
+                              <>
+                                <button
+                                  className="btn btn-warning"
+                                  onClick={() => pedirCambioEstado(u, 'BLOQUEADO')}
+                                  title="Impide el acceso conservando todos los datos"
+                                >
+                                  Bloquear
+                                </button>
+                                <button
+                                  className="btn btn-danger"
+                                  onClick={() => pedirCambioEstado(u, 'ELIMINADO')}
+                                  title="Marca la cuenta como dada de baja (no borra datos)"
+                                >
+                                  Dar de baja
+                                </button>
+                              </>
+                            )}
+
+                            {estado !== 'ACTIVO' && (
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => pedirCambioEstado(u, 'ACTIVO')}
+                                title="Devuelve el acceso a la cuenta"
+                              >
+                                Reactivar
+                              </button>
+                            )}
+
+                            {estado === 'BLOQUEADO' && (
+                              <button
+                                className="btn btn-danger"
+                                onClick={() => pedirCambioEstado(u, 'ELIMINADO')}
+                                title="Marca la cuenta como dada de baja (no borra datos)"
+                              >
+                                Dar de baja
+                              </button>
                             )}
                           </div>
                         )}
@@ -256,6 +379,67 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
+
+      {/* Confirmación del cambio de estado. Pide el motivo porque es el texto
+          que verá el usuario cuando intente iniciar sesión. */}
+      <ConfirmPopup
+        open={!!cambioEstado}
+        onCancel={() => setCambioEstado(null)}
+        onConfirm={confirmarCambioEstado}
+        title={
+          cambioEstado?.estado === 'BLOQUEADO'
+            ? '¿Bloquear esta cuenta?'
+            : cambioEstado?.estado === 'ELIMINADO'
+              ? '¿Dar de baja esta cuenta?'
+              : '¿Reactivar esta cuenta?'
+        }
+        message={
+          cambioEstado
+            ? `Usuario: ${cambioEstado.usuario.nombre || ''} ${cambioEstado.usuario.apellido || ''} (${cambioEstado.usuario.cedula || cambioEstado.usuario.pasaporte || 'sin identificación'}).`
+            : ''
+        }
+        note={
+          cambioEstado?.estado === 'ACTIVO'
+            ? 'La cuenta recuperará el acceso inmediatamente y podrá volver a iniciar sesión.'
+            : 'No se borra ningún dato. Sus reservas, boletos y calificaciones permanecen en la base de datos; solo se le retira el acceso. La operación es reversible desde este mismo panel.'
+        }
+        confirmLabel={
+          cambioEstado?.estado === 'BLOQUEADO'
+            ? 'Bloquear'
+            : cambioEstado?.estado === 'ELIMINADO'
+              ? 'Dar de baja'
+              : 'Reactivar'
+        }
+        variant={cambioEstado?.estado === 'ACTIVO' ? 'info' : 'warning'}
+        destructive={cambioEstado?.estado !== 'ACTIVO'}
+        loading={!!cambioEstado?.enCurso}
+        error={cambioEstado?.error}
+      >
+        {cambioEstado && cambioEstado.estado !== 'ACTIVO' && (
+          <div className="field">
+            <label htmlFor="motivo-estado">Motivo (se le mostrará al usuario)</label>
+            <input
+              id="motivo-estado"
+              className="input"
+              value={cambioEstado.motivo}
+              onChange={e => setCambioEstado(prev => ({ ...prev, motivo: e.target.value }))}
+              placeholder="Ej.: Incumplimiento de las condiciones de uso"
+              maxLength={300}
+              disabled={cambioEstado.enCurso}
+            />
+          </div>
+        )}
+      </ConfirmPopup>
+
+      {/* Avisos de resultado. Antes eran `alert()` del navegador: bloqueaban el
+          hilo y no seguían la identidad visual del proyecto. */}
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+          <button type="button" className="admin-feedback__close" onClick={cerrarAviso} aria-label="Cerrar aviso">×</button>
+        </div>
+      )}
     </div>
   );
 }

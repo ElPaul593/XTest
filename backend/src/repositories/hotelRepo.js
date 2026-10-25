@@ -35,13 +35,6 @@ exports.findByCiudad = async (ciudad) => {
   }).sort({ createdAt: -1 }).lean();
 };
 
-exports.findByGooglePlaceId = async (googlePlaceId) => {
-  if (!googlePlaceId) {
-    return null;
-  }
-
-  return Hotel.findOne({ googlePlaceId }).lean();
-};
 
 exports.findById = async (id) => {
   return Hotel.findById(id).lean();
@@ -52,27 +45,12 @@ exports.create = async (data) => {
   return hotel.save();
 };
 
-exports.upsertByGooglePlaceId = async (googlePlaceId, data) => {
-  if (!googlePlaceId) {
-    throw new Error('googlePlaceId es requerido para el upsert');
-  }
-
-  return Hotel.findOneAndUpdate(
-    { googlePlaceId },
-    {
-      $set: {
-        ...data,
-        googlePlaceId
-      }
-    },
-    {
-      new: true,
-      upsert: true,
-      runValidators: true,
-      setDefaultsOnInsert: true
-    }
-  ).lean();
-};
+/*
+ * #7BUG y #8BUG — CORREGIDOS: se eliminaron `findByGooglePlaceId` y
+ * `upsertByGooglePlaceId`. Ninguno se invocaba: la deduplicación y el alta de
+ * hoteles de Google Places los resuelve `bulkUpsertGoogleHotels`, que hace lo
+ * mismo para N hoteles en un único `bulkWrite` en lugar de uno en uno.
+ */
 
 exports.bulkUpsertGoogleHotels = async (hotelesGoogle = [], ciudad) => {
   if (!Array.isArray(hotelesGoogle) || hotelesGoogle.length === 0) {

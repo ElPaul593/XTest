@@ -2,6 +2,7 @@ const RutaRepo = require('../repositories/rutaRepo');
 const Ruta = require('../models/rutaModel');
 const { rutas } = require('../data/seedData');
 const MapsService = require('./mapsService');
+const { getCiudadesRegistradas, normalizarCiudadRegistrada } = require('../utils/provinciaUtils');
 
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern
@@ -18,6 +19,25 @@ exports.getAll = async () => {
   return RutaRepo.findAll();
 };
 
+exports.getCiudadesRegistradas = () => getCiudadesRegistradas();
+
+async function validateRouteEndpoints(data, excludeId = null) {
+  const from = normalizarCiudadRegistrada(data.from);
+  const to = normalizarCiudadRegistrada(data.to);
+
+  if (!from || !to) {
+    throw new Error('El origen y el destino deben ser ciudades registradas');
+  }
+  if (from.localeCompare(to, 'es', { sensitivity: 'base' }) === 0) {
+    throw new Error('El origen y el destino deben ser diferentes');
+  }
+  if (await RutaRepo.findByEndpoints(from, to, excludeId)) {
+    throw new Error('Ya existe una ruta con ese origen y destino');
+  }
+
+  return { from, to };
+}
+
 exports.getById = async (id) => {
   const ruta = await RutaRepo.findById(id);
   if (!ruta) throw new Error('Ruta no encontrada');
@@ -30,6 +50,9 @@ exports.remove = async (id) => {
 
 exports.create = async (data) => {
   const payload = { ...data };
+  const endpoints = await validateRouteEndpoints(payload);
+  payload.from = endpoints.from;
+  payload.to = endpoints.to;
   payload.duration = `${Number(payload.duration)} horas`;
   if (!payload.name && payload.from && payload.to) {
     payload.name = `${payload.from} - ${payload.to}`;
@@ -40,6 +63,9 @@ exports.create = async (data) => {
 
 exports.update = async (id, data) => {
   const payload = { ...data };
+  const endpoints = await validateRouteEndpoints(payload, id);
+  payload.from = endpoints.from;
+  payload.to = endpoints.to;
   if (payload.from && payload.to) {
     payload.name = `${payload.from} - ${payload.to}`;
   }

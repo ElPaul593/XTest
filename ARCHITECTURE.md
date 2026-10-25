@@ -39,6 +39,11 @@ HTTP → routes → middleware → controllers → services → repositories →
 Cada dominio sigue el mismo patrón `routes → controllers → services → repositories → models`:
 `users`, `auth`, `reservas`, `rutas`, `boletos`, `hoteles`, `lugarTuristico`, `calificacion`, `recomendacion`, `cedula`, `asientos`/`seat` (proxy), `pricing`, `stats`.
 
+#### Reglas de rutas y ciudades
+- El catálogo de ciudades registrado vive en `backend/src/utils/provinciaUtils.js` (`CIUDAD_PROVINCIA`), por lo que no se agrega una colección independiente de ciudades.
+- `RutaService` normaliza y valida origen/destino contra ese catálogo, rechaza origen y destino iguales y evita duplicar el mismo par origen-destino.
+- `GET /api/rutas/ciudades` expone el catálogo para los combobox del panel administrativo. Los filtros de rutas y lugares se aplican sobre sus listados sin alterar los contratos de persistencia.
+
 ### Roles y seguridad
 - El rol se guarda en `User.role` (`ADMIN` | `USER`) y viaja en el JWT (en minúsculas).
 - `authenticateToken` carga el usuario y normaliza el rol; `requireAdminAccess` exige `admin`.

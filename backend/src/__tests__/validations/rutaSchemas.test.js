@@ -29,4 +29,28 @@ describe('Validación de rutas administrativas', () => {
     const { error } = rutaSchemas.create.validate({ duration: 4 });
     expect(error).toBeDefined();
   });
+
+  test.each([
+    ['precio', { price: '2e0' }],
+    ['duración', { duration: '4e1' }],
+    ['asientos', { seats: '40a' }]
+  ])('rechaza letras o notación científica en %s', (_field, invalidValue) => {
+    const { error } = rutaSchemas.create.validate({ ...validRoute, ...invalidValue }, { convert: false });
+    expect(error).toBeDefined();
+  });
+
+  test('acepta decimales válidos en precio y duración, y enteros en asientos', () => {
+    const { error } = rutaSchemas.create.validate({
+      ...validRoute,
+      price: 12.5,
+      duration: 4.5,
+      seats: 45
+    });
+    expect(error).toBeUndefined();
+  });
+
+  test('rechaza asientos decimales', () => {
+    const { error } = rutaSchemas.create.validate({ ...validRoute, seats: 40.5 });
+    expect(error).toBeDefined();
+  });
 });

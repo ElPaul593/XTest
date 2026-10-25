@@ -63,49 +63,26 @@ exports.deleteById = async (id) => {
   return Calificacion.findByIdAndDelete(id).lean();
 };
 
-/**
- * PATRÓN REPOSITORY: Método especializado de búsqueda
- * Encapsula la búsqueda de calificaciones con información de nacionalidad.
+/*
+ * #4BUG, #5BUG y #6BUG — CORREGIDOS: se eliminaron tres métodos sin uso.
+ *
+ *  · `findByTipoYReferenciaConNacionalidad` — resto de una versión anterior del
+ *    motor de recomendaciones que ponderaba por nacionalidad. El algoritmo vigente
+ *    agrupa por provincia.
+ *
+ *  · `findCalificacionesMesActual` — la métrica que debía alimentar
+ *    (`calificacionesMesActual`) salía siempre 0 porque nadie llamaba al método.
+ *    Ahora el dato se calcula de verdad en `core/recommendationCore.js` a partir de
+ *    las calificaciones que ya están cargadas en memoria, SIN consultas
+ *    adicionales: una consulta por lugar habría reintroducido el problema N+1 que
+ *    ese archivo justamente resolvió.
+ *
+ *  · `findByTipoYReferenciaYProvincia` — duplicaba en MongoDB un filtrado que el
+ *    core ya hace sobre datos cargados; mantenerlo obligaría a dos consultas donde
+ *    basta una.
+ *
+ * El método vivo que usa el motor de recomendaciones es `findByTipoYReferenciaIn`.
  */
-// Método para obtener calificaciones agrupadas por nacionalidad
-exports.findByTipoYReferenciaConNacionalidad = async (tipo, referencia) => {
-  return Calificacion.find({ tipo, referencia })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
-    .sort({ fecha: -1 })
-    .lean();
-};
-
-/**
- * PATRÓN REPOSITORY: Método especializado de búsqueda con filtro temporal
- * Encapsula la lógica de búsqueda de calificaciones del mes actual.
- */
-// Método para obtener calificaciones del mes actual
-exports.findCalificacionesMesActual = async (tipo, referencia) => {
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-  
-  return Calificacion.find({ 
-    tipo, 
-    referencia,
-    fecha: { $gte: inicioMes }
-  })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
-    .sort({ fecha: -1 })
-    .lean();
-};
-
-/**
- * PATRÓN REPOSITORY: Método especializado de búsqueda con filtro por provincia
- * Encapsula la lógica de búsqueda y filtrado por provincia del usuario.
- */
-// Método para obtener calificaciones filtradas por provincia de usuario
-exports.findByTipoYReferenciaYProvincia = async (tipo, referencia, provincia) => {
-  const calificaciones = await Calificacion.find({ tipo, referencia })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
-    .sort({ fecha: -1 })
-    .lean();
-  
-  // Filtrar por provincia del usuario
-  return calificaciones.filter(c => c.usuario && c.usuario.provincia === provincia);
-};
-
+// ELIMINADO (#4BUG): findByTipoYReferenciaConNacionalidad
+// ELIMINADO (#5BUG): findCalificacionesMesActual
+// ELIMINADO (#6BUG): findByTipoYReferenciaYProvincia

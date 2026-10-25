@@ -16,6 +16,29 @@ import {
  *   disabled – boolean para deshabilitar interacción
  */
 
+/**
+ * #31BUG — Archivo de datos duplicado: 655 KB que se publican dos veces.
+ *
+ * El mismo GeoJSON existe en dos rutas, IDÉNTICAS byte a byte (670 788 bytes
+ * cada una, verificado con `cmp`):
+ *
+ *   · `frontend/public/ecuador-provinces.geojson`     ← el que se usa
+ *   · `frontend/src/assets/ecuador-provinces.geojson` ← copia muerta
+ *
+ * Esta constante apunta a `/ecuador-provinces.geojson`, es decir, a la copia de
+ * `public/`, que Vite sirve tal cual en la raíz del sitio. La copia de
+ * `src/assets/` no la importa nadie (0 referencias en todo `src/`), así que no
+ * entra en el bundle pero sí ocupa espacio en el repositorio y en cada clon.
+ *
+ * El riesgo es la divergencia silenciosa: si se corrige la geometría de una
+ * provincia en la copia equivocada, el mapa no cambia y el error es difícil de
+ * localizar, porque ambos archivos tienen el mismo nombre.
+ *
+ * La anotación va aquí porque el formato JSON no admite comentarios.
+ *
+ * NO se corrige por indicación expresa: solo se documenta. La copia viva es la
+ * de `public/`.
+ */
 const GEO_URL = '/ecuador-provinces.geojson';
 
 // ── Colores por región ─────────────────────────────────────────────────────

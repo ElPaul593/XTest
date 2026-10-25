@@ -74,6 +74,11 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
       ? preferenciasUsuario.filter(Boolean)
       : [];
 
+    // Inicio del mes en curso, para la métrica `calificacionesMesActual`.
+    // Se calcula una sola vez fuera del bucle.
+    const ahora = new Date();
+    const inicioMesActual = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+
     // Procesar cada lugar usando el mapa precargado (sin consultas adicionales)
     const lugaresConCalificaciones = lugaresTuristicos.map((lugar) => {
         const todasCalificaciones = calificacionesPorLugar.get(String(lugar._id)) || [];
@@ -106,11 +111,22 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
           score *= 1.2;
         }
 
+        // #5BUG CORREGIDO: antes este dato se devolvía como literal 0 y la
+        // métrica salía vacía en toda la aplicación. Se cuenta aquí, sobre las
+        // calificaciones YA cargadas en memoria, para no añadir una consulta por
+        // lugar (eso reintroduciría el problema N+1 que resuelve la carga única
+        // con `findByTipoYReferenciaIn`).
+        const calificacionesMesActual = todasCalificaciones.filter((c) => {
+          const fecha = c.fecha || c.createdAt;
+          return fecha && new Date(fecha) >= inicioMesActual;
+        }).length;
+
         return {
           lugarTuristico: lugar,
           calificacionPromedio: promedioCalificaciones,
           totalCalificaciones: calificacionesMismaProvincia.length,
           totalCalificacionesGenerales: todasCalificaciones.length,
+          calificacionesMesActual,
           score: score,
           provinciaOrigen: provinciaOrigen,
           ciudadDestino: ciudadDestino,
@@ -151,40 +167,52 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
       }
       
       if (ruta) {
-
-        // Guardar cada recomendación en la colección hija
-        await Promise.all(
-          lugaresOrdenados.map(async (item) => {
-            // Verificar si ya existe esta recomendación
-            const existe = await LugaresRecomendados.findOne({
+        /**
+         * #11BUG CORREGIDO (parte 1 de 2): de 2·N consultas a UNA sola.
+         *
+         * Antes, por cada lugar recomendado se hacía un `findOne` para ver si ya
+         * existía la fila y después un `create` o un `findByIdAndUpdate`. Con N
+         * lugares eso son 2·N viajes a MongoDB por cada petición de
+         * recomendaciones, y era el principal coste del endpoint.
+         *
+         * Ahora se resuelve con un único `bulkWrite` de `updateOne` + `upsert`:
+         * MongoDB decide por cada documento si lo inserta o lo actualiza, usando
+         * la misma clave lógica que antes se comprobaba a mano
+         * (usuario + lugarTuristico + ruta).
+         *
+         * La parte 2 de la corrección es que esta colección ya se LEE: ver
+         * `getRecomendadosPorProvinciaYDestino` y su endpoint.
+         */
+        const operaciones = lugaresOrdenados.map((item) => ({
+          updateOne: {
+            filter: {
               usuario: usuarioId,
               lugarTuristico: item.lugarTuristico._id,
               ruta: ruta._id
-            });
-
-            if (!existe) {
-              await LugaresRecomendados.create({
-                usuario: usuarioId,
-                lugarTuristico: item.lugarTuristico._id,
-                ruta: ruta._id,
-                provinciaOrigen: provinciaOrigen,
-                ciudadDestino: ciudadDestino,
-                provinciaDestino: provinciaDestino,
-                calificacionPromedio: item.calificacionPromedio,
-                totalCalificaciones: item.totalCalificaciones,
-                score: item.score
-              });
-            } else {
-              // Actualizar si ya existe
-              await LugaresRecomendados.findByIdAndUpdate(existe._id, {
+            },
+            update: {
+              $set: {
                 calificacionPromedio: item.calificacionPromedio,
                 totalCalificaciones: item.totalCalificaciones,
                 score: item.score,
                 fechaCalculo: new Date()
-              });
-            }
-          })
-        );
+              },
+              // Los datos geográficos solo se escriben al insertar: no cambian
+              // para una combinación usuario+lugar+ruta ya existente.
+              $setOnInsert: {
+                provinciaOrigen: provinciaOrigen,
+                ciudadDestino: ciudadDestino,
+                provinciaDestino: provinciaDestino,
+                createdAt: new Date()
+              }
+            },
+            upsert: true
+          }
+        }));
+
+        if (operaciones.length > 0) {
+          await LugaresRecomendados.bulkWrite(operaciones, { ordered: false });
+        }
       }
     }
 
@@ -200,7 +228,7 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
         totalCalificacionesGenerales: item.totalCalificacionesGenerales || item.totalCalificaciones || 0,
         score: item.score || 0,
         // Propiedades adicionales para el frontend
-        calificacionesMesActual: 0, // No se calcula en este algoritmo, pero el frontend lo espera
+        calificacionesMesActual: item.calificacionesMesActual || 0,
         promedioMismaNacionalidad: item.calificacionPromedio || 0, // Para compatibilidad
         // Metadatos
         provinciaOrigen: item.provinciaOrigen,
@@ -252,9 +280,16 @@ exports.getRecomendadosGuardados = async (usuarioId, rutaId) => {
 };
 
 /**
+ * #12BUG CORREGIDO: esta función era inalcanzable por HTTP. El servicio la
+ * reexportaba, pero ningún controlador la llamaba y ninguna ruta la exponía: dos
+ * capas de envoltorio para algo a lo que no se podía llegar.
+ *
+ * Ya tiene entrada: `GET /api/recomendaciones/guardados-por-provincia`. Con ello
+ * la colección `LugaresRecomendados` pasa a tener un lector real (ver #11BUG).
+ *
  * PATRÓN REPOSITORY: Método de acceso a datos guardados
  * Obtener recomendaciones guardadas por provincia de origen y ciudad de destino
- * 
+ *
  * PRINCIPIO SOLID: Single Responsibility Principle (SRP)
  * Responsabilidad única: recuperar recomendaciones por criterios de provincia y destino.
  */

@@ -1,3 +1,27 @@
+/**
+ * ============================================================================
+ * #30BUG - ARTEFACTO DE COMPILACION COMMITEADO: este archivo no es codigo fuente.
+ * ============================================================================
+ *
+ * `frontend/out.js` son 27.970 lineas (1,2 MB) de bundle ya empaquetado y
+ * minificado, con el prologo tipico de esbuild (__create, __defProp,
+ * __getOwnPropNames...). No lo importa nadie, no lo genera ningun script de
+ * `package.json` y no aparece en `vite.config.js`.
+ *
+ * Verificado: 0 referencias a `out.js` en `src/`, `index.html`,
+ * `package.json` y `vercel.json`.
+ *
+ * El problema es que SI esta versionado: `.gitignore` solo excluye `dist/`, no
+ * este archivo, asi que 1,2 MB de salida de compilacion viajan en cada clon del
+ * repositorio y ensucian todos los diffs cuando se regenera. Ademas contiene una
+ * copia congelada del codigo de la aplicacion en un momento pasado, por lo que al
+ * buscar por nombre de funcion aparecen resultados de una version antigua
+ * mezclados con los del codigo real.
+ *
+ * NO se elimina por indicacion expresa: solo se documenta.
+ * ============================================================================
+ */
+
 (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;

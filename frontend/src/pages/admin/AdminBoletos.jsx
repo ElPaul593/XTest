@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAllReservations } from '../../services/reservas';
 import { getBoletos, createBoleto } from '../../services/boletos';
+import useFeedback from '../../hooks/useFeedback';
 
 export default function AdminBoletos() {
   const [reservas, setReservas] = useState([]);
@@ -10,6 +11,7 @@ export default function AdminBoletos() {
 
   const [reservaId, setReservaId] = useState('');
   const [seatNumber, setSeatNumber] = useState('');
+  const { aviso, mostrarExito, mostrarError, mostrarInfo } = useFeedback();
 
   const load = useCallback(async () => {
     try {
@@ -40,17 +42,42 @@ export default function AdminBoletos() {
   const handleEmit = async (e) => {
     e.preventDefault();
     if (!reservaId || !seatNumber) {
-      alert('Selecciona una reserva y un asiento');
+      /**
+       * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
+       * emergente de la aplicación.
+       *
+       * Esta pantalla usa 3 llamadas nativas. Validación de formulario, confirmación de emisión y error, los tres con `alert`.
+       *
+       * Tres problemas concretos:
+       *
+       *  1. `alert()` y `confirm()` bloquean el hilo principal: mientras el diálogo
+       *     está abierto, React no puede repintar ni se ejecutan los temporizadores.
+       *     En las pantallas de asientos eso congela el contador del hold.
+       *  2. El navegador los pinta con su propio estilo, ajeno al negro + amarillo del
+       *     proyecto, y antepone el dominio ("localhost:3000 dice…").
+       *  3. No admiten formato ni contenido enriquecido, así que los mensajes largos
+       *     se apelmazan y los saltos de línea con `\n` se ven de forma distinta en
+       *     cada navegador.
+       *
+       * Sustitución disponible: `components/Popup.jsx` (`AlertPopup` para avisar,
+       * `ConfirmPopup` para confirmar) junto al hook `hooks/useFeedback.js`. Se
+       * renderizan con `createPortal` sobre `document.body` y en la capa `--z-modal`,
+       * por encima del navbar fijo. Ya están aplicados en `LoginForm`, `Profile`,
+       * `Dashboard` y `admin/AdminUsers` y pueden servir de referencia.
+       *
+       * NO se corrige aquí por indicación expresa: solo se documenta.
+       */
+      mostrarInfo('Selecciona una reserva y un asiento.', 'Datos incompletos');
       return;
     }
     try {
       await createBoleto({ reserva: reservaId, seatNumber: Number(seatNumber) });
       setReservaId('');
       setSeatNumber('');
-      alert('Boleto emitido correctamente');
+      mostrarExito('El boleto se emitió correctamente.', 'Boleto emitido');
       load();
     } catch (e) {
-      alert(e.message);
+      mostrarError(e, 'No se pudo emitir el boleto');
     }
   };
 
@@ -63,6 +90,12 @@ export default function AdminBoletos() {
 
   return (
     <div>
+      {aviso && (
+        <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
+          <strong>{aviso.title}</strong>
+          <span>{aviso.message}</span>
+        </div>
+      )}
       <div className="dashboard-section">
         <h2>Emitir boleto</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>El precio se calcula automáticamente según la ruta y la estrategia de pricing.</p>

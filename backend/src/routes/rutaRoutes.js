@@ -40,6 +40,7 @@ const { rutaSchemas } = require('../validations/schemas');
  *                     type: string
  */
 router.get('/', rutaController.getAll);
+router.get('/ciudades', rutaController.getCiudades);
 
 /**
  * @swagger
