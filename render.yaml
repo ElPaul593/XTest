@@ -1,14 +1,15 @@
-# Render Blueprint (Infrastructure as Code) para el BACKEND con Docker.
+# Render Blueprint (Infrastructure as Code) para el BACKEND con Node.js.
 # En Render: New + -> Blueprint -> conecta este repo. Render detecta este archivo.
 # Luego completa los valores secretos (sync:false) en el panel.
 
 services:
   - type: web
     name: culturaltrip-api
-    runtime: docker
+    runtime: node
     plan: free
     rootDir: backend
-    dockerfilePath: ./Dockerfile
+    buildCommand: npm ci
+    startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true
     envVars:
