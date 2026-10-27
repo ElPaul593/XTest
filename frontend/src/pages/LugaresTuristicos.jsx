@@ -10,10 +10,13 @@ function normalizarTexto(value = '') {
     .trim();
 }
 
+const PLACES_PAGE_SIZE = 10;
+
 export default function LugaresTuristicos() {
   const [lugares, setLugares] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroCiudad, setFiltroCiudad] = useState('');
+  const [pagina, setPagina] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -42,6 +45,13 @@ export default function LugaresTuristicos() {
     });
   }, [lugares, filtroCiudad]);
 
+  const totalPaginas = Math.max(1, Math.ceil(lugaresFiltrados.length / PLACES_PAGE_SIZE));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const lugaresDePagina = lugaresFiltrados.slice(
+    (paginaActual - 1) * PLACES_PAGE_SIZE,
+    paginaActual * PLACES_PAGE_SIZE
+  );
+
   return (
     <div className="lugares-container">
       <div className="container">
@@ -58,7 +68,10 @@ export default function LugaresTuristicos() {
             type="text"
             placeholder="Ejemplo: Quito, Limon, Guayaquil..."
             value={filtroCiudad}
-            onChange={(e) => setFiltroCiudad(e.target.value)}
+            onChange={(e) => {
+              setPagina(1);
+              setFiltroCiudad(e.target.value);
+            }}
           />
 
           <div className="ciudades-lista" aria-label="Ciudades disponibles">
@@ -67,7 +80,10 @@ export default function LugaresTuristicos() {
                 key={ciudad}
                 type="button"
                 className={`ciudad-chip ${normalizarTexto(filtroCiudad) === normalizarTexto(ciudad) ? 'active' : ''}`}
-                onClick={() => setFiltroCiudad(ciudad)}
+                onClick={() => {
+                  setPagina(1);
+                  setFiltroCiudad(ciudad);
+                }}
               >
                 {ciudad}
               </button>
@@ -93,7 +109,7 @@ export default function LugaresTuristicos() {
               </div>
             ) : (
               <div className="lugares-grid">
-                {lugaresFiltrados.map((lugar) => (
+                {lugaresDePagina.map((lugar) => (
                   <article key={lugar._id || `${lugar.nombre}-${lugar.ciudad}`} className="lugar-card">
                     <div className="lugar-imagen-wrap">
                       <img
@@ -116,6 +132,25 @@ export default function LugaresTuristicos() {
                     </div>
                   </article>
                 ))}
+              </div>
+            )}
+            {lugaresFiltrados.length > PLACES_PAGE_SIZE && (
+              <div className="pagination lugares-pagination">
+                <button
+                  type="button"
+                  disabled={paginaActual <= 1}
+                  onClick={() => setPagina((valor) => valor - 1)}
+                >
+                  Anterior
+                </button>
+                <span>Página {paginaActual} de {totalPaginas}</span>
+                <button
+                  type="button"
+                  disabled={paginaActual >= totalPaginas}
+                  onClick={() => setPagina((valor) => valor + 1)}
+                >
+                  Siguiente
+                </button>
               </div>
             )}
           </>

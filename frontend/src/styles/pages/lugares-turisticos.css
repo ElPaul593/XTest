@@ -55,6 +55,10 @@
   gap: 16px;
 }
 
+.lugares-pagination {
+  margin-top: 24px;
+}
+
 .lugar-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
