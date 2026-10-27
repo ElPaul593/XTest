@@ -6,17 +6,16 @@ Arquitectura de despliegue:
    Navegador
       │
       ▼
-  Vercel  ───(HTTPS, VITE_API_URL)──►  Render (Docker)  ──►  MongoDB Atlas
+  Vercel  ───(HTTPS, VITE_API_URL)──►  Render (Node.js)  ──►  MongoDB Atlas
  (frontend SPA)                          (backend API)
 ```
 
 - **Frontend** → Vercel (estáticos compilados con Vite).
-- **Backend** → Render (contenedor Docker).
+- **Backend** → Render (servicio Node.js).
 - **Base de datos** → MongoDB Atlas (ya configurada).
 
-> Nota sobre Docker: Render ejecuta el backend **con tu Dockerfile**. Vercel publica el
-> frontend como estáticos (no usa Docker). Para correr **todo en Docker en local** usa
-> `docker compose up` (ver el final). Así cumples "todo dockerizado" sin perder Vercel.
+> Render ejecuta el backend con `npm ci` y `npm start`. Vercel publica el frontend
+> como aplicación Vite estática. Docker permanece únicamente como alternativa local.
 
 ---
 
@@ -43,30 +42,23 @@ Al subir el repositorio se ejecuta `.github/workflows/ci-cd.yml`:
 
 1. Pull requests y pushes ejecutan el lint y las pruebas del backend y el build
    de producción del frontend.
-2. Si esas validaciones pasan, se construyen las dos imágenes Docker.
-3. Un push a `main` publica las imágenes en GHCR:
-   `ghcr.io/<usuario>/culturaltrip-backend` y
-   `ghcr.io/<usuario>/culturaltrip-frontend`.
+2. Si esas validaciones pasan, Vercel y Render pueden desplegar desde sus
+   integraciones nativas con GitHub.
+3. El workflow no construye imágenes ni publica registros: Render y Vercel
+   realizan el despliegue nativo desde sus propios servicios.
 
-El job de publicación usa automáticamente `secrets.GITHUB_TOKEN`. Si el
-repositorio pertenece a una organización, habilita en **Settings → Actions →
-General** el permiso `Read and write permissions` para que pueda publicar
-paquetes. No agregues `MONGO_URI`, `JWT_SECRET` ni otras credenciales al
-workflow.
-
-Render y Vercel pueden continuar desplegando automáticamente desde el mismo
-push a `main`: Render y Vercel debe tener configurado el
-directorio raíz `frontend`. GHCR queda como registro de imágenes versionadas y
-como evidencia del CD del Sprint 0; la aplicación desplegada mantiene las
-variables secretas en los paneles de cada proveedor.
+Render debe tener configurado el directorio raíz `backend` y Vercel el
+directorio raíz `frontend`. Ambos pueden desplegar automáticamente desde el
+mismo push a `main`; las variables secretas permanecen exclusivamente en los
+paneles de cada proveedor.
 
 ---
 
-## 2. Backend en Render (Docker)
+## 2. Backend en Render (Node.js)
 
 ### Opción A — Blueprint (recomendado, usa `render.yaml`)
 1. En Render: **New + → Blueprint** y conecta tu repositorio.
-2. Render detecta `render.yaml` y crea el servicio `culturaltrip-api` (Docker, `rootDir: backend`).
+2. Render detecta `render.yaml` y crea el servicio `culturaltrip-api` (Node.js, `rootDir: backend`).
 3. Completa las variables **secretas** en el panel del servicio → **Environment**:
    - `MONGO_URI` = tu cadena de conexión de Atlas.
    - `JWT_SECRET` = una cadena larga y aleatoria.
@@ -75,7 +67,7 @@ variables secretas en los paneles de cada proveedor.
 5. Verifica: abre `https://culturaltrip-api.onrender.com/health` → debe responder `{ "ok": true }`.
 
 ### Opción B — Manual
-**New + → Web Service** → conecta el repo → **Language: Docker** → **Root Directory: `backend`**
+**New + → Web Service** → conecta el repo → **Language: Node** → **Root Directory: `backend`**
 → Health Check Path: `/health` → agrega las mismas variables de entorno → Deploy.
 
 ### Crear el usuario administrador (una vez desplegado)
@@ -110,7 +102,7 @@ restringir a tu dominio de Vercel (mejora opcional de seguridad).
 
 ---
 
-## 5. Todo en Docker en local (para la defensa de la tesis)
+## 5. Alternativa Docker en local (opcional)
 Con Docker Desktop instalado y `backend/.env` creado:
 
 ```bash
