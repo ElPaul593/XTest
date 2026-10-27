@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../services/users';
 import { getProvinciaFromCedula } from '../constants/provincias';
-import { getRutasPorProvincia, getRutas, getRutaById } from '../services/rutas';
+import { getRutasPorProvincia, getRutas, getRutaById, getCiudadesRutas } from '../services/rutas';
 import EcuadorMapSelector from '../components/EcuadorMapSelector';
 import RouteMap from '../components/RouteMap';
 
@@ -56,6 +56,8 @@ function getRouteDurationMinutes(ruta) {
   return parseDurationToMinutes(ruta.duration);
 }
 
+const ROUTES_PAGE_SIZE = 10;
+
 export default function Rutas() {
   const [loading, setLoading] = useState(true);
   const [loadingRutas, setLoadingRutas] = useState(false);
@@ -65,6 +67,11 @@ export default function Rutas() {
   const [provinciaSeleccionada, setProvinciaSeleccionada] = useState('');
   const [mostrarTodas, setMostrarTodas] = useState(false);
   const [rutasRecomendadas, setRutasRecomendadas] = useState([]);
+  const [todasLasRutas, setTodasLasRutas] = useState([]);
+  const [ciudades, setCiudades] = useState([]);
+  const [ciudadOrigen, setCiudadOrigen] = useState('');
+  const [ciudadDestino, setCiudadDestino] = useState('');
+  const [paginaRutas, setPaginaRutas] = useState(1);
   const [rutaMapaSeleccionada, setRutaMapaSeleccionada] = useState(null);
   const [fechaViajeMapa, setFechaViajeMapa] = useState(new Date().toISOString().slice(0, 10));
   const navigate = useNavigate();
@@ -111,6 +118,12 @@ export default function Rutas() {
     }
   }, [provinciaSeleccionada, mostrarTodas]);
 
+  useEffect(() => {
+    getCiudadesRutas()
+      .then(setCiudades)
+      .catch((err) => console.error('Error al cargar ciudades para búsqueda:', err));
+  }, []);
+
   const formatearObjRuta = (ruta) => ({
     id: ruta._id || ruta.id,
     origen: ruta.from,
@@ -153,6 +166,7 @@ export default function Rutas() {
     setLoadingRutas(true);
     try {
       const rutas = await getRutas();
+      setTodasLasRutas(rutas);
       setRutasRecomendadas(formatearRutas(rutas));
     } catch (err) {
       console.error('Error al cargar todas las rutas:', err);
@@ -161,6 +175,40 @@ export default function Rutas() {
       setLoadingRutas(false);
     }
   };
+
+  const aplicarBusquedaCiudades = async (origen, destino) => {
+    if (!origen && !destino) return;
+
+    setLoadingRutas(true);
+    try {
+      const rutas = todasLasRutas.length > 0 ? todasLasRutas : await getRutas();
+      setTodasLasRutas(rutas);
+    } catch (err) {
+      console.error('Error al cargar rutas para búsqueda:', err);
+      setTodasLasRutas([]);
+    } finally {
+      setLoadingRutas(false);
+    }
+  };
+
+  useEffect(() => {
+    aplicarBusquedaCiudades(ciudadOrigen, ciudadDestino);
+  }, [ciudadOrigen, ciudadDestino]);
+
+  const rutasMostradas = ciudadOrigen || ciudadDestino
+    ? formatearRutas(todasLasRutas).filter((ruta) =>
+      (!ciudadOrigen || ruta.origen === ciudadOrigen)
+      && (!ciudadDestino || ruta.destino === ciudadDestino)
+    )
+    : rutasRecomendadas;
+  const totalPaginasRutas = Math.max(1, Math.ceil(rutasMostradas.length / ROUTES_PAGE_SIZE));
+  const paginaActualRutas = Math.min(paginaRutas, totalPaginasRutas);
+  const rutasDePagina = mostrarTodas
+    ? rutasMostradas.slice(
+      (paginaActualRutas - 1) * ROUTES_PAGE_SIZE,
+      paginaActualRutas * ROUTES_PAGE_SIZE
+    )
+    : rutasMostradas;
 
   const abrirMapaRuta = async (ruta) => {
     const rutaId = ruta.id || ruta._id;
@@ -235,6 +283,7 @@ export default function Rutas() {
                 checked={mostrarTodas}
                 onChange={(e) => {
                   setMostrarTodas(e.target.checked);
+                  setPaginaRutas(1);
                   if (e.target.checked) {
                     setProvinciaSeleccionada('');
                   }
@@ -254,6 +303,34 @@ export default function Rutas() {
               />
             </>
           )}
+          <div className="rutas-city-search">
+            <div className="rutas-city-search__title">Buscar por ciudades</div>
+            <div className="rutas-city-search__fields">
+              <label>
+                <span>Ciudad de salida</span>
+                <select value={ciudadOrigen} onChange={(e) => { setPaginaRutas(1); setCiudadOrigen(e.target.value); }}>
+                  <option value="">Todas las salidas</option>
+                  {ciudades.map((ciudad) => <option key={`origen-${ciudad}`} value={ciudad}>{ciudad}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Ciudad de destino</span>
+                <select value={ciudadDestino} onChange={(e) => { setPaginaRutas(1); setCiudadDestino(e.target.value); }}>
+                  <option value="">Todos los destinos</option>
+                  {ciudades.map((ciudad) => <option key={`destino-${ciudad}`} value={ciudad}>{ciudad}</option>)}
+                </select>
+              </label>
+            </div>
+            {(ciudadOrigen || ciudadDestino) && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => { setPaginaRutas(1); setCiudadOrigen(''); setCiudadDestino(''); }}
+              >
+                Limpiar búsqueda
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Rutas recomendadas */}
@@ -266,16 +343,18 @@ export default function Rutas() {
           </div>
         )}
 
-        {(provinciaSeleccionada || mostrarTodas) && !loadingRutas && rutasRecomendadas.length > 0 && (
+        {(provinciaSeleccionada || mostrarTodas || ciudadOrigen || ciudadDestino) && !loadingRutas && rutasMostradas.length > 0 && (
           <div className="rutas-section">
             <h3>
-              {mostrarTodas
-                ? `Todas las rutas disponibles (${rutasRecomendadas.length} rutas)`
+              {ciudadOrigen || ciudadDestino
+                ? `Rutas encontradas (${rutasMostradas.length})`
+                : mostrarTodas
+                ? `Todas las rutas disponibles (${rutasMostradas.length} rutas)`
                 : `Rutas desde ${provinciaSeleccionada} (${rutasRecomendadas.length} rutas disponibles)`
               }
             </h3>
             <div className="rutas-grid">
-              {rutasRecomendadas.map((ruta, index) => (
+              {rutasDePagina.map((ruta, index) => (
                 <div key={ruta.id || index} className="ruta-card">
                   <div className="ruta-header">
                     <div className="ruta-route">
@@ -320,6 +399,25 @@ export default function Rutas() {
                 </div>
               ))}
             </div>
+            {mostrarTodas && rutasMostradas.length > ROUTES_PAGE_SIZE && (
+              <div className="pagination rutas-pagination">
+                <button
+                  type="button"
+                  disabled={paginaActualRutas <= 1}
+                  onClick={() => setPaginaRutas((pagina) => pagina - 1)}
+                >
+                  Anterior
+                </button>
+                <span>Página {paginaActualRutas} de {totalPaginasRutas}</span>
+                <button
+                  type="button"
+                  disabled={paginaActualRutas >= totalPaginasRutas}
+                  onClick={() => setPaginaRutas((pagina) => pagina + 1)}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -376,10 +474,12 @@ export default function Rutas() {
           </div>
         )}
 
-        {(provinciaSeleccionada || mostrarTodas) && !loadingRutas && rutasRecomendadas.length === 0 && (
+        {(provinciaSeleccionada || mostrarTodas || ciudadOrigen || ciudadDestino) && !loadingRutas && rutasMostradas.length === 0 && (
           <div className="no-rutas">
             <p>
-              {mostrarTodas
+              {ciudadOrigen || ciudadDestino
+                ? 'No hay rutas que coincidan con las ciudades seleccionadas.'
+                : mostrarTodas
                 ? 'No hay rutas disponibles en este momento.'
                 : `No hay rutas disponibles para ${provinciaSeleccionada} en este momento.`
               }
@@ -396,4 +496,3 @@ export default function Rutas() {
     </div>
   );
 }
-

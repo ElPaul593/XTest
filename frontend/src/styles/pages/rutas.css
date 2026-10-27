@@ -55,6 +55,51 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.rutas-city-search {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.rutas-city-search__title {
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+}
+
+.rutas-city-search__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rutas-city-search__fields label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.rutas-city-search__fields span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rutas-city-search__fields select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.rutas-city-search .btn {
+  margin-top: 12px;
+}
+
 .provincia-selector label {
   display: block;
   font-size: var(--font-size-base);
@@ -305,6 +350,10 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .rutas-city-search__fields {
+    grid-template-columns: 1fr;
+  }
+
   .rutas-header h1 {
     font-size: var(--font-size-lg);
   }
@@ -335,4 +384,3 @@
     transform: rotate(90deg);
   }
 }
-
