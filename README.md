@@ -5,15 +5,16 @@ calificaciones y recomendaciones por provincia). Proyecto académico.
 
 - **Backend:** Node.js + Express + MongoDB (Mongoose), arquitectura en capas.
 - **Frontend:** React + Vite (SPA) con panel de administración y QR de boleto.
-- **Infra:** Docker (backend + frontend) y `docker-compose` para entorno local.
+- **Infra:** Render para el backend y Vercel para el frontend. Docker queda
+  únicamente como opción local, no forma parte del pipeline de CI/CD.
 
 ## Estructura
 ```
 CulturalTrip/
 ├── backend/            API REST (capas: routes → controllers → services → repositories → models)
 ├── frontend/           SPA React/Vite (components, pages, services, styles)
-├── docker-compose.yml  Orquestación local (backend + frontend)
-├── render.yaml         Blueprint de Render (backend con Docker)
+├── docker-compose.yml  Orquestación local opcional (backend + frontend)
+├── render.yaml         Blueprint de Render (backend con Node.js)
 ├── ARCHITECTURE.md     Dónde vive cada cosa (capas backend y estructura frontend)
 └── DEPLOYMENT.md       Despliegue: GitHub + Render + Vercel + Docker
 ```
@@ -50,7 +51,8 @@ El workflow [`ci-cd.yml`](./.github/workflows/ci-cd.yml) automatiza el Sprint 0:
 
 - En cada pull request o push a `main`, instala dependencias con `npm ci`, ejecuta
   lint y pruebas del backend y compila el frontend.
-- Después construye las imágenes Docker del backend y frontend.
+- Después valida el build del frontend y las pruebas del backend. Los despliegues
+  los realizan Render y Vercel mediante su integración con GitHub.
 - Solo después de un push exitoso a `main`, publica ambas imágenes en GitHub
   Container Registry (GHCR) con las etiquetas `latest` y `sha-<commit>`.
 
