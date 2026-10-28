@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { register, login } from '../services/auth';
+import { useLocation } from 'react-router-dom';
+import { register } from '../services/auth';
 import { validarCedula } from '../services/cedula';
 import { PAISES } from '../constants/paises';
 import { getCodigoTelefonico } from '../constants/codigosTelefonicos';
@@ -28,8 +28,9 @@ export default function RegisterForm() {
   const [codigoTelefonico, setCodigoTelefonico] = useState('+593'); // Por defecto Ecuador
   
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState({});
-  const navigate = useNavigate();
   const location = useLocation();
 
   /**
@@ -204,6 +205,7 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
     
     // Marcar todos los campos como tocados
     if (activeTab === 'nacional') {
@@ -213,6 +215,7 @@ export default function RegisterForm() {
     }
     
     setError(null);
+    setSuccess(null);
     
     if (activeTab === 'nacional') {
       // Validaciones para nacionales
@@ -242,6 +245,7 @@ export default function RegisterForm() {
       }
       
       try {
+        setSubmitting(true);
         // Combinar código telefónico con el número (Ecuador 593, sin el +)
         const codigoSinMas = '593'; // Ecuador sin el +
         const telefonoCompleto = codigoSinMas + telefono.trim();
@@ -255,11 +259,11 @@ export default function RegisterForm() {
           password,
           preferencias
         });
-        const data = await login({ cedula: cedulaDigits, password });
-        localStorage.setItem('token', data.token);
-        navigate('/dashboard');
+        setSuccess('Usuario registrado con éxito. Ya puedes iniciar sesión con tu cédula y contraseña.');
       } catch (err) {
         setError(err?.response?.data?.error || err.message || 'Error al registrar');
+      } finally {
+        setSubmitting(false);
       }
     } else {
       // Validaciones para extranjeros
@@ -279,6 +283,7 @@ export default function RegisterForm() {
       }
       
       try {
+        setSubmitting(true);
         // Combinar código telefónico con el número (solo dígitos, sin el +)
         const codigoSinMas = codigoTelefonico.replace('+', ''); // Quitar el símbolo +
         const telefonoCompleto = codigoSinMas + telefono.trim();
@@ -292,11 +297,11 @@ export default function RegisterForm() {
           password,
           preferencias
         });
-        const data = await login({ pasaporte: pasaporte.trim(), password });
-        localStorage.setItem('token', data.token);
-        navigate('/dashboard');
+        setSuccess('Usuario registrado con éxito. Ya puedes iniciar sesión con tu pasaporte y contraseña.');
       } catch (err) {
         setError(err?.response?.data?.error || err.message || 'Error al registrar');
+      } finally {
+        setSubmitting(false);
       }
     }
   };
@@ -628,13 +633,19 @@ export default function RegisterForm() {
             className="btn btn-primary" 
             type="submit" 
             disabled={
+              submitting ||
               !isFormValid || 
               (activeTab === 'nacional' && (cedulaDigits.length !== 10 || cedulaValida !== true || validandoCedula))
             }
           >
-            {activeTab === 'nacional' && validandoCedula ? 'Validando cédula...' : 'Crear cuenta'}
+            {submitting
+              ? 'Creando cuenta...'
+              : activeTab === 'nacional' && validandoCedula
+                ? 'Validando cédula...'
+                : 'Crear cuenta'}
           </button>
 
+          {success && <div className="success-message" role="status">{success}</div>}
           {error && <div className="error">{error}</div>}
         </form>
       </div>
