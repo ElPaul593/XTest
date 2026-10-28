@@ -173,20 +173,21 @@ exports.createUserAccount = async ({ cedula, pasaporte, email, nombre, apellido,
 /**
  * Registro público: SIEMPRE crea con rol USER (no permite escalada de privilegios).
  *
- * Tras crear la cuenta se envía el correo de verificación. El envío se hace
- * "best effort": si falla, el registro NO se deshace. Un usuario registrado que
- * no recibió el correo puede pedir el reenvío; uno al que se le rechaza el
- * registro por un problema del servidor de correo pierde todos sus datos y no
- * entiende por qué.
+ * Tras crear la cuenta se inicia el envío del correo de verificación sin
+ * bloquear la respuesta HTTP. El envío se hace "best effort": si falla, el
+ * registro NO se deshace y el usuario puede pedir el reenvío desde el login.
+ *
+ * Esto es importante en producción: un proveedor de correo puede tardar más que
+ * el timeout del navegador aunque la cuenta ya se haya guardado correctamente.
  */
 exports.register = async (data) => {
   const user = await exports.createUserAccount({ ...data, role: 'USER' });
 
-  try {
-    await exports.enviarVerificacionEmail(user);
-  } catch (error) {
+  // No esperar al proveedor externo: el registro debe confirmar la creación
+  // aunque el correo tarde o falle. La promesa siempre tiene un rechazo tratado.
+  void exports.enviarVerificacionEmail(user).catch((error) => {
     console.error(`[authService] Registro OK pero no se pudo enviar la verificación a ${user.email}:`, error.message);
-  }
+  });
 
   return user;
 };
