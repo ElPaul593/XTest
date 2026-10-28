@@ -122,6 +122,7 @@ router.delete('/me', authenticateToken, userController.removeMe);
  *         description: Acceso denegado (solo admin)
  */
 router.get('/', authenticateToken, requireAdminAccess, userController.getAll);
+router.get('/count', authenticateToken, requireAdminAccess, userController.getCount);
 
 /**
  * @swagger
@@ -246,13 +247,11 @@ router.post('/:id/restore', authenticateToken, requireAdminAccess, userControlle
  * @swagger
  * /api/users/{id}:
  *   delete:
- *     summary: Dar de baja un usuario (Admin)
+ *     summary: Eliminar un usuario (Admin)
  *     description: >
- *       Baja LÓGICA, no física: la cuenta pasa a estado `ELIMINADO` y el documento
- *       se conserva en la base de datos. De este modo las reservas, boletos y
- *       calificaciones asociadas mantienen su referencia al usuario y no se pierde
- *       el histórico. Para bloquear temporalmente sin dar de baja, usar
- *       `PATCH /api/users/{id}/estado`.
+ *       Si la cuenta no tiene reservas ni historial relacionado, se elimina
+ *       físicamente. Si conserva registros, no se elimina: pasa a `BLOQUEADO`
+ *       para conservar las referencias históricas.
  *     tags: [Usuarios]
  *     security:
  *       - bearerAuth: []
@@ -264,7 +263,7 @@ router.post('/:id/restore', authenticateToken, requireAdminAccess, userControlle
  *           type: string
  *     responses:
  *       200:
- *         description: Cuenta dada de baja correctamente
+ *         description: Usuario eliminado o cuenta bloqueada por conservar historial
  *       401:
  *         description: No autorizado
  *       403:

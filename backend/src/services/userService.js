@@ -22,6 +22,7 @@ function normalizePreferencias(preferencias) {
 
 exports.getAll = async (options = {}) => UserRepo.findAll(options);
 exports.getById = async (id) => UserRepo.findById(id);
+exports.contarPorEstado = async () => UserRepo.countByEstado();
 
 /**
  * Creación administrativa de usuarios. Reutiliza exactamente las reglas del registro
@@ -97,6 +98,37 @@ exports.softDelete = async (id, { motivo = null, actorId = null } = {}) => {
 };
 
 /**
+ * Eliminación solicitada desde el panel administrativo.
+ * Una cuenta con actividad se bloquea para conservar su historial; una cuenta
+ * nueva, sin referencias en colecciones históricas, sí puede eliminarse.
+ */
+exports.removeFromAdmin = async (id, { actorId = null } = {}) => {
+  const user = await UserRepo.findById(id);
+  if (!user) return null;
+
+  if (actorId && String(actorId) === String(id)) {
+    throw new AppError('No puedes eliminar tu propia cuenta de administrador', 400);
+  }
+
+  if (getEstado(user) === ESTADOS.ELIMINADO) {
+    throw new AppError('Esta cuenta ya fue dada de baja', 409);
+  }
+
+  const result = await UserRepo.removeIfWithoutHistory(id);
+  if (result.deleted) {
+    return { deleted: true, blocked: false };
+  }
+
+  const blocked = await UserRepo.updateEstadoById(id, {
+    estado: ESTADOS.BLOQUEADO,
+    motivo: 'Cuenta protegida: conserva reservas o historial en la plataforma',
+    actorId
+  });
+
+  return { deleted: false, blocked: true, data: blocked };
+};
+
+/**
  * Cambio administrativo del estado de una cuenta (bloquear / reactivar / dar de baja).
  *
  * @param {string} id
@@ -132,6 +164,3 @@ exports.cambiarEstado = async (id, estado, { motivo = null, actorId = null } = {
     actorId
   });
 };
-
-/** Recuento de cuentas por estado para el panel administrativo. */
-exports.contarPorEstado = async () => UserRepo.countByEstado();

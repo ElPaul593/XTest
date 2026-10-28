@@ -1,4 +1,7 @@
 const User = require('../models/userModel');
+const Reserva = require('../models/reservaModel');
+const Calificacion = require('../models/calificacionModel');
+const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
 
 /**
  * PATRÓN DE DISEÑO: Repository Pattern
@@ -112,6 +115,26 @@ exports.updateEstadoById = async (id, { estado, motivo = null, actorId = null })
     },
     { new: true, runValidators: true, select: '-password' }
   ).lean();
+};
+
+/**
+ * Elimina físicamente solo cuentas que no tienen actividad relacionada.
+ * Las colecciones históricas se consultan antes del borrado para no dejar
+ * referencias huérfanas en reservas, calificaciones o recomendaciones.
+ */
+exports.removeIfWithoutHistory = async (id) => {
+  const [reservas, calificaciones, recomendaciones] = await Promise.all([
+    Reserva.exists({ user: id }),
+    Calificacion.exists({ usuario: id }),
+    LugaresRecomendados.exists({ usuario: id })
+  ]);
+
+  if (reservas || calificaciones || recomendaciones) {
+    return { deleted: false, hasHistory: true };
+  }
+
+  const deleted = await User.findByIdAndDelete(id).select('_id').lean();
+  return { deleted: Boolean(deleted), hasHistory: false };
 };
 
 // Recuento de cuentas por estado, para el panel administrativo.

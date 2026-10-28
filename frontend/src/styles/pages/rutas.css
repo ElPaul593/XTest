@@ -25,7 +25,7 @@
 
 .bienvenida-provincia {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-  color: var(--bg);
+  color: #000;
   padding: var(--spacing-lg);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-xl);
@@ -37,6 +37,7 @@
   margin: 0 0 var(--spacing-sm);
   font-size: var(--font-size-lg);
   font-weight: 700;
+  color: #000;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -44,7 +45,8 @@
 .bienvenida-provincia p {
   margin: 0;
   font-size: var(--font-size-base);
-  opacity: 0.95;
+  color: #000;
+  opacity: 1;
 }
 
 .provincia-selector {

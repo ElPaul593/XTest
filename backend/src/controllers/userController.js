@@ -17,6 +17,18 @@ exports.getAll = async (req, res) => {
   }
 };
 
+exports.getCount = async (req, res) => {
+  try {
+    const estados = await UserService.contarPorEstado();
+    res.json({
+      total: Object.values(estados).reduce((total, cantidad) => total + cantidad, 0),
+      estados
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const user = await UserService.create(req.body);
@@ -78,16 +90,15 @@ exports.updateMe = async (req, res) => {
 };
 
 /**
- * DELETE /api/users/:id — baja de cuenta.
+ * DELETE /api/users/:id — eliminación administrativa condicionada.
  *
- * Mantiene el verbo y la ruta DELETE (el frontend y Postman ya los usan), pero la
- * semántica es baja lógica: la cuenta pasa a estado ELIMINADO y el documento se
- * conserva para no romper el histórico de reservas y boletos.
+ * Una cuenta sin actividad relacionada se elimina físicamente. Si conserva
+ * reservas o historial, se bloquea y el documento se mantiene para proteger
+ * las referencias históricas.
  */
 exports.remove = async (req, res) => {
   try {
-    const result = await UserService.softDelete(req.params.id, {
-      motivo: req.body?.motivo || null,
+    const result = await UserService.removeFromAdmin(req.params.id, {
       actorId: req.user?._id || null
     });
 
@@ -95,10 +106,19 @@ exports.remove = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    if (!result.deleted) {
+      return res.json({
+        message: 'La cuenta fue bloqueada porque conserva reservas o historial en la plataforma',
+        deleted: false,
+        blocked: true,
+        data: result.data
+      });
+    }
+
     res.json({
-      message: 'Cuenta dada de baja correctamente',
-      estado: result.estado,
-      data: result
+      message: 'Usuario eliminado correctamente',
+      deleted: true,
+      blocked: false
     });
   } catch (err) {
     const status = err.statusCode || 400;

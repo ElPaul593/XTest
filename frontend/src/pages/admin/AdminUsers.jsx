@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { listUsers, createUser, updateUser, cambiarEstadoUsuario } from '../../services/users';
+import { listUsers, getUserCount, createUser, updateUser, deleteUser, cambiarEstadoUsuario } from '../../services/users';
 import { getRutas } from '../../services/rutas';
 import { ConfirmPopup } from '../../components/Popup';
 import useFeedback from '../../hooks/useFeedback';
@@ -9,9 +9,8 @@ const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido
 /**
  * Presentación de los estados de cuenta.
  *
- * Las cuentas no se borran: se bloquean o se dan de baja. Así las reservas,
- * boletos y calificaciones conservan su referencia al usuario y el histórico
- * sigue siendo consultable.
+ * Las cuentas con historial se bloquean para conservar sus referencias. Las
+ * cuentas nuevas, sin actividad relacionada, sí pueden eliminarse.
  */
 const ESTADOS_UI = {
   ACTIVO: { etiqueta: 'Activo', color: 'var(--success)', icono: '●' },
@@ -51,6 +50,7 @@ function EstadoBadge({ estado }) {
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1 });
+  const [totalUsers, setTotalUsers] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -68,8 +68,9 @@ export default function AdminUsers() {
    * Forma: { usuario, estado, motivo, enCurso, error }
    */
   const [cambioEstado, setCambioEstado] = useState(null);
+  const [eliminacionPendiente, setEliminacionPendiente] = useState(null);
 
-  const { aviso, mostrarExito, mostrarError, cerrarAviso } = useFeedback();
+  const { aviso, mostrarExito, mostrarError, mostrarInfo, cerrarAviso } = useFeedback();
 
   useEffect(() => {
     getRutas().then((r) => setRutas(Array.isArray(r) ? r : (r?.data || []))).catch(() => setRutas([]));
@@ -100,6 +101,11 @@ export default function AdminUsers() {
   }, [page, search, filtroEstado]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    getUserCount()
+      .then((result) => setTotalUsers(result.total || 0))
+      .catch((e) => setError(e.message));
+  }, [users]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -149,15 +155,34 @@ export default function AdminUsers() {
     }
   };
 
-  /**
-   * Abre la confirmación de cambio de estado.
-   *
-   * Sustituye al borrado de usuarios: ninguna de las tres operaciones elimina
-   * datos. BLOQUEADO corta el acceso conservando todo; ELIMINADO marca la baja;
-   * ACTIVO reactiva la cuenta.
-   */
   const pedirCambioEstado = (usuario, estado) => {
     setCambioEstado({ usuario, estado, motivo: '', enCurso: false, error: null });
+  };
+
+  const pedirEliminacion = (usuario) => {
+    setEliminacionPendiente({ usuario, enCurso: false, error: null });
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!eliminacionPendiente) return;
+    const { usuario } = eliminacionPendiente;
+    const id = usuario._id || usuario.id;
+
+    try {
+      setEliminacionPendiente((prev) => ({ ...prev, enCurso: true, error: null }));
+      const result = await deleteUser(id);
+      setEliminacionPendiente(null);
+      await load();
+      const nombre = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim() || 'La cuenta';
+      if (result.deleted) {
+        mostrarExito(`${nombre} fue eliminado porque no tenía reservas ni historial.`, 'Usuario eliminado');
+        setTotalUsers((total) => Math.max(0, total - 1));
+      } else {
+        mostrarInfo(`${nombre} fue bloqueado porque conserva reservas o historial. Sus datos siguen protegidos.`, 'Cuenta bloqueada');
+      }
+    } catch (e) {
+      setEliminacionPendiente((prev) => ({ ...prev, enCurso: false, error: e.message }));
+    }
   };
 
   const confirmarCambioEstado = async () => {
@@ -218,7 +243,7 @@ export default function AdminUsers() {
 
       <div className="dashboard-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <h2>Usuarios</h2>
+          <h2>Usuarios ({totalUsers})</h2>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <select
               className="input"
@@ -316,9 +341,6 @@ export default function AdminUsers() {
                             <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Cancelar</button>
                           </div>
                         ) : (
-                          /* Las acciones dependen del estado actual. Ya no hay
-                             "Eliminar": el borrado físico dejaba huérfanas las
-                             reservas y boletos del usuario. */
                           <div className="action-buttons" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button className="btn btn-secondary" onClick={() => startEdit(u)}>Editar</button>
 
@@ -330,13 +352,6 @@ export default function AdminUsers() {
                                   title="Impide el acceso conservando todos los datos"
                                 >
                                   Bloquear
-                                </button>
-                                <button
-                                  className="btn btn-danger"
-                                  onClick={() => pedirCambioEstado(u, 'ELIMINADO')}
-                                  title="Marca la cuenta como dada de baja (no borra datos)"
-                                >
-                                  Dar de baja
                                 </button>
                               </>
                             )}
@@ -351,13 +366,13 @@ export default function AdminUsers() {
                               </button>
                             )}
 
-                            {estado === 'BLOQUEADO' && (
+                            {estado !== 'ELIMINADO' && (
                               <button
                                 className="btn btn-danger"
-                                onClick={() => pedirCambioEstado(u, 'ELIMINADO')}
-                                title="Marca la cuenta como dada de baja (no borra datos)"
+                                onClick={() => pedirEliminacion(u)}
+                                title="Elimina cuentas nuevas o bloquea cuentas con historial"
                               >
-                                Dar de baja
+                                Eliminar
                               </button>
                             )}
                           </div>
@@ -430,6 +445,24 @@ export default function AdminUsers() {
           </div>
         )}
       </ConfirmPopup>
+
+      <ConfirmPopup
+        open={!!eliminacionPendiente}
+        onCancel={() => setEliminacionPendiente(null)}
+        onConfirm={confirmarEliminacion}
+        title="¿Eliminar esta cuenta?"
+        message={
+          eliminacionPendiente
+            ? `Usuario: ${eliminacionPendiente.usuario.nombre || ''} ${eliminacionPendiente.usuario.apellido || ''} (${eliminacionPendiente.usuario.cedula || eliminacionPendiente.usuario.pasaporte || 'sin identificación'}).`
+            : ''
+        }
+        note="Si no tiene reservas ni historial, se eliminará definitivamente. Si conserva registros, no se borrará: la cuenta se bloqueará para proteger la información histórica."
+        confirmLabel="Eliminar o bloquear"
+        variant="warning"
+        destructive
+        loading={!!eliminacionPendiente?.enCurso}
+        error={eliminacionPendiente?.error}
+      />
 
       {/* Avisos de resultado. Antes eran `alert()` del navegador: bloqueaban el
           hilo y no seguían la identidad visual del proyecto. */}

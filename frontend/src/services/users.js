@@ -47,6 +47,17 @@ export async function listUsers(params = {}) {
     const message = err?.response?.data?.error || err.message || 'Error al obtener usuarios';
     throw new Error(message);
   }
+
+}
+
+export async function getUserCount() {
+  try {
+    const response = await api.get('/users/count');
+    return response.data;
+  } catch (err) {
+    const message = err?.response?.data?.error || err.message || 'Error al obtener el total de usuarios';
+    throw new Error(message);
+  }
 }
 
 export async function createUser(userData) {
@@ -74,17 +85,8 @@ export async function updateUser(id, userData) {
 }
 
 /**
- * Baja administrativa de una cuenta ajena (`DELETE /api/users/:id`).
- *
- * Desde el rediseño del manejo de cuentas, el panel admin ya no ofrece
- * "Eliminar": usa `cambiarEstadoUsuario` con BLOQUEADO / ELIMINADO / ACTIVO,
- * porque así queda constancia del motivo y la acción es reversible. Por eso esta
- * función no se invoca hoy desde ninguna pantalla.
- *
- * Se conserva a propósito, no por descuido: el endpoint sigue existiendo (ahora
- * hace baja LÓGICA, ya no borrado físico) y se usa desde la colección de Postman
- * de `backend/docs/postman_collection.json`. Si se decide retirar también el
- * endpoint, esta función debe irse con él.
+ * Elimina una cuenta si no tiene historial; si tiene registros relacionados,
+ * el backend la bloquea para conservar las referencias históricas.
  */
 export async function deleteUser(id) {
   try {
