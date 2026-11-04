@@ -4,6 +4,7 @@ import AdminRutas from './admin/AdminRutas';
 import AdminBoletos from './admin/AdminBoletos';
 import AdminStats from './admin/AdminStats';
 import AdminLugares from './admin/AdminLugares';
+import AdminFinanzas from './admin/AdminFinanzas';
 
 const TABS = [
   { key: 'usuarios', label: '👥 Usuarios', Comp: AdminUsers },
@@ -11,6 +12,7 @@ const TABS = [
   { key: 'lugares', label: '🗺️ Lugares', Comp: AdminLugares },
   { key: 'boletos', label: '🎫 Boletos', Comp: AdminBoletos },
   { key: 'stats', label: '📊 Estadísticas', Comp: AdminStats },
+  { key: 'finanzas', label: '💵 Finanzas', Comp: AdminFinanzas },
 ];
 
 export default function Admin() {

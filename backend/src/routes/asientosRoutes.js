@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const axios = require('axios');
+const mongoose = require('mongoose');
 const asyncHandler = require('../utils/asyncHandler');
 const Hold = require('../models/holdModel');
 const Ruta = require('../models/rutaModel');
+const Reserva = require('../models/reservaModel');
 const {
   seatApiUrl,
   DEFAULT_REQUEST_TIMEOUT_MS,
@@ -77,6 +79,31 @@ async function getActiveHolds(rutaId, fecha) {
     console.error('[AsientosRoutes] Error consultando holds en Mongo:', err.message);
     return [];
   }
+}
+
+/**
+ * Asientos ya vendidos según Mongo. La API externa los olvida al reiniciarse, y
+ * sin este cruce un asiento pagado volvería a aparecer libre.
+ */
+async function getAsientosVendidos(rutaId, fecha) {
+  if (!mongoose.isValidObjectId(rutaId)) return new Set();
+
+  const reservas = await Reserva.find({ ruta: rutaId, fecha: String(fecha), status: 'reserved' })
+    .select('seatNumber seatNumbers')
+    .lean();
+
+  return new Set(reservas.flatMap((r) => (r.seatNumbers?.length ? r.seatNumbers : [r.seatNumber])));
+}
+
+function quitarVendidos(respuesta, vendidos) {
+  const data = { ...respuesta };
+  if (Array.isArray(data.available)) {
+    data.available = data.available.filter((asiento) => !vendidos.has(asiento));
+  }
+  if (Array.isArray(data.asientos)) {
+    data.asientos = data.asientos.filter((asiento) => !vendidos.has(asiento?.numero ?? asiento));
+  }
+  return data;
 }
 
 /** Asientos 1..N sin hold activo. */
@@ -210,11 +237,13 @@ router.get("/disponibles", asyncHandler(async (req, res) => {
       params: { rutaId, fecha },
       timeout: TIMEOUT
     });
-    return res.json({ ok: true, ...response.data, _source: 'external-api' });
+    const vendidos = await getAsientosVendidos(rutaId, fecha);
+    return res.json({ ok: true, ...quitarVendidos(response.data, vendidos), _source: 'external-api' });
   } catch (error) {
     logFallback('disponibles', error);
     const activeHolds = await getActiveHolds(rutaId, fecha);
-    const available = computeAvailable(activeHolds);
+    const vendidos = await getAsientosVendidos(rutaId, fecha);
+    const available = computeAvailable(activeHolds).filter((asiento) => !vendidos.has(asiento));
     return res.json({
       ok: true,
       rutaId,
@@ -286,6 +315,11 @@ router.post("/reservar", asyncHandler(async (req, res) => {
   }
 
   const owner = userId || clientId || 'guest';
+
+  const vendidos = await getAsientosVendidos(rutaId, fecha);
+  if (asientos.some((asiento) => vendidos.has(asiento))) {
+    return res.status(409).json({ ok: false, error: 'Ese asiento ya fue vendido' });
+  }
 
   try {
     // Una sola llamada para todos los asientos. La API resuelve los conflictos

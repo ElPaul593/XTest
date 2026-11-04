@@ -22,3 +22,5 @@ services:
         sync: false
       - key: EXTERNAL_API_URL
         sync: false
+      - key: SEAT_API_ADMIN_TOKEN
+        sync: false

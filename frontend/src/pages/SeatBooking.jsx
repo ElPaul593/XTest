@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getCurrentUser } from '../services/users';
 import { getRutas } from '../services/rutas';
 import BusSeatSelector from '../components/BusSeatSelector';
+import { capturarPago } from '../services/pagos';
 import './SeatBooking.css';
 
 const SeatBooking = () => {
@@ -12,6 +13,14 @@ const SeatBooking = () => {
     const rutaInicial = searchParams.get('ruta') || '';
     const fechaInicial = searchParams.get('fecha') || '';
     const vieneDeCompra = Boolean(rutaInicial && fechaInicial);
+    // Al volver de PayPal llegan la orden y cómo terminó
+    const ordenPayPal = searchParams.get('orden');
+    const estadoPayPal = searchParams.get('estado');
+    const [resultadoPago, setResultadoPago] = useState(
+        ordenPayPal
+            ? { estado: estadoPayPal === 'aprobada' ? 'procesando' : 'cancelado' }
+            : null
+    );
     const [user, setUser] = useState(null);
     const [rutas, setRutas] = useState([]);
     const [selectedRuta, setSelectedRuta] = useState(rutaInicial);
@@ -53,6 +62,17 @@ const SeatBooking = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!ordenPayPal || estadoPayPal !== 'aprobada') return;
+        capturarPago(ordenPayPal)
+            .then((pago) => setResultadoPago({
+                estado: pago.enRevision ? 'revision' : 'pagado',
+                asientos: pago.asientos,
+                total: pago.cobro?.valor
+            }))
+            .catch((err) => setResultadoPago({ estado: 'error', mensaje: err.message }));
+    }, [ordenPayPal, estadoPayPal]);
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -96,6 +116,32 @@ const SeatBooking = () => {
     };
 
     if (!token) return null;
+
+    if (resultadoPago) {
+        const mensajes = {
+            procesando: ['Confirmando tu pago...', 'No cierres esta ventana.'],
+            pagado: ['¡Pago confirmado!', `Asientos ${resultadoPago.asientos?.join(', ')} · Total $${resultadoPago.total}`],
+            revision: ['Tu pago está en revisión', 'Un administrador lo revisará; tus asientos siguen apartados.'],
+            cancelado: ['Pago cancelado', 'No se realizó ningún cobro.'],
+            error: ['No pudimos confirmar el pago', resultadoPago.mensaje]
+        };
+        const [titulo, detalle] = mensajes[resultadoPago.estado];
+
+        return (
+            <div className="seat-booking-page">
+                <div className="booking-header">
+                    <h1>{titulo}</h1>
+                    <p>{detalle}</p>
+                </div>
+                {resultadoPago.estado !== 'procesando' && (
+                    <div className="action-section">
+                        <Link className="btn btn-primary" to="/dashboard">Ver mis reservas</Link>
+                        <Link className="btn btn-secondary" to="/boletos">Comprar otro boleto</Link>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="seat-booking-page">
@@ -167,6 +213,7 @@ const SeatBooking = () => {
                             fecha={selectedFecha}
                             onClose={() => (vieneDeCompra ? navigate('/boletos') : setShowSelector(false))}
                             onReservationComplete={handleReservationComplete}
+                            modoPago
                         />
                     </div>
                 )}

@@ -1,37 +1,10 @@
-/**
- * ============================================================================
- * #19BUG — ARCHIVO HUÉRFANO: 245 líneas que nunca se ejecutan.
- * ============================================================================
- *
- * Ningún componente ni página importa este módulo.
- *
- * Verificado: 0 importaciones de `asientosService` en todo `src/`.
- *
- * Dos problemas añadidos si alguien decidiera resucitarlo:
- *
- *  1. Crea su propia instancia de `axios` en lugar de usar la de
- *     `services/api.js`, así que se queda FUERA de los interceptores: no añade
- *     la cabecera `Authorization` ni cierra la sesión ante un 401. Cualquier
- *     endpoint autenticado al que llamara fallaría.
- *
- *  2. Depende de `VITE_SEAT_API_URL`, variable que no está declarada en
- *     `frontend/.env.example` ni en `.env.production`, por lo que siempre caería
- *     al valor por defecto.
- *
- * La lógica viva de asientos está en `components/BusSeatSelector.jsx` y
- * `pages/SeatBooking.jsx`.
- * ============================================================================
- */
-
-import axios from 'axios';
+import axios from './api';
 
 /**
- * Servicio para la API de Asientos Externa
- * BaseURL: http://localhost:5000/api/asientos
+ * Los asientos siempre pasan por el backend propio: él consulta la API externa y
+ * descuenta lo ya vendido, que solo queda registrado en Mongo.
  */
-
-// Eliminar trailing slash para evitar doble slash en endpoints (/api/asientos//holds)
-const SEAT_API_BASE_URL = (import.meta.env.VITE_SEAT_API_URL || '/api/asientos').replace(/\/$/, '');
+const SEAT_API_BASE_URL = '/asientos';
 
 const CLIENT_ID = () => {
     // Obtener userId del token o localStorage
@@ -56,25 +29,13 @@ export async function getDisponibles({ rutaId, fecha }) {
     try {
         const response = await axios.get(`${SEAT_API_BASE_URL}/disponibles`, {
             params: { rutaId, fecha },
-            timeout: 8000
+            timeout: 15000
         });
         return response.data;
     } catch (err) {
         console.error('Error fetching disponibles:', err);
 
-        // FALLBACK: Si la API externa falla (404, timeout, etc.), devolver datos de prueba
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.response?.status === 404) {
-            console.warn('API no disponible (timeout/404) - usando datos de demostración');
-            return {
-                ok: true,
-                rutaId,
-                fecha,
-                available: [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38],
-                total: 40,
-                _isFallback: true
-            };
-        }
-        return { ok: false, error: err.message };
+        return { ok: false, error: err.response?.data?.error || err.message };
     }
 }
 
@@ -91,31 +52,11 @@ export async function createHold({ rutaId, fecha, seatNumber }) {
             fecha,
             asiento: seatNumber,
             userId: userId // El proxy espera userId, no clientId
-        }, { timeout: 8000 });
+        }, { timeout: 15000 });
         return response.data;
     } catch (err) {
         console.error('Error creating hold:', err);
-        const errorMsg = String(err.response?.data?.error || err.message || '');
-        const errorDetails = err.response?.data;
-
-        // FALLBACK: Usar demo si hay cualquier error de API externa (404, timeout, 400, etc.)
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.response?.status === 404 || err.response?.status === 400) {
-            console.warn('API no disponible o error de validación (timeout/404/400) - usando modo demostración para hold');
-            console.warn('Error details:', errorDetails);
-            const demoHoldId = `demo_hold_${Date.now()}_${seatNumber}`;
-            return {
-                ok: true,
-                holdId: demoHoldId,
-                asiento: seatNumber,
-                rutaId: String(rutaId),
-                fecha: String(fecha),
-                expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-                remainingMs: 300000,
-                _isFallback: true,
-                _originalError: errorMsg
-            };
-        }
-        throw err; // Re-lanzar otros errores
+        return { ok: false, error: err.response?.data?.error || err.message };
     }
 }
 
@@ -125,14 +66,10 @@ export async function createHold({ rutaId, fecha, seatNumber }) {
  */
 export async function getHolds() {
     try {
-        const response = await axios.get(`${SEAT_API_BASE_URL}/holds`, { timeout: 8000 });
+        const response = await axios.get(`${SEAT_API_BASE_URL}/holds`, { timeout: 15000 });
         return response.data;
     } catch (err) {
         console.error('Error fetching holds:', err);
-        // FALLBACK: Si la API falla (404, timeout, etc.), devolver lista vacía
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.response?.status === 404) {
-            return { ok: true, holds: [], count: 0, _isFallback: true };
-        }
         return { ok: false, holds: [], error: err.message };
     }
 }
@@ -148,7 +85,7 @@ export async function deleteHold({ holdId, rutaId, fecha, asiento }) {
         if (holdId) {
             const response = await axios.delete(`${SEAT_API_BASE_URL}/holds`, {
                 data: { holdId },
-                timeout: 8000
+                timeout: 15000
             });
             return response.data;
         }
@@ -156,17 +93,13 @@ export async function deleteHold({ holdId, rutaId, fecha, asiento }) {
         if (rutaId && fecha && asiento) {
             const response = await axios.delete(`${SEAT_API_BASE_URL}/holds`, {
                 data: { rutaId, fecha, asiento },
-                timeout: 8000
+                timeout: 15000
             });
             return response.data;
         }
         return { ok: false, error: 'Se requiere holdId o (rutaId, fecha, asiento)' };
     } catch (err) {
         console.error('Error deleting hold:', err);
-        // FALLBACK para demo (404, timeout, etc.)
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.response?.status === 404) {
-            return { ok: true, released: true, _isFallback: true };
-        }
         return { ok: false, error: err.response?.data?.error || err.message };
     }
 }
@@ -196,14 +129,10 @@ export async function confirmReserva({ rutaId, fecha, asiento, holdId }) {
             fecha,
             asiento,
             holdId
-        }, { timeout: 8000 });
+        }, { timeout: 15000 });
         return response.data;
     } catch (err) {
         console.error('Error confirming reservation:', err);
-        // FALLBACK para demo (404, timeout, etc.)
-        if (err.code === 'ECONNABORTED' || err.message.includes('timeout') || err.response?.status === 404 || holdId?.startsWith('demo_')) {
-            return { ok: true, reservedAt: new Date().toISOString(), _isFallback: true };
-        }
         return { ok: false, error: err.response?.data?.error || err.message };
     }
 }

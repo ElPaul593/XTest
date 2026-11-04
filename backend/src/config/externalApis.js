@@ -46,7 +46,7 @@ const EXTERNAL_API_URL = (
   process.env.EXTERNAL_SEAT_API ||
   process.env.PRICING_API ||
   process.env.SEAT_API_URL ||
-  'https://apiconsumidorac.onrender.com'
+  'https://apiconsumidorac.vercel.app'
 ).replace(/\/+$/, '');
 
 /**
@@ -63,19 +63,27 @@ const SEAT_API_PATHS = Object.freeze({
   liberarHold: '/api/asientos/holds/liberar',
   reservarDefinitivo: '/api/asientos/reservar-definitivo',
   calcularPrecio: '/calcular-precio',
+  checkoutConfiguracion: '/api/checkout/configuracion',
+  checkoutCrearOrden: '/api/checkout/crear-orden',
+  checkoutCapturarOrden: '/api/checkout/capturar-orden',
+  adminPagos: '/api/admin/pagos',
+  reportesCuentaPasarela: '/api/reportes/cuenta-pasarela',
   health: '/health'
 });
 
 /** Construye una URL absoluta a partir de una clave de SEAT_API_PATHS. */
-function seatApiUrl(clave) {
+function seatApiUrl(clave, sufijo = '') {
   const path = SEAT_API_PATHS[clave];
   if (!path) {
     throw new Error(`Ruta desconocida de la API de asientos: "${clave}"`);
   }
-  return `${EXTERNAL_API_URL}${path}`;
+  return `${EXTERNAL_API_URL}${path}${sufijo}`;
 }
 
-const DEFAULT_REQUEST_TIMEOUT_MS = Number(process.env.SEAT_API_TIMEOUT_MS || 4000);
+const DEFAULT_REQUEST_TIMEOUT_MS = Number(process.env.SEAT_API_TIMEOUT_MS || 10000);
+
+// PayPal puede tardar varios segundos, más el arranque en frío de Vercel.
+const PAGO_REQUEST_TIMEOUT_MS = Number(process.env.PAGO_API_TIMEOUT_MS || 30000);
 
 /**
  * Precio unitario de respaldo, SOLO para cuando la API externa no responde.
@@ -96,6 +104,7 @@ module.exports = {
   SEAT_API_PATHS,
   seatApiUrl,
   DEFAULT_REQUEST_TIMEOUT_MS,
+  PAGO_REQUEST_TIMEOUT_MS,
   DEFAULT_PRECIO_UNITARIO_USD,
   FALLBACK_TOTAL_ASIENTOS,
   FALLBACK_HOLD_TTL_MS

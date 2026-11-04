@@ -10,6 +10,7 @@ import {
     buildSeatMap
 } from '../services/asientosService';
 import { getPricing } from '../services/pricingService';
+import { crearOrdenPago } from '../services/pagos';
 
 const SeatButton = ({ seat, myHolds, loading, onSeatClick }) => {
     const isSelected = myHolds.some(h => h.asiento === seat.number);
@@ -50,7 +51,7 @@ const BusGrid = ({ seats, myHolds, loading, onSeatClick }) => {
     return rows;
 };
 
-const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete }) => {
+const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPago = false }) => {
     const [seats, setSeats] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -189,7 +190,8 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete }) => {
         try {
             // Pasar rutaId para que use el precio de la ruta local, no el de la API externa
             console.log(`[BusSeatSelector] Llamando getPricing con cantidad: ${myHolds.length}, rutaId: ${normalizedRutaId}`);
-            const pricingResult = await getPricing(myHolds.length, normalizedRutaId);
+            // Al pagar se muestra la cotización de la API, que es la que PayPal cobra
+            const pricingResult = await getPricing(myHolds.length, modoPago ? null : normalizedRutaId);
             console.log('[BusSeatSelector] Pricing result:', pricingResult);
 
             if (pricingResult.ok) {
@@ -357,6 +359,19 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete }) => {
         } catch (err) {
             setError(err.message || 'Error al cancelar holds');
         } finally {
+            setLoading(false);
+        }
+    };
+
+    // Reserva los asientos en la API y envía al comprador a PayPal
+    const handlePagar = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const orden = await crearOrdenPago(myHolds.map((hold) => hold.holdId));
+            window.location.assign(orden.approvalUrl);
+        } catch (err) {
+            setError(err.message);
             setLoading(false);
         }
     };
@@ -571,11 +586,13 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete }) => {
                     <div className="hold-actions">
                         <button
                             className="btn btn-confirm"
-                            onClick={handleConfirm}
+                            onClick={modoPago ? handlePagar : handleConfirm}
                             disabled={loading || !pricingInfo?.ok || myHolds.some(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento)}
                             title={!pricingInfo?.ok ? 'Calculando precio...' : (myHolds.some(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento) ? 'Faltan datos en algunos holds' : '')}
                         >
-                            ✓ Confirmar {myHolds.length} Reserva{myHolds.length > 1 ? 's' : ''}
+                            {modoPago
+                                ? `Pagar $${pricingInfo?.totalPagar?.toLocaleString() || ''} con PayPal`
+                                : `✓ Confirmar ${myHolds.length} Reserva${myHolds.length > 1 ? 's' : ''}`}
                         </button>
                         <button
                             className="btn btn-cancel"

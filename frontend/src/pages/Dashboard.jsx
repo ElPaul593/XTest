@@ -312,6 +312,7 @@ export default function Dashboard() {
                 fecha={changingSeatFor?.fecha || selectedFecha}
                 onClose={closeSeatModals}
                 onReservationComplete={handleReservationComplete}
+                modoPago={!changingSeatFor}
               />
             </div>
           </div>

@@ -16,10 +16,12 @@ const agenteRoutes = require('./agenteRoutes');
 const seatProxyRoutes = require("./seatProxy.routes");
 const asientosRoutes = require("./asientosRoutes");
 const pricingRoutes = require("./pricingRoutes");
+const pagosRoutes = require("./pagosRoutes");
 
 router.use("/seat", seatProxyRoutes);
 router.use("/asientos", asientosRoutes);
 router.use("/pricing", pricingRoutes);
+router.use("/pagos", pagosRoutes);
 router.use('/users', userRoutes);
 router.use('/auth', authRoutes);
 router.use('/reservas', reservaRoutes);
