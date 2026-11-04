@@ -41,11 +41,17 @@ require('dotenv').config();
 // Base del servicio. En desarrollo conviene apuntar a la API local
 // (`http://localhost:5008`) para trabajar contra la versión en curso sin
 // desplegar: basta definir EXTERNAL_API_URL en backend/.env
+//
+// La instalación antigua de Render no tiene PayPal: si una variable aún la
+// nombra, se ignora para no conectar el backend a ella.
+const SEAT_API_RETIRADA = 'apiconsumidorac.onrender.com';
 const EXTERNAL_API_URL = (
-  process.env.EXTERNAL_API_URL ||
-  process.env.EXTERNAL_SEAT_API ||
-  process.env.PRICING_API ||
-  process.env.SEAT_API_URL ||
+  [
+    process.env.EXTERNAL_API_URL,
+    process.env.EXTERNAL_SEAT_API,
+    process.env.PRICING_API,
+    process.env.SEAT_API_URL
+  ].find((url) => url && !url.includes(SEAT_API_RETIRADA)) ||
   'https://apiconsumidorac.vercel.app'
 ).replace(/\/+$/, '');
 
