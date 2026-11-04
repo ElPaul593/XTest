@@ -11,9 +11,12 @@ import {
  * Usa react-simple-maps + GeoJSON geográfico preciso.
  *
  * Props:
- *   value    – nombre de la provincia seleccionada (string)
- *   onChange – callback(nombre) cuando se selecciona / deselecciona
- *   disabled – boolean para deshabilitar interacción
+ *   origin       – provincia de salida (marca A)
+ *   destination  – provincia de destino (marca B)
+ *   activeStep   – 'origen' | 'destino': qué se está eligiendo
+ *   available    – Map provincia → Set de ciudades con rutas para ese paso
+ *   onSelect     – callback(nombre) al hacer clic en una provincia disponible
+ *   disabled     – boolean para deshabilitar interacción
  */
 
 /**
@@ -101,13 +104,25 @@ function normalizeName(raw = '') {
   return map[raw] || raw;
 }
 
+const MARKS = {
+  origin: { fill: '#FFD60A', ink: '#0B0B0D', letter: 'A' },
+  destination: { fill: '#EC4899', ink: '#FFFFFF', letter: 'B' },
+};
+
 function getColors(nombre) {
   const region = PROVINCE_TO_REGION[nombre] || 'amazonia';
   return REGION_MAP[region];
 }
 
 // ── Componente principal ───────────────────────────────────────────────────
-export default function EcuadorMapSelector({ value, onChange, disabled = false }) {
+export default function EcuadorMapSelector({
+  origin = '',
+  destination = '',
+  activeStep = 'origen',
+  available,
+  onSelect,
+  disabled = false,
+}) {
   const [hovered, setHovered] = useState(null);
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, name: '' });
   const [geoData, setGeoData] = useState(null);
@@ -120,9 +135,16 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
       .catch(console.error);
   }, []);
 
+  const isAvailable = (nombre) => !available || available.has(nombre);
+  const getMark = (nombre) => {
+    if (nombre === destination && activeStep === 'destino') return MARKS.destination;
+    if (nombre === origin) return MARKS.origin;
+    return nombre === destination ? MARKS.destination : null;
+  };
+
   const handleClick = (nombre) => {
-    if (disabled) return;
-    onChange(value === nombre ? '' : nombre);
+    if (disabled || !isAvailable(nombre)) return;
+    onSelect(nombre);
   };
 
   const handleMouseEnter = (e, nombre) => {
@@ -145,51 +167,43 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
     setTooltip(t => ({ ...t, visible: false }));
   };
 
-  const handleClear = () => { if (!disabled) onChange(''); };
-
   // Determinar colores de fill / stroke de cada provincia
   const getFill = (nombre) => {
     const c = getColors(nombre);
-    if (value === nombre)   return c.selected;
-    if (hovered === nombre) return c.hover;
+    const mark = getMark(nombre);
+    if (mark) return mark.fill;
+    if (hovered === nombre && isAvailable(nombre)) return c.hover;
     return c.base;
   };
 
   const getStroke = (nombre) => {
-    if (value === nombre)   return '#FFFFFF';
-    if (hovered === nombre) return '#E2E8F0';
+    if (getMark(nombre)) return '#FFFFFF';
+    if (hovered === nombre && isAvailable(nombre)) return '#E2E8F0';
     return '#0F172A';
   };
 
   const getStrokeWidth = (nombre) => {
-    if (value === nombre)   return 1.5;
-    if (hovered === nombre) return 1;
+    if (getMark(nombre)) return 1.5;
+    if (hovered === nombre && isAvailable(nombre)) return 1;
     return 0.3;
   };
 
-  return (
-    <div style={styles.wrapper}>
-      {/* ── Status bar ─────────────────────────────────────────── */}
-      <div style={styles.statusBar}>
-        <div style={styles.statusLeft}>
-          <span style={styles.pinIcon}>📍</span>
-          {value
-            ? <span style={styles.selectedText}>{value}</span>
-            : <span style={styles.placeholderText}>Seleccione una provincia en el mapa</span>
-          }
-        </div>
-        {value && (
-          <button
-            onClick={handleClear}
-            style={styles.clearBtn}
-            title="Limpiar selección"
-            aria-label="Deseleccionar provincia"
-          >
-            ✕
-          </button>
-        )}
-      </div>
+  const tooltipCities = available?.get(tooltip.name);
+  const tooltipDetail = available
+    ? tooltipCities ? [...tooltipCities].slice(0, 3).join(', ') : 'Sin rutas'
+    : '';
 
+  const hintText = () => {
+    if (hovered && !isAvailable(hovered)) {
+      return activeStep === 'destino' && origin
+        ? `No hay rutas de ${origin} a ${hovered}`
+        : `${hovered} no tiene rutas disponibles`;
+    }
+    return hovered || 'Toca una provincia';
+  };
+
+  return (
+    <div className="ecuador-map" style={styles.wrapper}>
       {/* ── Leyenda ────────────────────────────────────────────── */}
       <div style={styles.legend}>
         {Object.entries({
@@ -213,11 +227,12 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
             style={{
               ...styles.tooltip,
               left: tooltip.x,
-              top: tooltip.y - 36,
+              top: Math.max(0, tooltip.y - 48),
             }}
             aria-hidden="true"
           >
             {tooltip.name}
+            {tooltipDetail && <span style={styles.tooltipDetail}>{tooltipDetail}</span>}
           </div>
         )}
 
@@ -229,57 +244,68 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
               scale: 2800,
             }}
             width={400}
-            height={520}
+            height={430}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           >
               <Geographies geography={geoData}>
-                {({ geographies }) =>
-                  geographies.map((geo) => {
-                    const raw   = geo.properties.province || geo.properties.name || '';
-                    const nombre = normalizeName(raw);
-                    const isSelected = value === nombre;
-                    const isHovered  = hovered === nombre;
+                {({ geographies, path }) => (
+                  <>
+                    {geographies.map((geo) => {
+                      const raw   = geo.properties.province || geo.properties.name || '';
+                      const nombre = normalizeName(raw);
+                      const isMarked = Boolean(getMark(nombre));
+                      const enabled = isAvailable(nombre);
+                      const cursor = disabled ? 'default' : enabled ? 'pointer' : 'not-allowed';
+                      const baseStyle = {
+                        fill:         getFill(nombre),
+                        fillOpacity:  enabled || isMarked ? 1 : 0.2,
+                        stroke:       getStroke(nombre),
+                        strokeWidth:  getStrokeWidth(nombre),
+                        outline:      'none',
+                        cursor,
+                        transition:   'fill 0.18s ease, stroke 0.18s ease, fill-opacity 0.18s ease',
+                        filter: isMarked
+                          ? 'drop-shadow(0 0 4px rgba(255,255,255,0.6))'
+                          : 'none',
+                      };
 
-                    return (
-                      <Geography
-                        key={geo.rsmKey || nombre}
-                        geography={geo}
-                        onClick={() => handleClick(nombre)}
-                        onMouseEnter={(e) => handleMouseEnter(e, nombre)}
-                        onMouseLeave={handleMouseLeave}
-                        tabIndex={disabled ? -1 : 0}
-                        onKeyDown={(e) => e.key === 'Enter' && handleClick(nombre)}
-                        aria-label={`Provincia de ${nombre}${isSelected ? ' (seleccionada)' : ''}`}
-                        aria-pressed={isSelected}
-                        role="button"
-                        style={{
-                          default: {
-                            fill:         getFill(nombre),
-                            stroke:       getStroke(nombre),
-                            strokeWidth:  getStrokeWidth(nombre),
-                            outline:      'none',
-                            cursor:       disabled ? 'default' : 'pointer',
-                            transition:   'fill 0.18s ease, stroke 0.18s ease',
-                            filter: isSelected
-                              ? 'drop-shadow(0 0 4px rgba(255,255,255,0.6))'
-                              : 'none',
-                          },
-                          hover: {
-                            fill:        getColors(nombre).hover,
-                            stroke:      '#E2E8F0',
-                            strokeWidth: 1,
-                            outline:     'none',
-                            cursor:      disabled ? 'default' : 'pointer',
-                          },
-                          pressed: {
-                            fill:    getColors(nombre).selected,
-                            outline: 'none',
-                          },
-                        }}
-                      />
-                    );
-                  })
-                }
+                      return (
+                        <Geography
+                          key={geo.rsmKey || nombre}
+                          geography={geo}
+                          onClick={() => handleClick(nombre)}
+                          onMouseEnter={(e) => handleMouseEnter(e, nombre)}
+                          onMouseLeave={handleMouseLeave}
+                          tabIndex={disabled || !enabled ? -1 : 0}
+                          onKeyDown={(e) => e.key === 'Enter' && handleClick(nombre)}
+                          aria-label={`Provincia de ${nombre}${isMarked ? ' (seleccionada)' : ''}`}
+                          aria-pressed={isMarked}
+                          aria-disabled={!enabled}
+                          role="button"
+                          style={{ default: baseStyle, hover: baseStyle, pressed: baseStyle }}
+                        />
+                      );
+                    })}
+
+                    {/* Marcas A/B: si origen y destino coinciden se separan */}
+                    {[[origin, MARKS.origin, -11], [destination, MARKS.destination, 11]].map(([nombre, mark, offset]) => {
+                      if (!nombre) return null;
+                      const geo = geographies.find((g) =>
+                        normalizeName(g.properties.province || g.properties.name || '') === nombre);
+                      if (!geo) return null;
+                      const [x, y] = path.centroid(geo);
+                      const dx = origin === destination ? offset : 0;
+                      return (
+                        <g key={mark.letter} transform={`translate(${x + dx},${y})`} style={{ pointerEvents: 'none' }}>
+                          <circle r="10" fill={mark.fill} stroke="#FFFFFF" strokeWidth="1.5" />
+                          <text textAnchor="middle" dy="4" fontSize="12" fontWeight="700" fill={mark.ink}>
+                            {mark.letter}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </>
+                )}
               </Geographies>
           </ComposableMap>
         ) : (
@@ -292,11 +318,7 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
 
       {/* ── Hint inferior ──────────────────────────────────────── */}
       <div style={styles.hint}>
-        {hovered && hovered !== value
-          ? `Clic para seleccionar ${hovered}`
-          : value
-          ? `Provincia seleccionada · clic nuevamente para deseleccionar`
-          : 'Haz clic sobre una provincia del mapa para filtrar rutas'}
+        {hintText()}
       </div>
     </div>
   );
@@ -305,59 +327,15 @@ export default function EcuadorMapSelector({ value, onChange, disabled = false }
 // ── Estilos ───────────────────────────────────────────────────────────────
 const styles = {
   wrapper: {
+    width: '100%',
     maxWidth: '420px',
-    marginTop: '8px',
-    margin: '8px auto 0',
+    margin: '0 auto',
     background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
     borderRadius: '16px',
     border: '1px solid #334155',
     overflow: 'hidden',
     boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
     fontFamily: 'system-ui, -apple-system, sans-serif',
-  },
-  statusBar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    background: 'rgba(255,255,255,0.04)',
-    borderBottom: '1px solid #1E293B',
-    minHeight: '48px',
-  },
-  statusLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  pinIcon: { fontSize: '16px' },
-  selectedText: {
-    color: '#F8FAFC',
-    fontWeight: '600',
-    fontSize: '14px',
-    letterSpacing: '0.02em',
-  },
-  placeholderText: {
-    color: '#64748B',
-    fontSize: '13px',
-    fontStyle: 'italic',
-  },
-  clearBtn: {
-    background: 'rgba(239,68,68,0.15)',
-    border: '1px solid rgba(239,68,68,0.3)',
-    borderRadius: '50%',
-    width: '28px',
-    height: '28px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    color: '#F87171',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    transition: 'all 0.15s ease',
-    flexShrink: 0,
-    lineHeight: 1,
-    padding: 0,
   },
   legend: {
     display: 'flex',
@@ -383,6 +361,8 @@ const styles = {
     fontWeight: '500',
   },
   mapContainer: {
+    flex: 1,
+    minHeight: 0,
     padding: '8px',
     display: 'flex',
     justifyContent: 'center',
@@ -404,6 +384,11 @@ const styles = {
     transform: 'translateX(-50%)',
     boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
   },
+  tooltipDetail: {
+    display: 'block',
+    color: '#CBD5E1',
+    fontWeight: '400',
+  },
   loadingMap: {
     display: 'flex',
     flexDirection: 'column',
@@ -422,8 +407,8 @@ const styles = {
   },
   hint: {
     textAlign: 'center',
-    color: '#475569',
-    fontSize: '11px',
+    color: '#94A3B8',
+    fontSize: '12px',
     padding: '8px 16px 12px',
     minHeight: '32px',
     transition: 'color 0.2s',

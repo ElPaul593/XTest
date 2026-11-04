@@ -57,20 +57,334 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.rutas-container .rutas-header {
+  align-items: center;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.compra-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.compra-modos {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.compra-modos button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.compra-modos button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink, #0b0b0d);
+}
+
+.provincia-selector label,
+.compra-fecha {
+  margin: 0;
+}
+
+.compra-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.compra-fecha input {
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.compra-rapida {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100dvh - var(--topbar-h) - 190px);
+  min-height: 420px;
+}
+
+.compra-rapida .rutas-city-search {
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ruta-fila__enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ruta-fila__enlaces a {
+  color: var(--accent);
+}
+
+.ruta-fila__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Todo en una pantalla: la lista hace scroll por dentro y el mapa queda fijo */
+.trip-planner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  gap: var(--spacing-lg);
+  height: calc(100dvh - var(--topbar-h) - 190px);
+  min-height: 460px;
+}
+
+.trip-planner__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.trip-planner__steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ecuador-map {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.trip-planner .ecuador-map svg {
+  height: 100% !important;
+}
+
+.rutas-resultados {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.rutas-resultados h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: var(--font-size-base);
+}
+
+.rutas-resultados__aviso {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.rutas-resultados__lista {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ruta-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ruta-fila__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ruta-fila__info strong {
+  color: var(--text);
+  font-size: var(--font-size-base);
+}
+
+.ruta-fila__info span {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.ruta-fila__precio {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.ruta-fila__acciones {
+  display: flex;
+  gap: 6px;
+}
+
+.ruta-fila__btn {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ruta-fila__btn--principal {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink, #0b0b0d);
+}
+
+.ruta-map-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-backdrop);
+  overflow-y: auto;
+  padding: 24px 16px;
+  background: var(--glass-backdrop);
+}
+
+.ruta-map-modal .ruta-map-section {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.trip-planner__guide {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
+  color: var(--text);
+  font-size: var(--font-size-base);
+  line-height: 1.45;
+}
+
+.trip-step {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.trip-step--active {
+  border-color: var(--accent);
+}
+
+.trip-step__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trip-step__badge {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffd60a;
+  color: #0b0b0d;
+  font-size: 13px;
+}
+
+.trip-step--destino .trip-step__badge {
+  background: #ec4899;
+  color: #fff;
+}
+
+.trip-step__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-step__field select {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.trip-step__clear {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
 .rutas-city-search {
   margin-top: 20px;
   padding-top: 18px;
   border-top: 1px solid var(--border);
 }
 
+.trip-planner .rutas-city-search {
+  margin-top: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
 .rutas-city-search__title {
-  margin-bottom: 10px;
+  cursor: pointer;
   color: var(--text);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .rutas-city-search__fields {
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
@@ -351,7 +665,56 @@
 }
 
 /* Responsive */
+/* Tablet y móvil: el orden es guía, pasos, mapa, ciudad y resultados */
+@media (max-width: 900px) {
+  .trip-planner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: auto;
+    min-height: 0;
+  }
+
+  .trip-planner__panel {
+    display: contents;
+  }
+
+  .trip-planner__guide { order: 1; }
+  .trip-planner__steps { order: 2; }
+  .ecuador-map { order: 3; height: auto; }
+  .rutas-city-search { order: 4; }
+  .rutas-resultados { order: 5; }
+
+  .trip-planner .ecuador-map svg {
+    height: 34vh !important;
+  }
+
+  .rutas-resultados__lista {
+    overflow-y: visible;
+  }
+
+  .compra-rapida {
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .ruta-fila {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ruta-fila__acciones {
+    grid-column: 1 / -1;
+  }
+
+  .ruta-fila__btn {
+    flex: 1;
+  }
+}
+
 @media (max-width: 768px) {
+
   .rutas-city-search__fields {
     grid-template-columns: 1fr;
   }

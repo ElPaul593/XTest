@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getCurrentUser } from '../services/users';
 import { getRutas } from '../services/rutas';
 import BusSeatSelector from '../components/BusSeatSelector';
@@ -7,13 +7,18 @@ import './SeatBooking.css';
 
 const SeatBooking = () => {
     const navigate = useNavigate();
+    // Desde "Comprar boletos" llegan la ruta y la fecha ya elegidas
+    const [searchParams] = useSearchParams();
+    const rutaInicial = searchParams.get('ruta') || '';
+    const fechaInicial = searchParams.get('fecha') || '';
+    const vieneDeCompra = Boolean(rutaInicial && fechaInicial);
     const [user, setUser] = useState(null);
     const [rutas, setRutas] = useState([]);
-    const [selectedRuta, setSelectedRuta] = useState('');
-    const [selectedFecha, setSelectedFecha] = useState('');
+    const [selectedRuta, setSelectedRuta] = useState(rutaInicial);
+    const [selectedFecha, setSelectedFecha] = useState(fechaInicial);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [showSelector, setShowSelector] = useState(false);
+    const [showSelector, setShowSelector] = useState(vieneDeCompra);
 
     const token = localStorage.getItem('token');
 
@@ -87,8 +92,7 @@ const SeatBooking = () => {
     const handleReservationComplete = (result) => {
         console.log('Reserva completada:', result);
         setShowSelector(false);
-        // Opcional: redirigir a mis reservas
-        // navigate('/reservas');
+        navigate('/dashboard');
     };
 
     if (!token) return null;
@@ -161,7 +165,7 @@ const SeatBooking = () => {
                         <BusSeatSelector
                             rutaId={selectedRuta}
                             fecha={selectedFecha}
-                            onClose={() => setShowSelector(false)}
+                            onClose={() => (vieneDeCompra ? navigate('/boletos') : setShowSelector(false))}
                             onReservationComplete={handleReservationComplete}
                         />
                     </div>

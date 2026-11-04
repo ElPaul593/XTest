@@ -1,19 +1,6 @@
 /**
- * ============================================================================
- * #26BUG — ARCHIVO DE CONSTANTES MUERTO: nada de aquí se importa.
- * ============================================================================
- *
- * Los tres exports (`PROVINCIAS`, `PROVINCIAS_ARRAY`, `getProvinciaByCodigo`)
- * no se usan en ninguna pantalla.
- *
- * Verificado: 0 importaciones en `pages/`, `components/` y `services/`.
- *
- * La deducción de la provincia a partir de la cédula se hace ÍNTEGRAMENTE en el
- * backend (`backend/src/utils/provinciaUtils.js`), que mantiene su propio mapa de
- * códigos. Resultado: la misma tabla de 24 provincias duplicada en dos lenguajes
- * y dos repositorios de código, con el riesgo de que divergan y nadie lo note,
- * porque esta copia no se ejecuta nunca.
- * ============================================================================
+ * Datos de provincias usados por la pantalla de Rutas: deducción de la provincia
+ * desde la cédula, regiones y ciudad → provincia.
  */
 
 // Códigos de provincias de Ecuador según los primeros 2 dígitos de la cédula
@@ -66,3 +53,61 @@ export function getProvinciaFromCedula(cedula) {
   return getProvinciaByCodigo(codigo);
 }
 
+// Provincias agrupadas por región natural (mismo criterio que los colores del mapa)
+export const REGIONES = [
+  {
+    id: 'sierra',
+    nombre: 'Sierra',
+    provincias: [
+      'Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'Imbabura',
+      'Loja', 'Pichincha', 'Santo Domingo de los Tsáchilas', 'Tungurahua'
+    ]
+  },
+  {
+    id: 'costa',
+    nombre: 'Costa',
+    provincias: ['El Oro', 'Esmeraldas', 'Guayas', 'Los Ríos', 'Manabí', 'Santa Elena']
+  },
+  {
+    id: 'amazonia',
+    nombre: 'Amazonía',
+    provincias: ['Morona Santiago', 'Napo', 'Orellana', 'Pastaza', 'Sucumbíos', 'Zamora Chinchipe']
+  },
+  { id: 'galapagos', nombre: 'Galápagos', provincias: ['Galápagos'] }
+];
+
+// Ciudades registradas en el backend (utils/provinciaUtils.js) por provincia real
+const CIUDADES_POR_PROVINCIA = {
+  Azuay: ['Cuenca', 'Gualaceo'],
+  'Bolívar': ['Guaranda', 'San Miguel'],
+  'Cañar': ['Azogues', 'Cañar'],
+  Carchi: ['Tulcán', 'San Gabriel'],
+  Chimborazo: ['Riobamba', 'Guano'],
+  Cotopaxi: ['Latacunga', 'Saquisilí'],
+  'El Oro': ['Machala', 'Santa Rosa', 'Pasaje', 'Huaquillas', 'Zaruma', 'Piñas'],
+  Esmeraldas: ['Esmeraldas', 'Atacames', 'San Lorenzo', 'Muisne'],
+  Guayas: ['Guayaquil', 'Daule', 'Samborondón'],
+  Imbabura: ['Ibarra', 'Otavalo', 'Atuntaqui'],
+  Loja: ['Loja', 'Macará', 'Catamayo', 'Vilcabamba'],
+  'Los Ríos': ['Babahoyo', 'Quevedo', 'Ventanas', 'Valencia', 'Vinces'],
+  'Manabí': ['Manta', 'Portoviejo', 'Montecristi', 'Puerto López', 'Bahía de Caráquez', 'Jipijapa'],
+  'Morona Santiago': ['Macas', 'Gualaquiza', 'Limon Indanza'],
+  Napo: ['Tena', 'Archidona', 'Baeza'],
+  Orellana: ['Francisco de Orellana', 'Coca'],
+  Pastaza: ['Puyo', 'Mera'],
+  Pichincha: ['Quito', 'Sangolquí', 'Cayambe'],
+  'Santa Elena': ['Santa Elena', 'Salinas', 'Montañita', 'Ayangue'],
+  'Santo Domingo de los Tsáchilas': ['Santo Domingo', 'La Concordia'],
+  'Sucumbíos': ['Lago Agrio', 'Nueva Loja'],
+  Tungurahua: ['Ambato', 'Baños', 'Pelileo'],
+  'Zamora Chinchipe': ['Zamora', 'Yantzaza']
+};
+
+const CIUDAD_A_PROVINCIA = Object.fromEntries(
+  Object.entries(CIUDADES_POR_PROVINCIA).flatMap(([provincia, ciudades]) =>
+    ciudades.map((ciudad) => [ciudad, provincia]))
+);
+
+export function getProvinciaDeCiudad(ciudad) {
+  return CIUDAD_A_PROVINCIA[ciudad] || null;
+}

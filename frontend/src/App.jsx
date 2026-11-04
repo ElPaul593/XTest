@@ -8,7 +8,6 @@ import Login from './components/LoginForm';
 import Register from './components/RegisterForm';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
-import Boletos from './pages/Boletos';
 import Rutas from './pages/Rutas';
 import Profile from './pages/Profile';
 import Destino from './pages/Destino';
@@ -60,8 +59,8 @@ export default function App() {
           {/* ---- Usuario autenticado ---- */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/reservas" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/boletos" element={<ProtectedRoute><Boletos /></ProtectedRoute>} />
-          <Route path="/rutas" element={<ProtectedRoute><Rutas /></ProtectedRoute>} />
+          <Route path="/boletos" element={<ProtectedRoute><Rutas /></ProtectedRoute>} />
+          <Route path="/rutas" element={<Navigate to="/boletos" replace />} />
           <Route path="/lugares-turisticos" element={<ProtectedRoute><LugaresTuristicos /></ProtectedRoute>} />
           <Route path="/seat-booking" element={<ProtectedRoute><SeatBooking /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

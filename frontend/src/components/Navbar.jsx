@@ -18,9 +18,8 @@ function enlacesPorRol({ admin, agente }) {
   }
 
   const comunes = [
-    { to: '/dashboard', label: 'Mis reservas', icon: '🧾' },
     { to: '/boletos', label: 'Comprar boletos', icon: '🎟️' },
-    { to: '/rutas', label: 'Rutas', icon: '🗺️' },
+    { to: '/dashboard', label: 'Mis reservas', icon: '🧾' },
     { to: '/lugares-turisticos', label: 'Lugares', icon: '📍' }
   ];
 
