@@ -102,14 +102,9 @@ async function buscarEnRevision(orderId) {
 exports.aprobar = async (orderId) => {
   const pago = await buscarEnRevision(orderId);
 
-  try {
-    await llamarApi('post', seatApiUrl('adminPagos', `/${encodeURIComponent(orderId)}/aprobar`), {
-      headers: encabezadoAdmin()
-    });
-  } catch (error) {
-    // La API pudo reiniciarse y olvidar la orden; el cobro sigue registrado aquí.
-    if (!esOrdenPerdida(error)) throw error;
-  }
+  await llamarApi('post', seatApiUrl('adminPagos', `/${encodeURIComponent(orderId)}/aprobar`), {
+    headers: encabezadoAdmin()
+  });
 
   pago.estado = 'PAGADO';
   await pago.save();
