@@ -1580,6 +1580,14 @@ form > .error:last-child {
   background: rgba(255, 255, 255, 0.9);
 }
 
+:root[data-theme='light'] input:-webkit-autofill,
+:root[data-theme='light'] input:-webkit-autofill:hover,
+:root[data-theme='light'] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  caret-color: var(--text);
+}
+
 :root[data-theme='light'] .table-container {
   overflow-x: auto;
 }
