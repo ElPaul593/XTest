@@ -23,6 +23,35 @@
   font-size: var(--font-size-base);
 }
 
+.rutas-welcome {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px 10px;
+  width: 100%;
+  margin: 0 0 var(--spacing-md);
+  padding: 9px 14px;
+  border: 1px solid var(--glass-accent-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-accent);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.rutas-welcome strong {
+  color: var(--accent);
+}
+
+.rutas-welcome span {
+  color: var(--text-muted);
+}
+
+:root[data-theme='light'] .rutas-welcome strong {
+  color: #a16207;
+}
+
 .bienvenida-provincia {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: #000;

@@ -90,6 +90,7 @@ export default function Rutas() {
   const [errorRutas, setErrorRutas] = useState(false);
   const [loadingMapaId, setLoadingMapaId] = useState(null);
   const [provinciaOrigen, setProvinciaOrigen] = useState('');
+  const [provinciaUsuario, setProvinciaUsuario] = useState('');
   const [provinciaDestino, setProvinciaDestino] = useState('');
   const [pasoActivo, setPasoActivo] = useState('origen');
   const [modo, setModo] = useState(destinoInicial ? 'rapida' : 'mapa');
@@ -114,8 +115,7 @@ export default function Rutas() {
         // Si el usuario es ecuatoriano (tiene cédula), su provincia es la salida
         if (me.cedula) {
           const provincia = getProvinciaFromCedula(me.cedula);
-          setProvinciaOrigen(provincia || '');
-          if (provincia) setPasoActivo('destino');
+          setProvinciaUsuario(provincia || '');
         }
       } catch (err) {
         console.error('Error al obtener usuario actual:', err.message);
@@ -334,6 +334,12 @@ export default function Rutas() {
       <div className="container">
         <div className="rutas-header">
           <h1>Comprar boletos</h1>
+          {provinciaUsuario && (
+            <div className="rutas-welcome" role="status">
+              <strong>¡Bienvenido ciudadano de la provincia de {provinciaUsuario}!</strong>
+              <span>Explora las rutas disponibles para tu viaje.</span>
+            </div>
+          )}
           <div className="compra-barra">
             <div className="compra-modos" role="group" aria-label="Forma de buscar">
               <button type="button" aria-pressed={modo === 'mapa'} onClick={() => cambiarModo('mapa')}>Con mapa</button>
