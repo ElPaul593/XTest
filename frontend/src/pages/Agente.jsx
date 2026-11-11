@@ -304,7 +304,7 @@ export default function Agente() {
                 : scanResult.estado === 'CANCELADO' ? 'Boleto cancelado'
                 : 'No válido'}
             </h2>
-            <p style={{ textAlign: 'center', color: '#555', marginTop: 0 }}>{scanResult.mensaje}</p>
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 0 }}>{scanResult.mensaje}</p>
 
             {scanResult.pasajero && (
               <div style={S.modalInfo}>
@@ -313,7 +313,7 @@ export default function Agente() {
                 {scanResult.ruta && <div><strong>Ruta:</strong> {scanResult.ruta.from} ➜ {scanResult.ruta.to}</div>}
                 {scanResult.asientos && <div><strong>Asiento(s):</strong> {(scanResult.asientos || []).join(', ') || '—'}</div>}
                 {scanResult.pertenece === false && scanResult.ruta && (
-                  <div style={{ color: '#b45309', marginTop: '6px' }}>
+                  <div style={{ color: 'var(--warning-ink)', marginTop: '6px' }}>
                     ⚠️ Esta ruta no está entre tus rutas asignadas.
                   </div>
                 )}
@@ -336,36 +336,36 @@ const S = {
   header: { marginBottom: '18px' },
   h1: { margin: '0 0 4px', fontSize: '24px' },
   subtitle: { margin: 0, color: '#64748B', fontSize: '14px' },
-  card: { background: '#fff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginBottom: '18px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
+  card: { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '18px', boxShadow: 'var(--glass-shadow)' },
   h2: { margin: '0 0 12px', fontSize: '17px' },
-  muted: { color: '#94a3b8', fontSize: '14px' },
-  input: { flex: 1, minWidth: '200px', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px' },
+  muted: { color: 'var(--text-muted)', fontSize: '14px' },
+  input: { flex: 1, minWidth: '200px', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--glass-bg-soft)', color: 'var(--text)' },
   btnPrimary: { padding: '10px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px' },
-  btnGhost: { padding: '10px 16px', background: '#fff', color: '#2563eb', border: '1px solid #2563eb', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px' },
+  btnGhost: { padding: '10px 16px', background: 'var(--glass-bg-soft)', color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px' },
   btnSmall: { padding: '6px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 },
-  btnSmallGhost: { padding: '6px 12px', background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' },
-  divider: { textAlign: 'center', borderTop: '1px solid #e2e8f0', margin: '16px 0', position: 'relative' },
-  dividerText: { position: 'relative', top: '-10px', background: '#fff', padding: '0 10px', color: '#94a3b8', fontSize: '12px' },
-  infoBox: { background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', marginBottom: '12px' },
-  errorBox: { background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '8px', padding: '10px 12px', fontSize: '13px' },
+  btnSmallGhost: { padding: '6px 12px', background: 'var(--glass-bg-soft)', color: 'var(--error)', border: '1px solid var(--error)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' },
+  divider: { textAlign: 'center', borderTop: '1px solid var(--border)', margin: '16px 0', position: 'relative' },
+  dividerText: { position: 'relative', top: '-10px', background: 'var(--surface)', padding: '0 10px', color: 'var(--text-muted)', fontSize: '12px' },
+  infoBox: { background: 'rgba(14, 165, 233, 0.16)', border: '1px solid rgba(56, 189, 248, 0.5)', color: 'var(--info-ink)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', marginBottom: '12px' },
+  errorBox: { background: 'rgba(239, 68, 68, 0.16)', border: '1px solid rgba(248, 113, 113, 0.52)', color: 'var(--error-ink)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px' },
   rutaGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' },
-  rutaCard: { textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', cursor: 'pointer', transition: 'all 0.15s' },
-  rutaCardActive: { borderColor: '#2563eb', boxShadow: '0 0 0 2px rgba(37,99,235,0.2)', background: '#eff6ff' },
+  rutaCard: { textAlign: 'left', background: 'var(--glass-bg-soft)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px', cursor: 'pointer', transition: 'all 0.15s' },
+  rutaCardActive: { borderColor: 'var(--accent)', boxShadow: '0 0 0 2px var(--glass-accent)', background: 'var(--glass-accent)' },
   rutaTitle: { fontWeight: 700, fontSize: '15px', marginBottom: '2px' },
-  rutaMeta: { color: '#94a3b8', fontSize: '12px', marginBottom: '10px' },
+  rutaMeta: { color: 'var(--text-muted)', fontSize: '12px', marginBottom: '10px' },
   badges: { display: 'flex', gap: '6px', flexWrap: 'wrap' },
-  badgeTotal: { background: '#e2e8f0', color: '#334155', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
-  badgeOk: { background: '#dcfce7', color: '#15803d', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
-  badgePend: { background: '#fef9c3', color: '#a16207', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
+  badgeTotal: { background: 'var(--glass-bg-hover)', color: 'var(--text)', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
+  badgeOk: { background: 'rgba(34, 197, 94, 0.16)', color: 'var(--success-ink)', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
+  badgePend: { background: 'rgba(255, 167, 38, 0.16)', color: 'var(--warning-ink)', borderRadius: '20px', padding: '2px 10px', fontSize: '12px', fontWeight: 600 },
   pasHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' },
   resumen: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '14px' },
-  th: { textAlign: 'left', padding: '10px 8px', borderBottom: '2px solid #e2e8f0', color: '#475569', fontSize: '13px' },
-  td: { padding: '10px 8px', borderBottom: '1px solid #f1f5f9' },
-  rowOk: { background: '#f0fdf4' },
-  tagOk: { color: '#15803d', fontWeight: 600 },
-  tagPend: { color: '#a16207', fontWeight: 600 },
+  th: { textAlign: 'left', padding: '10px 8px', borderBottom: '2px solid var(--border)', color: 'var(--text-muted)', fontSize: '13px' },
+  td: { padding: '10px 8px', borderBottom: '1px solid var(--border)' },
+  rowOk: { background: 'rgba(34, 197, 94, 0.1)' },
+  tagOk: { color: 'var(--success-ink)', fontWeight: 600 },
+  tagPend: { color: 'var(--warning-ink)', fontWeight: 600 },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '20px' },
-  modal: { background: '#fff', borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%' },
-  modalInfo: { background: '#f8fafc', borderRadius: '10px', padding: '12px', marginTop: '12px', fontSize: '14px', lineHeight: 1.7 }
+  modal: { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxWidth: '380px', width: '100%' },
+  modalInfo: { background: 'var(--glass-bg-soft)', borderRadius: '10px', padding: '12px', marginTop: '12px', fontSize: '14px', lineHeight: 1.7 }
 };

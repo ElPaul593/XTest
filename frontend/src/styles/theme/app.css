@@ -37,6 +37,10 @@
   --accent-hover: #ffe347;
   --accent-ink: #0b0b0d;
   --border: rgba(255, 255, 255, 0.08);
+  --success-ink: #bbf7d0;
+  --warning-ink: #ffe2bd;
+  --error-ink: #fecaca;
+  --info-ink: #bae6fd;
 
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
@@ -1374,6 +1378,38 @@ form > .error:last-child {
 .dot.available { background: #22c55e !important; }
 .dot.heldByMe { background: var(--accent) !important; }
 
+:root[data-theme='light'] .seat-available {
+  background: #dcfce7 !important;
+  border-color: #22c55e !important;
+  color: #166534 !important;
+}
+
+:root[data-theme='light'] .seat-heldByMe {
+  background: var(--accent) !important;
+  border-color: #ca8a04 !important;
+  color: #0f1733 !important;
+}
+
+:root[data-theme='light'] .seat-heldByOther {
+  background: #ffedd5 !important;
+  border-color: #f97316 !important;
+  color: #9a3412 !important;
+}
+
+:root[data-theme='light'] .seat-reserved {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+}
+
+:root[data-theme='light'] .legend {
+  background: #ffffff !important;
+}
+
+:root[data-theme='light'] .hold-panel {
+  color: #78350f;
+}
+
 /* --- Comprar boletos: botón «Ver recomendados» (boletos.css) --- */
 .link-recomendados {
   background: rgba(255, 214, 10, 0.12) !important;
@@ -1470,6 +1506,10 @@ form > .error:last-child {
   --text-dim: rgba(15, 23, 51, 0.45);
   --border: rgba(79, 70, 229, 0.18);
   --accent-ink: #0f1733;
+  --success-ink: #166534;
+  --warning-ink: #92400e;
+  --error-ink: #991b1b;
+  --info-ink: #075985;
   --glass-bg: rgba(255, 255, 255, 0.94);
   --glass-bg-strong: rgba(255, 255, 255, 0.98);
   --glass-bg-soft: rgba(255, 255, 255, 0.9);
@@ -1693,6 +1733,63 @@ form > .error:last-child {
 :root[data-theme='light'] ::selection {
   background: rgba(2, 132, 199, 0.22);
   color: var(--text);
+}
+
+:root[data-theme='light'] .popup-note--warning {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+:root[data-theme='light'] .popup-note--danger,
+:root[data-theme='light'] .popup-error {
+  color: #991b1b;
+  background: #fff1f2;
+  border-color: #fda4af;
+}
+
+:root[data-theme='light'] .btn-danger {
+  color: #991b1b !important;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+:root[data-theme='light'] .btn-danger:hover:not(:disabled) {
+  background: #fecaca;
+  border-color: #f87171;
+}
+
+:root[data-theme='light'] .btn-warning {
+  color: #92400e !important;
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+:root[data-theme='light'] .btn-warning:hover:not(:disabled) {
+  background: #fed7aa;
+  border-color: #fb923c;
+}
+
+:root[data-theme='light'] .error-message,
+:root[data-theme='light'] .error {
+  color: #991b1b;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+:root[data-theme='light'] .success-message {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+:root[data-theme='light'] .navbar {
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 4px 24px rgba(49, 46, 129, 0.12);
+}
+
+:root[data-theme='light'] .mobile-menu {
+  background: rgba(255, 255, 255, 0.96);
 }
 
 /* El panel administrativo conserva la misma geometría en ambos temas. */

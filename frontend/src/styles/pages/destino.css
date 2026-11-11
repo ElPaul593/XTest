@@ -92,8 +92,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ccc;
-  background: #1a1a1a;
+  color: var(--text-muted);
+  background: var(--surface-light);
   font-size: 0.95rem;
 }
 
@@ -246,4 +246,3 @@
     grid-template-columns: 1fr;
   }
 }
-
