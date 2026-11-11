@@ -1429,6 +1429,24 @@ form > .error:last-child {
   background:
     radial-gradient(circle at 100% 0%, rgba(255, 214, 10, 0.1), transparent 55%),
     var(--glass-bg) !important;
+  padding: 0 30px 30px !important;
+  overflow: hidden;
+}
+
+.recomendados-grid .recomendado-card .stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: transparent !important;
+}
+
+.recomendados-grid .recomendado-card .stats .stat-item {
+  padding: 14px !important;
+  background: var(--glass-bg-soft) !important;
+  border: 1px solid var(--glass-border);
+}
+
+.recomendados-grid .recomendado-card .stat-value--rating {
+  display: flex !important;
+  font-size: 28px !important;
 }
 
 /* --- Mis reservas: banner de reserva rápida (antes verde en línea) --- */
@@ -1570,6 +1588,12 @@ form > .error:last-child {
 
 :root[data-theme='light'] .dashboard-section + .dashboard-section {
   margin-top: 28px;
+}
+
+:root[data-theme='light'] .recomendado-card .badge-top {
+  color: #3f2a00;
+  background: #facc15;
+  box-shadow: 0 2px 6px rgba(120, 53, 15, 0.25);
 }
 
 :root[data-theme='light'] .dashboard-section h2,

@@ -53,18 +53,39 @@
 
 .recomendados-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(500px, 540px));
   gap: var(--spacing-xl);
+  justify-content: center;
 }
 
 .recomendado-card {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: var(--text);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
+  padding: 0 var(--spacing-xl) var(--spacing-xl);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   position: relative;
+  min-width: 0;
+  width: 100%;
+  max-width: 540px;
+  overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.recomendado-card__image {
+  display: block;
+  width: calc(100% + 60px);
+  height: 220px;
+  margin: 0 -30px var(--spacing-lg);
+  object-fit: cover;
+  background: var(--surface-light);
+}
+
+.recomendado-card__image--fallback {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 42px;
 }
 
 .recomendado-card:hover {
@@ -111,19 +132,27 @@
 }
 
 .stats {
-  background: rgba(255, 255, 255, 0.15);
+  background: transparent;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   margin: var(--spacing-md) 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-md);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  padding: 14px !important;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg-soft);
 }
 
 .stat-item.highlight {
@@ -140,6 +169,41 @@
 .stat-value {
   font-size: var(--font-size-md);
   font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.stat-value--rating {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 68px;
+  line-height: 1.2;
+  font-size: 28px !important;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.rating-stars {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  letter-spacing: -2px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.rating-number {
+  white-space: nowrap;
+  font-size: 28px;
+}
+
+.recomendado-card .stats .stat-value:not(.stat-value--rating) {
+  display: block !important;
+  font-size: 28px !important;
+  line-height: 1.2;
 }
 
 .recomendado-card .precio {
@@ -171,5 +235,19 @@
   .recomendados-grid {
     grid-template-columns: 1fr;
   }
+
+  .recomendado-card {
+    max-width: 540px;
+    justify-self: center;
+  }
 }
 
+@media (max-width: 480px) {
+  .recomendados-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

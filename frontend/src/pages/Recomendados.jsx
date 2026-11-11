@@ -120,6 +120,21 @@ export default function Recomendados() {
         <div className="recomendados-grid">
           {recomendados.map((item, index) => (
             <div key={item._id} className="recomendado-card">
+              {item.imagen ? (
+                <img
+                  className="recomendado-card__image"
+                  src={item.imagen}
+                  alt={`Imagen de ${item.nombre}`}
+                  loading="lazy"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="recomendado-card__image recomendado-card__image--fallback" aria-hidden="true">
+                  🏞️
+                </div>
+              )}
               <div className="badge-top">
                 #{index + 1} Recomendado
               </div>
@@ -137,9 +152,13 @@ export default function Recomendados() {
                 )}
                 <div className="stat-item">
                   <span className="stat-label">Calificación:</span>
-                  <span className="stat-value">
-                    {renderStars(item.promedioGeneral || item.calificacionPromedio || 0)} 
-                    {(item.promedioGeneral || item.calificacionPromedio || 0).toFixed(1)}
+                  <span className="stat-value stat-value--rating">
+                    <span className="rating-stars" aria-label="Estrellas de calificación">
+                      {renderStars(item.promedioGeneral || item.calificacionPromedio || 0)}
+                    </span>
+                    <span className="rating-number">
+                      {(item.promedioGeneral || item.calificacionPromedio || 0).toFixed(1)}
+                    </span>
                   </span>
                 </div>
                 <div className="stat-item">
@@ -175,4 +194,3 @@ export default function Recomendados() {
     </div>
   );
 }
-
