@@ -197,6 +197,11 @@ const rutaSchemas = {
     price: Joi.number().min(3).max(20).required(),
     duration: Joi.number().strict().min(1).max(16).required(),
     horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+    salidas: Joi.array().items(Joi.object({
+      fecha: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).required(),
+      horaSalida: Joi.string().pattern(/^([01]\d|2[0-3]):[0-5]\d$/).required(),
+      activo: Joi.boolean().optional()
+    })).max(100).optional(),
     seats: Joi.number().integer().min(1).max(80).optional(),
   }),
 

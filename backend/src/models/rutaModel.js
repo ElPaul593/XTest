@@ -8,6 +8,11 @@ const RutaSchema = new mongoose.Schema({
   price: { type: Number, required: true, min: 3, max: 20 },
   duration: { type: String, required: true },
   horaSalida: { type: String, default: '08:00' },
+  salidas: [{
+    fecha: { type: String, required: true },
+    horaSalida: { type: String, required: true },
+    activo: { type: Boolean, default: true }
+  }],
   polyline: { type: String, default: null },
   duracionEstimada: { type: Number, default: null },
   mapNoDisponible: { type: Boolean, default: false },

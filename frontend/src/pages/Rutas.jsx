@@ -99,6 +99,7 @@ export default function Rutas() {
   const [ciudadDestino, setCiudadDestino] = useState(destinoInicial);
   const [rutaMapaSeleccionada, setRutaMapaSeleccionada] = useState(null);
   const [fechaViajeMapa, setFechaViajeMapa] = useState(hoyLocal());
+  const [salidaPorRuta, setSalidaPorRuta] = useState({});
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -148,6 +149,9 @@ export default function Rutas() {
     precio: ruta.price ? `$${ruta.price}` : 'Consultar precio',
     duracion: ruta.duration || 'Consultar duración',
     horaSalida: ruta.horaSalida || '08:00',
+    salidas: Array.isArray(ruta.salidas)
+      ? ruta.salidas.filter((salida) => salida.activo !== false && salida.fecha && salida.horaSalida)
+      : [],
     duracionEstimada: ruta.duracionEstimada || null,
     polyline: ruta.polyline || null,
     mapNoDisponible: ruta.mapNoDisponible || false,
@@ -202,18 +206,22 @@ export default function Rutas() {
     if (provincia && !provinciaOrigen) setPasoActivo('origen');
   };
 
-  const abrirMapaRuta = async (ruta) => {
+  const abrirMapaRuta = async (ruta, salida = null) => {
     const rutaId = ruta.id || ruta._id;
     setLoadingMapaId(rutaId);
     try {
       const freshRuta = await getRutaById(rutaId);
       const rutaFormateada = formatearObjRuta(freshRuta);
+      if (salida) {
+        rutaFormateada.fechaSalida = salida.fecha;
+        rutaFormateada.horaSalida = salida.horaSalida;
+      }
       setRutaMapaSeleccionada(rutaFormateada);
-      setFechaViajeMapa((currentValue) => currentValue || hoyLocal());
+      if (salida?.fecha) setFechaViajeMapa(salida.fecha);
     } catch (err) {
       console.error('Error al obtener datos frescos de la ruta:', err);
-      setRutaMapaSeleccionada(ruta);
-      setFechaViajeMapa((currentValue) => currentValue || hoyLocal());
+      setRutaMapaSeleccionada(salida ? { ...ruta, fechaSalida: salida.fecha, horaSalida: salida.horaSalida } : ruta);
+      if (salida?.fecha) setFechaViajeMapa(salida.fecha);
     } finally {
       setLoadingMapaId(null);
     }
@@ -295,9 +303,29 @@ export default function Rutas() {
       <div className="rutas-resultados__lista">
         {rutasMostradas.map((ruta) => (
           <article key={ruta.id} className="ruta-fila">
+            {(() => {
+              const salidas = ruta.salidas.length
+                ? ruta.salidas
+                : [{ fecha: fechaViajeMapa, horaSalida: ruta.horaSalida }];
+              const salida = salidas.find((item) => item.fecha === salidaPorRuta[ruta.id]) || salidas[0];
+              return (
+                <>
             <div className="ruta-fila__info">
               <strong>{ruta.origen} ➜ {ruta.destino}</strong>
-              <span>{ruta.horaSalida} · {ruta.duracion} · {ruta.asientos} asientos</span>
+              <span>
+                {ruta.salidas.length ? (
+                  <label>
+                    Salida:{' '}
+                    <select
+                      value={salida.fecha}
+                      onChange={(event) => setSalidaPorRuta((current) => ({ ...current, [ruta.id]: event.target.value }))}
+                      aria-label={`Salida de ${ruta.origen} a ${ruta.destino}`}
+                    >
+                      {salidas.map((item) => <option key={`${item.fecha}-${item.horaSalida}`} value={item.fecha}>{item.fecha} · {item.horaSalida}</option>)}
+                    </select>
+                  </label>
+                ) : `${salida.fecha} · ${salida.horaSalida}`} · {ruta.duracion} · {ruta.asientos} asientos
+              </span>
               <span className="ruta-fila__enlaces">
                 <Link to={`/destino?ciudad=${encodeURIComponent(ruta.destino)}`}>Hoteles y lugares</Link>
                 <Link to={`/recomendados?ciudad=${encodeURIComponent(ruta.destino)}`}>Recomendados</Link>
@@ -308,21 +336,24 @@ export default function Rutas() {
               <button
                 type="button"
                 className="ruta-fila__btn ruta-fila__btn--principal"
-                disabled={!fechaViajeMapa}
-                title={fechaViajeMapa ? undefined : 'Elige una fecha'}
-                onClick={() => navigate(`/seat-booking?ruta=${encodeURIComponent(ruta.id)}&fecha=${fechaViajeMapa}`)}
+                disabled={!salida?.fecha}
+                title={salida?.fecha ? undefined : 'Esta ruta no tiene una salida programada'}
+                onClick={() => navigate(`/seat-booking?ruta=${encodeURIComponent(ruta.id)}&fecha=${encodeURIComponent(salida.fecha)}&hora=${encodeURIComponent(salida.horaSalida)}`)}
               >
                 Elegir
               </button>
               <button
                 type="button"
                 className="ruta-fila__btn"
-                onClick={() => abrirMapaRuta(ruta)}
+                onClick={() => abrirMapaRuta(ruta, salida)}
                 disabled={loadingMapaId === ruta.id}
               >
                 {loadingMapaId === ruta.id ? '...' : 'Ver trayecto'}
               </button>
             </div>
+                </>
+              );
+            })()}
           </article>
         ))}
       </div>
@@ -400,6 +431,8 @@ export default function Rutas() {
                     type="date"
                     min={hoyLocal()}
                     value={fechaViajeMapa}
+                    disabled={Boolean(rutaMapaSeleccionada.salidas?.length)}
+                    title={rutaMapaSeleccionada.salidas?.length ? 'La fecha pertenece a la salida programada seleccionada' : undefined}
                     onChange={(e) => setFechaViajeMapa(e.target.value)}
                   />
                 </label>

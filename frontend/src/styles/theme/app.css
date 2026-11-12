@@ -445,8 +445,25 @@ p { color: var(--text-muted); }
   color: var(--accent-ink);
 }
 
+.btn.btn-cancel {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+.btn.btn-cancel:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
 .btn-edit:hover, .btn-cancel:hover, .pagination button:hover:not(:disabled) {
   background: var(--glass-bg-hover);
+}
+
+:root[data-theme='light'] .btn.btn-cancel {
+  background: #b91c1c;
+  border-color: #991b1b;
+  color: #fff;
 }
 
 .btn-save:hover, .btn-ruta:hover, .btn-calificar:hover { background: var(--accent-hover); }

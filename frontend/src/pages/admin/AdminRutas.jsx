@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getRutas, getCiudadesRutas, createRuta, updateRuta, deleteRuta } from '../../services/rutas';
 import useFeedback from '../../hooks/useFeedback';
 
-const emptyForm = { from: '', to: '', price: '', duration: '', horaSalida: '08:00', seats: 40 };
+const emptyForm = { from: '', to: '', price: '', duration: '', horaSalida: '08:00', seats: 40, salidas: [] };
 
 const preventNonNumericKeys = (event) => {
   if (['e', 'E', '+', '-'].includes(event.key)) {
@@ -66,7 +66,8 @@ export default function AdminRutas() {
         price: Number(form.price),
         duration: Number(form.duration),
         horaSalida: form.horaSalida.trim(),
-        seats: Number(form.seats) || 40
+        seats: Number(form.seats) || 40,
+        salidas: form.salidas.filter((salida) => salida.fecha && salida.horaSalida)
       };
 
       if (editingId) await updateRuta(editingId, payload);
@@ -114,7 +115,8 @@ export default function AdminRutas() {
       price: ruta.price ?? '',
       duration: numericDuration,
       horaSalida: ruta.horaSalida || '08:00',
-      seats: ruta.seats || 40
+      seats: ruta.seats || 40,
+      salidas: Array.isArray(ruta.salidas) ? ruta.salidas.map(({ fecha, horaSalida, activo = true }) => ({ fecha, horaSalida, activo })) : []
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -140,7 +142,7 @@ export default function AdminRutas() {
       <div className="table-container">
         <table className="users-table">
           <thead>
-            <tr><th>Origen</th><th>Destino</th><th>Precio</th><th>Duración</th><th>Salida</th><th>Asientos</th><th>Acciones</th></tr>
+            <tr><th>Origen</th><th>Destino</th><th>Precio</th><th>Duración</th><th>Salidas</th><th>Asientos</th><th>Acciones</th></tr>
           </thead>
           <tbody>
             {paginatedRutas.map(r => {
@@ -151,7 +153,7 @@ export default function AdminRutas() {
                   <td>{r.to}</td>
                   <td>${r.price}</td>
                   <td>{r.duration}</td>
-                  <td>{r.horaSalida || '08:00'}</td>
+                  <td>{r.salidas?.length ? `${r.salidas.length} programadas` : `Base: ${r.horaSalida || '08:00'}`}</td>
                   <td>{r.seats}</td>
                   <td>
                     <button className="btn btn-secondary" onClick={() => startEdit(r)}>Editar</button>
@@ -204,6 +206,30 @@ export default function AdminRutas() {
             <div className="field">
               <label htmlFor="ruta-salida">Hora de salida</label>
               <input id="ruta-salida" className="input" type="time" value={form.horaSalida} onChange={e => setForm({ ...form, horaSalida: e.target.value })} required />
+            </div>
+            <div className="field" style={{ minWidth: '100%' }}>
+              <label>Salidas programadas</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'end' }}>
+                {form.salidas.map((salida, index) => (
+                  <div key={`${salida.fecha}-${salida.horaSalida}-${index}`} style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
+                    <label>
+                      Fecha
+                      <input className="input" type="date" min={new Date().toLocaleDateString('en-CA')} value={salida.fecha}
+                        onChange={(e) => setForm((current) => ({ ...current, salidas: current.salidas.map((item, i) => i === index ? { ...item, fecha: e.target.value } : item) }))} />
+                    </label>
+                    <label>
+                      Hora
+                      <input className="input" type="time" value={salida.horaSalida}
+                        onChange={(e) => setForm((current) => ({ ...current, salidas: current.salidas.map((item, i) => i === index ? { ...item, horaSalida: e.target.value } : item) }))} />
+                    </label>
+                    <button type="button" className="btn btn-ghost" onClick={() => setForm((current) => ({ ...current, salidas: current.salidas.filter((_, i) => i !== index) }))}>Quitar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-secondary" onClick={() => setForm((current) => ({ ...current, salidas: [...current.salidas, { fecha: '', horaSalida: current.horaSalida || '08:00', activo: true }] }))}>
+                  + Agregar salida
+                </button>
+              </div>
+              <small>Si agregas salidas programadas, serán las fechas disponibles para comprar esta ruta.</small>
             </div>
             <div className="field">
               <label htmlFor="ruta-asientos">Asientos</label>
