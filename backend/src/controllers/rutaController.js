@@ -62,6 +62,7 @@ exports.remove = async (req, res) => {
     res.json({ message: 'Ruta eliminada correctamente' });
   } catch (err) {
     if (err.name === 'CastError') return res.status(400).json({ error: 'ID inválido' });
+    if (err.statusCode === 409) return res.status(409).json({ error: err.message });
     res.status(500).json({ error: err.message });
   }
 };

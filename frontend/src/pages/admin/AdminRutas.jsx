@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getRutas, getCiudadesRutas, createRuta, updateRuta, deleteRuta } from '../../services/rutas';
+import { ConfirmPopup } from '../../components/Popup';
 import useFeedback from '../../hooks/useFeedback';
 
 const emptyForm = { from: '', to: '', price: '', duration: '', horaSalida: '08:00', seats: 40, salidas: [] };
@@ -25,6 +26,8 @@ export default function AdminRutas() {
   const [filterFrom, setFilterFrom] = useState('');
   const [filterTo, setFilterTo] = useState('');
   const [page, setPage] = useState(1);
+  const [rutaParaEliminar, setRutaParaEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
   const { aviso, mostrarExito, mostrarError } = useFeedback();
 
   const load = useCallback(async () => {
@@ -121,14 +124,22 @@ export default function AdminRutas() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta ruta?')) return;
+  const handleDelete = (ruta) => {
+    setRutaParaEliminar(ruta);
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!rutaParaEliminar) return;
     try {
-      await deleteRuta(id);
+      setEliminando(true);
+      await deleteRuta(rutaParaEliminar._id || rutaParaEliminar.id);
+      setRutaParaEliminar(null);
       load();
       mostrarExito('La ruta se eliminó correctamente.', 'Ruta eliminada');
     } catch (e) {
-      mostrarError(e, 'No se pudo eliminar la ruta');
+      setRutaParaEliminar((current) => ({ ...current, error: e.message }));
+    } finally {
+      setEliminando(false);
     }
   };
 
@@ -157,7 +168,7 @@ export default function AdminRutas() {
                   <td>{r.seats}</td>
                   <td>
                     <button className="btn btn-secondary" onClick={() => startEdit(r)}>Editar</button>
-                    <button className="btn btn-ghost" onClick={() => handleDelete(id)}>Eliminar</button>
+                    <button className="btn btn-ghost" onClick={() => handleDelete(r)}>Eliminar</button>
                   </td>
                 </tr>
               );
@@ -176,6 +187,19 @@ export default function AdminRutas() {
           <span>{aviso.message}</span>
         </div>
       )}
+      <ConfirmPopup
+        open={Boolean(rutaParaEliminar)}
+        onCancel={() => { if (!eliminando) setRutaParaEliminar(null); }}
+        onConfirm={confirmarEliminacion}
+        title="¿Eliminar esta ruta?"
+        message={rutaParaEliminar ? `Ruta ${rutaParaEliminar.from} → ${rutaParaEliminar.to}.` : ''}
+        note="Si esta ruta tiene reservas, boletos o historial asociado, no se eliminará para proteger la información histórica."
+        confirmLabel="Eliminar ruta"
+        cancelLabel="Cancelar"
+        destructive
+        loading={eliminando}
+        error={rutaParaEliminar?.error}
+      />
       <div className="dashboard-section">
         <h2>Nueva ruta</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>Precio en USD (entre 3 y 20). El nombre se genera como "Origen - Destino".</p>

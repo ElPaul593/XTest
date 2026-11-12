@@ -457,7 +457,7 @@ export default function Dashboard() {
             ? `Ruta ${cancelacion.reserva.ruta?.from || '—'} → ${cancelacion.reserva.ruta?.to || '—'}, fecha ${cancelacion.reserva.fecha || '—'}.`
             : ''
         }
-        note="El asiento volverá a estar disponible para otros viajeros. La reserva se conserva en tu historial marcada como cancelada."
+        note="Importante: no se realizará ninguna devolución de dinero. El asiento volverá a estar disponible para otros viajeros y la reserva se conservará en tu historial como cancelada."
         confirmLabel="Sí, cancelar"
         cancelLabel="Mantener reserva"
         destructive

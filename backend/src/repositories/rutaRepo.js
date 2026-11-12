@@ -1,4 +1,6 @@
 const Ruta = require('../models/rutaModel');
+const Reserva = require('../models/reservaModel');
+const Hold = require('../models/holdModel');
 
 /**
  * PATRÓN DE DISEÑO: Repository Pattern
@@ -61,3 +63,10 @@ exports.updateById = async (id, data) => Ruta.findByIdAndUpdate(
 ).lean();
 
 exports.deleteById = async (id) => Ruta.findByIdAndDelete(id).lean();
+
+exports.countReservations = async (rutaId) => Reserva.countDocuments({ ruta: rutaId });
+
+exports.hasActiveHolds = async (rutaId) => Hold.exists({
+  rutaId,
+  expiresAt: { $gt: new Date() }
+});

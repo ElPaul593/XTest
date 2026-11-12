@@ -45,6 +45,13 @@ exports.getById = async (id) => {
 };
 
 exports.remove = async (id) => {
+  const reservations = await RutaRepo.countReservations(id);
+  const activeHold = await RutaRepo.hasActiveHolds(id);
+  if (reservations > 0 || activeHold) {
+    const error = new Error('No se puede eliminar una ruta que ya tiene reservas o historial asociado');
+    error.statusCode = 409;
+    throw error;
+  }
   return RutaRepo.deleteById(id);
 };
 
