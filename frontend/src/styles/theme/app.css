@@ -466,6 +466,56 @@ p { color: var(--text-muted); }
   color: #fff;
 }
 
+.boleto-qr-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--glass-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  padding: 20px;
+}
+
+.boleto-qr-dialog {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  box-shadow: var(--glass-shadow-lg);
+}
+
+.boleto-qr-dialog h2 {
+  margin: 0 0 6px;
+}
+
+.boleto-qr-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.boleto-qr-route {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+}
+
+.boleto-qr-help {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 .btn-save:hover, .btn-ruta:hover, .btn-calificar:hover { background: var(--accent-hover); }
 
 .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }

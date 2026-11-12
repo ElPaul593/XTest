@@ -28,22 +28,22 @@ export default function BoletoQR({ reserva, onClose }) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}
+      className="boleto-qr-overlay"
       onClick={onClose}
     >
       <div
-        style={{ background: 'white', borderRadius: '16px', padding: '28px', maxWidth: '380px', width: '100%', textAlign: 'center', position: 'relative' }}
+        className="boleto-qr-dialog"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          style={{ position: 'absolute', top: '12px', right: '14px', background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer' }}
+          className="boleto-qr-close"
           aria-label="Cerrar"
         >
           ✕
         </button>
-        <h2 style={{ marginTop: 0, marginBottom: '6px' }}>🎫 Tu boleto</h2>
-        <p style={{ margin: '0 0 16px', color: '#555' }}>{origen} ➜ {destino}</p>
+        <h2>🎫 Tu boleto</h2>
+        <p className="boleto-qr-route">{origen} ➜ {destino}</p>
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <QRCodeSVG value={qrText} size={208} level="M" includeMargin />
@@ -57,7 +57,7 @@ export default function BoletoQR({ reserva, onClose }) {
           {total != null && <div><strong>Total:</strong> ${Number(total).toFixed(2)}</div>}
         </div>
 
-        <p style={{ marginTop: '16px', fontSize: '12px', color: '#888' }}>
+        <p className="boleto-qr-help">
           Presenta este código QR al abordar para validar tu reserva.
         </p>
       </div>

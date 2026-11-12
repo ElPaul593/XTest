@@ -208,13 +208,13 @@
 .popup-note--warning {
   background: rgba(255, 167, 38, 0.1);
   border-color: rgba(255, 167, 38, 0.32);
-  color: #ffe2bd;
+  color: var(--warning-ink);
 }
 
 .popup-note--danger {
   background: rgba(255, 68, 68, 0.1);
   border-color: rgba(255, 68, 68, 0.32);
-  color: #ffd4d4;
+  color: var(--error-ink);
 }
 
 .popup-footer {
@@ -235,7 +235,7 @@
   font-size: var(--font-size-base);
   background: rgba(255, 68, 68, 0.14);
   border: 1px solid rgba(255, 68, 68, 0.4);
-  color: #ffd4d4;
+  color: var(--error-ink);
 }
 
 /* --------------------------------------------------------------------------
