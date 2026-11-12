@@ -5,6 +5,7 @@ import { getLugaresTuristicos } from '../services/lugaresTuristicos';
 import { getCalificaciones, createCalificacion } from '../services/calificaciones';
 import { OPCIONES_CALIFICACION, CALIFICACION_DEFAULT } from '../constants/calificaciones';
 import { API_BASE_URL } from '../constants/api';
+import { AlertPopup } from '../components/Popup';
 
 export default function Destino() {
   const [searchParams] = useSearchParams();
@@ -19,6 +20,7 @@ export default function Destino() {
   const [showCalificarModal, setShowCalificarModal] = useState(null);
   const [calificacionForm, setCalificacionForm] = useState({ calificacion: CALIFICACION_DEFAULT, recomendacion: '' });
   const [erroresImagen, setErroresImagen] = useState({});
+  const [popupMessage, setPopupMessage] = useState(null);
 
   const getFallbackImageUrl = (lugar) => {
     const seed = encodeURIComponent(`${lugar.nombre}-${lugar.ciudad}`.toLowerCase());
@@ -156,7 +158,11 @@ export default function Destino() {
        *
        * NO se corrige aquí por indicación expresa: solo se documenta.
        */
-      alert('Error al guardar calificación: ' + err.message);
+      setPopupMessage({
+        title: 'No se pudo guardar la calificación',
+        message: err.message,
+        variant: 'error'
+      });
     }
   };
 
@@ -170,6 +176,13 @@ export default function Destino() {
 
   return (
     <div className="destino-container">
+      <AlertPopup
+        open={Boolean(popupMessage)}
+        onClose={() => setPopupMessage(null)}
+        title={popupMessage?.title}
+        message={popupMessage?.message}
+        variant={popupMessage?.variant}
+      />
       <div className="destino-header">
         <h1>Destino: {ciudad}</h1>
         <p>Explora hoteles y lugares turísticos en {ciudad}</p>
@@ -369,4 +382,3 @@ export default function Destino() {
     </div>
   );
 }
-

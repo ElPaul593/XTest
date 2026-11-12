@@ -6,6 +6,7 @@ import {
   verificarBoleto,
   togglePasajero
 } from '../services/agente';
+import { AlertPopup } from '../components/Popup';
 
 /**
  * Panel del Agente de Turismo.
@@ -28,6 +29,7 @@ export default function Agente() {
   const [manualCode, setManualCode] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [scanResult, setScanResult] = useState(null);
+  const [popupMessage, setPopupMessage] = useState(null);
 
   const loadRutas = useCallback(async () => {
     try {
@@ -79,7 +81,7 @@ export default function Agente() {
        *
        * NO se corrige aquí por indicación expresa: solo se documenta.
        */
-      alert(e.message);
+      setPopupMessage({ title: 'No se pudo cargar la ruta', message: e.message, variant: 'error' });
     } finally {
       setLoadingPas(false);
     }
@@ -121,7 +123,7 @@ export default function Agente() {
       await refreshPasajeros();
       await loadRutas();
     } catch (e) {
-      alert(e.message);
+      setPopupMessage({ title: 'No se pudo actualizar el abordaje', message: e.message, variant: 'error' });
     }
   }, [selectedRuta, refreshPasajeros, loadRutas]);
 
@@ -139,6 +141,13 @@ export default function Agente() {
 
   return (
     <main style={S.page}>
+      <AlertPopup
+        open={Boolean(popupMessage)}
+        onClose={() => setPopupMessage(null)}
+        title={popupMessage?.title}
+        message={popupMessage?.message}
+        variant={popupMessage?.variant}
+      />
       <div style={S.header}>
         <h1 style={S.h1}>🎫 Verificación de Boletos</h1>
         <p style={S.subtitle}>Agente de Turismo · escanea el QR y controla el abordaje</p>

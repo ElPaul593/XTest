@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getRecomendados } from '../services/recomendaciones';
 import { TIPOS_RECOMENDACION, TIPO_DEFAULT } from '../constants/recomendaciones';
+import { AlertPopup } from '../components/Popup';
 
 export default function Recomendados() {
   const [searchParams] = useSearchParams();
@@ -12,6 +13,7 @@ export default function Recomendados() {
   const [loading, setLoading] = useState(true);
   const [tipo, setTipo] = useState(TIPO_DEFAULT);
   const [usuarioId, setUsuarioId] = useState(null);
+  const [popupMessage, setPopupMessage] = useState(null);
 
   useEffect(() => {
     // Obtener userId del token si está disponible
@@ -75,7 +77,11 @@ export default function Recomendados() {
        *
        * NO se corrige aquí por indicación expresa: solo se documenta.
        */
-      alert('Error al cargar recomendaciones: ' + (err.message || 'Error desconocido'));
+      setPopupMessage({
+        title: 'No se pudieron cargar las recomendaciones',
+        message: err.message || 'Error desconocido',
+        variant: 'error'
+      });
     } finally {
       setLoading(false);
     }
@@ -91,6 +97,13 @@ export default function Recomendados() {
 
   return (
     <div className="recomendados-container">
+      <AlertPopup
+        open={Boolean(popupMessage)}
+        onClose={() => setPopupMessage(null)}
+        title={popupMessage?.title}
+        message={popupMessage?.message}
+        variant={popupMessage?.variant}
+      />
       <div className="recomendados-header">
         <h1>Recomendados para ti en {ciudad}</h1>
         <p>

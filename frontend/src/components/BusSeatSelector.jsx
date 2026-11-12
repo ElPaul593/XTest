@@ -11,6 +11,7 @@ import {
 } from '../services/asientosService';
 import { getPricing } from '../services/pricingService';
 import { crearOrdenPago } from '../services/pagos';
+import { AlertPopup, ConfirmPopup } from './Popup';
 
 const SeatButton = ({ seat, myHolds, loading, onSeatClick }) => {
     const isSelected = myHolds.some(h => h.asiento === seat.number);
@@ -60,6 +61,8 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
     const [pricingInfo, setPricingInfo] = useState(null); // { precioBase, descuento, recargo, totalPagar }
     const [showDebug, setShowDebug] = useState(false);
     const [debugData, setDebugData] = useState(null);
+    const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+    const [popupMessage, setPopupMessage] = useState(null);
     const consecutiveErrors = useRef(0); // Contador de errores para backoff del intervalo
 
     // Normalizar rutaId - puede venir como objeto o string
@@ -329,10 +332,11 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
          *
          * NO se corrige aquí por indicación expresa: solo se documenta.
          */
-        if (!window.confirm(`¿Cancelar todos los holds? (${myHolds.length} asiento${myHolds.length > 1 ? 's' : ''})`)) {
-            return;
-        }
+        setConfirmCancelOpen(true);
+    };
 
+    const confirmCancelAll = async () => {
+        setConfirmCancelOpen(false);
         setLoading(true);
         const rutaIdToUse = normalizeRutaId(rutaId);
 
@@ -406,7 +410,11 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
             const failed = results.filter(r => !r.ok);
 
             if (successful.length > 0) {
-                alert(`¡${successful.length} reserva${successful.length > 1 ? 's' : ''} confirmada${successful.length > 1 ? 's' : ''}!`);
+                setPopupMessage({
+                    title: 'Reservas confirmadas',
+                    message: `¡${successful.length} reserva${successful.length > 1 ? 's' : ''} confirmada${successful.length > 1 ? 's' : ''}!`,
+                    variant: 'success'
+                });
 
                 // Pasar información completa incluyendo precio
                 const completeResult = {
@@ -438,7 +446,11 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 }
 
                 if (failed.length > 0) {
-                    alert(`Advertencia: ${failed.length} reserva${failed.length > 1 ? 's' : ''} no se pudieron confirmar.`);
+                    setPopupMessage({
+                        title: 'Confirmación parcial',
+                        message: `Advertencia: ${failed.length} reserva${failed.length > 1 ? 's' : ''} no se pudieron confirmar.`,
+                        variant: 'warning'
+                    });
                 }
             } else {
                 setError('No se pudo confirmar ninguna reserva');
@@ -462,6 +474,23 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
 
     return (
         <div className="bus-seat-selector">
+            <ConfirmPopup
+                open={confirmCancelOpen}
+                onCancel={() => setConfirmCancelOpen(false)}
+                onConfirm={confirmCancelAll}
+                title="¿Cancelar todos los holds?"
+                message={`Se liberarán ${myHolds.length} asiento${myHolds.length > 1 ? 's' : ''} seleccionado${myHolds.length > 1 ? 's' : ''}.`}
+                confirmLabel="Cancelar holds"
+                cancelLabel="Mantener asientos"
+                destructive
+            />
+            <AlertPopup
+                open={Boolean(popupMessage)}
+                onClose={() => setPopupMessage(null)}
+                title={popupMessage?.title}
+                message={popupMessage?.message}
+                variant={popupMessage?.variant}
+            />
             <div className="selector-header">
                 <h2 style={{ color: '#000' }}>Selección de Asientos</h2>
                 <p style={{ color: '#000' }}>Ruta: {normalizedRutaId || 'N/A'} | Fecha: {String(fecha || '')}</p>

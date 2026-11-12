@@ -6,6 +6,7 @@ import {
   updateLugarTuristico,
 } from '../../services/lugaresTuristicosAdmin';
 import useFeedback from '../../hooks/useFeedback';
+import { ConfirmPopup } from '../../components/Popup';
 
 const emptyForm = {
   nombre: '',
@@ -32,6 +33,8 @@ export default function AdminLugares() {
   const [search, setSearch] = useState('');
   const [filterCity, setFilterCity] = useState('');
   const [page, setPage] = useState(1);
+  const [lugarParaEliminar, setLugarParaEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
   const { aviso, mostrarExito, mostrarError } = useFeedback();
 
   const load = useCallback(async () => {
@@ -69,7 +72,12 @@ export default function AdminLugares() {
   };
 
   const openEditModal = (lugar) => {
-    const id = lugar._id || lugar.id;
+    setLugarParaEliminar(lugar);
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!lugarParaEliminar) return;
+    const id = lugarParaEliminar._id || lugarParaEliminar.id;
     setEditingId(id);
     setForm({
       nombre: lugar.nombre || '',
@@ -153,21 +161,35 @@ export default function AdminLugares() {
      *
      * NO se corrige aquí por indicación expresa: solo se documenta.
      */
-    if (!window.confirm(`¿Eliminar el lugar "${lugar.nombre}"?`)) return;
-
     try {
+      setEliminando(true);
       setError(null);
       await deleteLugarTuristico(id);
+      setLugarParaEliminar(null);
       await load();
       mostrarExito('El lugar turístico se eliminó correctamente.', 'Lugar eliminado');
     } catch (e) {
-      setError(e.message);
-      mostrarError(e, 'No se pudo eliminar el lugar turístico');
+      setLugarParaEliminar((current) => ({ ...current, error: e.message }));
+    } finally {
+      setEliminando(false);
     }
   };
 
   return (
     <div>
+      <ConfirmPopup
+        open={Boolean(lugarParaEliminar)}
+        onCancel={() => { if (!eliminando) setLugarParaEliminar(null); }}
+        onConfirm={confirmarEliminacion}
+        title="¿Eliminar este lugar turístico?"
+        message={lugarParaEliminar ? lugarParaEliminar.nombre : ''}
+        note="Esta acción eliminará el lugar de la aplicación."
+        confirmLabel="Eliminar lugar"
+        cancelLabel="Cancelar"
+        destructive
+        loading={eliminando}
+        error={lugarParaEliminar?.error}
+      />
       {aviso && (
         <div className={`admin-feedback admin-feedback--${aviso.variant}`} role="status">
           <strong>{aviso.title}</strong>

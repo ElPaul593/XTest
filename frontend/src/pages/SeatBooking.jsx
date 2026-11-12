@@ -5,6 +5,7 @@ import { getRutas } from '../services/rutas';
 import BusSeatSelector from '../components/BusSeatSelector';
 import { capturarPago } from '../services/pagos';
 import './SeatBooking.css';
+import { AlertPopup } from '../components/Popup';
 
 const SeatBooking = () => {
     const navigate = useNavigate();
@@ -28,6 +29,7 @@ const SeatBooking = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showSelector, setShowSelector] = useState(vieneDeCompra);
+    const [popupMessage, setPopupMessage] = useState(null);
 
     const token = localStorage.getItem('token');
 
@@ -103,7 +105,11 @@ const SeatBooking = () => {
              *
              * NO se corrige aquí por indicación expresa: solo se documenta.
              */
-            alert('Por favor selecciona una ruta y fecha primero');
+            setPopupMessage({
+                title: 'Faltan datos',
+                message: 'Por favor selecciona una ruta y una salida programada primero.',
+                variant: 'warning'
+            });
             return;
         }
         setShowSelector(true);
@@ -129,6 +135,13 @@ const SeatBooking = () => {
 
         return (
             <div className="seat-booking-page">
+                <AlertPopup
+                    open={Boolean(popupMessage)}
+                    onClose={() => setPopupMessage(null)}
+                    title={popupMessage?.title}
+                    message={popupMessage?.message}
+                    variant={popupMessage?.variant}
+                />
                 <div className="booking-header">
                     <h1>{titulo}</h1>
                     <p>{detalle}</p>
