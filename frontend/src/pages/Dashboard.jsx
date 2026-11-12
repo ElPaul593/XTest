@@ -101,6 +101,22 @@ export default function Dashboard() {
     setShowSeatSelector(true);
   };
 
+  const salidasDisponibles = (() => {
+    const ruta = rutas.find((item) => String(item._id || item.id) === String(selectedRuta));
+    return Array.isArray(ruta?.salidas)
+      ? ruta.salidas.filter((salida) => salida.activo !== false && salida.fecha && salida.horaSalida)
+      : [];
+  })();
+
+  const seleccionarRutaRapida = (rutaId) => {
+    setSelectedRuta(rutaId);
+    const ruta = rutas.find((item) => String(item._id || item.id) === String(rutaId));
+    const salidas = Array.isArray(ruta?.salidas)
+      ? ruta.salidas.filter((salida) => salida.activo !== false && salida.fecha && salida.horaSalida)
+      : [];
+    setSelectedFecha(salidas[0]?.fecha || '');
+  };
+
   const handleChangeSeat = (reserva) => {
     const rutaIdValue = reserva.ruta?._id || reserva.ruta?.id || reserva.ruta || '';
     const rutaIdString = typeof rutaIdValue === 'object' && rutaIdValue !== null
@@ -266,7 +282,7 @@ export default function Dashboard() {
               id="qr-ruta"
               className="input"
               value={selectedRuta}
-              onChange={e => setSelectedRuta(e.target.value)}
+              onChange={e => seleccionarRutaRapida(e.target.value)}
             >
               <option value="">— Elige una ruta —</option>
               {rutas.map(r => (
@@ -277,15 +293,30 @@ export default function Dashboard() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="qr-fecha">Fecha de viaje</label>
-            <input
+            <label htmlFor="qr-fecha">Salida disponible</label>
+            <select
               id="qr-fecha"
               className="input"
-              type="date"
               value={selectedFecha}
               onChange={e => setSelectedFecha(e.target.value)}
-              min={today}
-            />
+              disabled={!selectedRuta || salidasDisponibles.length === 0}
+            >
+              <option value="">
+                {selectedRuta ? '— Elige una salida —' : '— Primero elige una ruta —'}
+              </option>
+              {salidasDisponibles.map((salida) => (
+                <option key={`${salida.fecha}-${salida.horaSalida}`} value={salida.fecha}>
+                  {new Date(`${salida.fecha}T00:00:00`).toLocaleDateString('es-EC', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })} · {salida.horaSalida}
+                </option>
+              ))}
+            </select>
+            {selectedRuta && salidasDisponibles.length === 0 && (
+              <small>Esta ruta todavía no tiene salidas programadas.</small>
+            )}
           </div>
           <div className="popup-footer">
             <button type="button" className="btn btn-secondary" onClick={() => setShowQuickReserve(false)}>
@@ -367,7 +398,11 @@ export default function Dashboard() {
                       <span className="value">{reserva.ruta?.duration}</span>
                     </div>
                     <div className="info-item">
-                      <span className="label">Fecha Compra:</span>
+                      <span className="label">Fecha del viaje:</span>
+                      <span className="value">{reserva.fecha || 'No especificada'}</span>
+                    </div>
+                    <div className="info-item">
+                      <span className="label">Fecha de compra:</span>
                       <span className="value">{new Date(reserva.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
