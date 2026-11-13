@@ -69,3 +69,19 @@ jobs:
         env:
           VITE_API_URL: http://localhost:5000/api
           VITE_SEAT_API_URL: http://localhost:5000/api/asientos
+
+  deploy-render:
+    name: Deploy backend to Render
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/main_paul' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "Missing required GitHub secret: RENDER_DEPLOY_HOOK_URL"
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"

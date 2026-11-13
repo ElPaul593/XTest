@@ -11,7 +11,9 @@ services:
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
-    autoDeploy: true
+    # GitHub Actions ejecuta lint, pruebas y build antes de disparar el deploy.
+    # Esto evita que Render despliegue directamente cada push sin pasar CI.
+    autoDeploy: false
     envVars:
       - key: NODE_ENV
         value: production

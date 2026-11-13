@@ -42,15 +42,14 @@ Al subir el repositorio se ejecuta `.github/workflows/ci-cd.yml`:
 
 1. Pull requests y pushes ejecutan el lint y las pruebas del backend y el build
    de producción del frontend.
-2. Si esas validaciones pasan, Vercel y Render pueden desplegar desde sus
-   integraciones nativas con GitHub.
-3. El workflow no construye imágenes ni publica registros: Render y Vercel
-   realizan el despliegue nativo desde sus propios servicios.
+2. Solo después de que ambos jobs pasan, un push a `main`, `main_paul` o `master`
+   dispara el deploy de Render mediante un Deploy Hook.
+3. Vercel puede mantener su integración nativa; Render debe tener el auto-deploy
+   desactivado para que nunca publique un push que no haya pasado CI.
 
 Render debe tener configurado el directorio raíz `backend` y Vercel el
-directorio raíz `frontend`. Ambos pueden desplegar automáticamente desde el
-mismo push a `main`; las variables secretas permanecen exclusivamente en los
-paneles de cada proveedor.
+directorio raíz `frontend`. Las variables secretas permanecen exclusivamente en
+los paneles de cada proveedor.
 
 ---
 
@@ -65,6 +64,13 @@ paneles de cada proveedor.
    - `EXTERNAL_API_URL` = URL de la API externa de asientos/pricing (o déjala con el valor por defecto).
 4. Deploy. Cuando termine, copia la URL pública (ej. `https://culturaltrip-api.onrender.com`).
 5. Verifica: abre `https://culturaltrip-api.onrender.com/health` → debe responder `{ "ok": true }`.
+
+### Deploy condicionado por CI
+
+En Render crea un **Deploy Hook** para `culturaltrip-api` y guarda su URL como
+secreto de GitHub con el nombre `RENDER_DEPLOY_HOOK_URL`. El `render.yaml`
+mantiene `autoDeploy: false`; el workflow solo llama ese hook cuando terminan
+correctamente el lint, las pruebas backend y el build frontend.
 
 ### Opción B — Manual
 **New + → Web Service** → conecta el repo → **Language: Node** → **Root Directory: `backend`**
