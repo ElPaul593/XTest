@@ -3,6 +3,7 @@ import { listUsers, getUserCount, createUser, updateUser, deleteUser, cambiarEst
 import { getRutas } from '../../services/rutas';
 import { ConfirmPopup } from '../../components/Popup';
 import useFeedback from '../../hooks/useFeedback';
+import PasswordInput from '../../components/PasswordInput';
 
 const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido: '', telefono: '', paisOrigen: 'Ecuador', password: '', role: 'USER' };
 
@@ -230,7 +231,7 @@ export default function AdminUsers() {
             <input className="input" placeholder="Nombre" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
             <input className="input" placeholder="Apellido" value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} required />
             <input className="input" placeholder="Teléfono" value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} required />
-            <input className="input" type="password" placeholder="Contraseña" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+            <PasswordInput className="input" placeholder="Contraseña" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
             <select className="input" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>

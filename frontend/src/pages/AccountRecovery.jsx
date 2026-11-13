@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 /**
  * Recuperación de cuenta por código de 6 dígitos.
@@ -181,10 +182,9 @@ export default function AccountRecovery({ purpose = 'account' }) {
 
             <div className="field">
               <label htmlFor="recovery-password">Nueva contraseña</label>
-              <input
+              <PasswordInput
                 id="recovery-password"
                 className="input"
-                type="password"
                 autoComplete="new-password"
                 minLength={6}
                 value={password}

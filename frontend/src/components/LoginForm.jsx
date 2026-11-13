@@ -4,6 +4,7 @@ import { login, requestPasswordReset, loginConGoogle, reenviarVerificacion } fro
 import { setSession, homePathForRole } from '../services/session';
 import Popup, { AlertPopup } from './Popup';
 import GoogleSignInButton from './GoogleSignInButton';
+import PasswordInput from './PasswordInput';
 import useFeedback from '../hooks/useFeedback';
 
 export default function LoginForm() {
@@ -306,10 +307,9 @@ export default function LoginForm() {
 
           <div className="field">
             <label htmlFor="password">Contraseña</label>
-            <input
+            <PasswordInput
               id="password"
               className="input"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, password: true }))}

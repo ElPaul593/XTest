@@ -4,6 +4,7 @@ import { getCurrentUser, deleteCurrentUser, updateCurrentUser } from '../service
 import { logout } from '../services/auth';
 import { AlertPopup, ConfirmPopup } from '../components/Popup';
 import useFeedback from '../hooks/useFeedback';
+import PasswordInput from '../components/PasswordInput';
 
 export default function Profile() {
   const [loading, setLoading] = useState(true);
@@ -318,8 +319,7 @@ export default function Profile() {
             
             <div className="form-group">
               <label>Nueva Contraseña:</label>
-              <input
-                type="password"
+              <PasswordInput
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}

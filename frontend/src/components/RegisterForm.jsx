@@ -4,6 +4,7 @@ import { register } from '../services/auth';
 import { validarCedula } from '../services/cedula';
 import { PAISES } from '../constants/paises';
 import { getCodigoTelefonico } from '../constants/codigosTelefonicos';
+import PasswordInput from './PasswordInput';
 
 export default function RegisterForm() {
   const [activeTab, setActiveTab] = useState('nacional'); // 'nacional' o 'extranjero'
@@ -615,10 +616,9 @@ export default function RegisterForm() {
 
             <div className="field" style={{flex:'1 1 240px'}}>
               <label htmlFor="password">Contraseña</label>
-              <input
+              <PasswordInput
                 id="password"
                 className="input"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, password: true }))}
