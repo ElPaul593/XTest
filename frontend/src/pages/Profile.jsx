@@ -7,6 +7,7 @@ import useFeedback from '../hooks/useFeedback';
 import PasswordInput from '../components/PasswordInput';
 
 export default function Profile() {
+  const opcionesPreferencias = ['Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro'];
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function Profile() {
     nombre: '',
     apellido: '',
     telefono: '',
+    preferencias: [],
     currentPassword: '',
     password: '',
     passwordConfirmation: ''
@@ -54,6 +56,7 @@ export default function Profile() {
           nombre: me.nombre || '',
           apellido: me.apellido || '',
           telefono: me.telefono || '',
+          preferencias: Array.isArray(me.preferencias) ? me.preferencias : [],
           currentPassword: '',
           password: '',
           passwordConfirmation: ''
@@ -132,7 +135,8 @@ export default function Profile() {
         email: formData.email,
         nombre: formData.nombre,
         apellido: formData.apellido,
-        telefono: formData.telefono
+        telefono: formData.telefono,
+        preferencias: formData.preferencias
       };
 
       if (wantsPasswordChange) {
@@ -151,6 +155,7 @@ export default function Profile() {
         nombre: updatedUser.nombre || '',
         apellido: updatedUser.apellido || '',
         telefono: updatedUser.telefono || '',
+        preferencias: Array.isArray(updatedUser.preferencias) ? updatedUser.preferencias : [],
         currentPassword: '',
         password: '',
         passwordConfirmation: ''
@@ -213,6 +218,7 @@ export default function Profile() {
       nombre: user.nombre || '',
       apellido: user.apellido || '',
       telefono: user.telefono || '',
+      preferencias: Array.isArray(user.preferencias) ? user.preferencias : [],
       currentPassword: '',
       password: '',
       passwordConfirmation: ''
@@ -301,6 +307,10 @@ export default function Profile() {
               <label>Fecha de registro:</label>
               <span>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''}</span>
             </div>
+            <div className="info-group">
+              <label>Preferencias:</label>
+              <span>{user.preferencias?.length ? user.preferencias.join(', ') : 'No especificadas'}</span>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleUpdateProfile} className="profile-form">
@@ -381,6 +391,33 @@ export default function Profile() {
                 onChange={handleInputChange}
                 required
               />
+            </div>
+
+            <div className="form-group profile-preferences">
+              <label>Preferencias de destinos turísticos:</label>
+              <div className="preference-options">
+                {opcionesPreferencias.map((preferencia) => (
+                  <label
+                    key={preferencia}
+                    className={`preference-option${formData.preferencias.includes(preferencia) ? ' is-selected' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.preferencias.includes(preferencia)}
+                      onChange={() => {
+                        setFormData((current) => ({
+                          ...current,
+                          preferencias: current.preferencias.includes(preferencia)
+                            ? current.preferencias.filter((item) => item !== preferencia)
+                            : [...current.preferencias, preferencia]
+                        }));
+                      }}
+                    />
+                    <span>{preferencia}</span>
+                  </label>
+                ))}
+              </div>
+              <small>Estas preferencias ayudan a priorizar categorías de lugares turísticos.</small>
             </div>
             
             <div className="password-change-section">
