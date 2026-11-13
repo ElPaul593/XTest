@@ -73,6 +73,10 @@ exports.findById = async (id) => {
   return User.findById(id).select(selectNoPassword).lean();
 }
 
+exports.findByIdWithPassword = async (id) => {
+  return User.findById(id).select('+password');
+};
+
 // PATRÓN REPOSITORY: Método updateById - encapsula la actualización de entidades
 //Update
 exports.updateById = async (id, data) => {

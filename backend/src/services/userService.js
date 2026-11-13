@@ -45,6 +45,20 @@ exports.create = async (data) => {
 exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   const update = {};
 
+  if (!allowRole && data.password && String(data.password).trim() !== '') {
+    const currentPassword = String(data.currentPassword || '');
+    const passwordConfirmation = String(data.passwordConfirmation || '');
+    const user = await UserRepo.findByIdWithPassword(id);
+
+    if (!user || !user.password || !(await bcrypt.compare(currentPassword, user.password))) {
+      throw new AppError('La contraseña actual es incorrecta', 400);
+    }
+
+    if (String(data.password) !== passwordConfirmation) {
+      throw new AppError('La nueva contraseña y su confirmación no coinciden', 400);
+    }
+  }
+
   if (data.email !== undefined) update.email = String(data.email).trim().toLowerCase();
   if (data.nombre !== undefined) update.nombre = String(data.nombre).trim();
   if (data.apellido !== undefined) update.apellido = String(data.apellido).trim();
@@ -72,6 +86,11 @@ exports.update = async (id, data = {}, { allowRole = false } = {}) => {
   }
 
   return UserRepo.updateById(id, update);
+};
+
+exports.verifyPassword = async (id, password) => {
+  const user = await UserRepo.findByIdWithPassword(id);
+  return Boolean(user && user.password && await bcrypt.compare(String(password), user.password));
 };
 
 /**

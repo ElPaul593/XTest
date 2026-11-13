@@ -82,11 +82,20 @@ exports.updateMe = async (req, res) => {
     if (!updated) return res.status(404).json({ error: 'User not found' });
     res.json(updated);
   } catch (err) {
+    if (err?.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
     if (err.name === 'CastError') {
       return res.status(400).json({ error: 'ID inválido' });
     }
     res.status(500).json({ error: 'Error al actualizar el perfil' });
   }
+};
+
+exports.verifyPassword = async (req, res) => {
+  const valid = await UserService.verifyPassword(req.user.id.toString(), req.body.password);
+  if (!valid) return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+  res.json({ valid: true });
 };
 
 /**

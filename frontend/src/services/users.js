@@ -188,6 +188,16 @@ export async function updateCurrentUser(userData) {
   }
 }
 
+export async function verifyCurrentPassword(password) {
+  try {
+    await api.post('/users/me/verify-password', { password });
+    return true;
+  } catch (err) {
+    const message = err?.response?.data?.error || err.message || 'No se pudo verificar la contraseña actual';
+    throw new Error(message);
+  }
+}
+
 /**
  * Baja de la cuenta propia.
  *

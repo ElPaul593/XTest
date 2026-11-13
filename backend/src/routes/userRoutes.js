@@ -72,6 +72,7 @@ router.get('/me', authenticateToken, (req, res) => {
  *         description: No autorizado
  */
 router.put('/me', authenticateToken, validate(userSchemas.update, 'body'), userController.updateMe);
+router.post('/me/verify-password', authenticateToken, validate(userSchemas.verifyPassword, 'body'), userController.verifyPassword);
 router.delete('/me', authenticateToken, userController.removeMe);
 
 /**

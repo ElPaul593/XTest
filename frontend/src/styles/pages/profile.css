@@ -134,6 +134,48 @@
   border-color: var(--accent);
 }
 
+.password-change-section {
+  grid-column: 1 / -1;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border);
+}
+
+.password-change-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 430px;
+  margin-bottom: 0;
+  color: var(--text);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+.password-change-question input {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.password-change-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.password-change-fields .password-change-group:last-child {
+  grid-column: 1 / 2;
+}
+
+.password-field-error {
+  color: var(--error) !important;
+}
+
 .form-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -170,6 +212,14 @@
   .profile-form {
     grid-template-columns: 1fr;
   }
+
+  .password-change-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .password-change-fields .password-change-group:last-child {
+    grid-column: auto;
+  }
   
   .btn-edit,
   .btn-cancel,
@@ -178,4 +228,3 @@
     width: 100%;
   }
 }
-

@@ -116,8 +116,16 @@ const userSchemas = {
     provincia: Joi.string().max(50).optional(),
     preferencias: Joi.array().items(Joi.string().valid('Museo', 'Parque', 'Monumento', 'Playa', 'Montaña', 'Centro Histórico', 'Otro')).optional(),
     password: Joi.string().min(6).allow('').optional(),
+    currentPassword: Joi.string().allow('').optional(),
+    passwordConfirmation: Joi.string().allow('').optional(),
     role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()
+  }),
+
+  verifyPassword: Joi.object({
+    password: Joi.string().required().messages({
+      'any.required': 'La contraseña actual es requerida'
+    })
   }),
 
   /**

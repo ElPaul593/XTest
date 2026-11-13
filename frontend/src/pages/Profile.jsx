@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, deleteCurrentUser, updateCurrentUser } from '../services/users';
+import { getCurrentUser, deleteCurrentUser, updateCurrentUser, verifyCurrentPassword } from '../services/users';
 import { logout } from '../services/auth';
 import { AlertPopup, ConfirmPopup } from '../components/Popup';
 import useFeedback from '../hooks/useFeedback';
@@ -22,7 +22,19 @@ export default function Profile() {
   // Datos de ejemplo del usuario
 
   const [user, setUser] = useState(null);
-  const [formData, setFormData] = useState({ email: '', nombre: '', apellido: '', telefono: '', password: '' });
+  const [changePassword, setChangePassword] = useState(false);
+  const [currentPasswordError, setCurrentPasswordError] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [passwordMismatch, setPasswordMismatch] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    nombre: '',
+    apellido: '',
+    telefono: '',
+    currentPassword: '',
+    password: '',
+    passwordConfirmation: ''
+  });
 
   useEffect(() => {
     // Validar autenticación
@@ -42,7 +54,9 @@ export default function Profile() {
           nombre: me.nombre || '',
           apellido: me.apellido || '',
           telefono: me.telefono || '',
-          password: ''
+          currentPassword: '',
+          password: '',
+          passwordConfirmation: ''
         });
       } catch (err) {
         // Si hay error (token inválido, expirado, etc.), redirigir al login
@@ -61,6 +75,35 @@ export default function Profile() {
       ...formData,
       [e.target.name]: e.target.value
     });
+
+    if (e.target.name === 'currentPassword') {
+      setCurrentPasswordError('');
+    }
+
+    if (e.target.name === 'password' || e.target.name === 'passwordConfirmation') {
+      const password = e.target.name === 'password' ? e.target.value : formData.password;
+      const confirmation = e.target.name === 'passwordConfirmation'
+        ? e.target.value
+        : formData.passwordConfirmation;
+      setPasswordMismatch(Boolean(confirmation) && password !== confirmation);
+    }
+  };
+
+  const handleCurrentPasswordBlur = async () => {
+    if (!changePassword || !formData.currentPassword) {
+      setCurrentPasswordError('');
+      return;
+    }
+
+    try {
+      setVerifyingPassword(true);
+      await verifyCurrentPassword(formData.currentPassword);
+      setCurrentPasswordError('');
+    } catch (err) {
+      setCurrentPasswordError(err.message);
+    } finally {
+      setVerifyingPassword(false);
+    }
   };
 
   const handleUpdateProfile = async (e) => {
@@ -68,17 +111,34 @@ export default function Profile() {
     cerrarAviso();
 
     try {
-      // Preparar los datos para actualizar (solo enviar password si no está vacío)
+      const wantsPasswordChange = changePassword;
+
+      if (wantsPasswordChange && (!formData.currentPassword || !formData.password || !formData.passwordConfirmation)) {
+        mostrarError('Para cambiar la contraseña debes completar los tres campos.', 'Datos incompletos');
+        return;
+      }
+
+      if (wantsPasswordChange && currentPasswordError) {
+        mostrarError(currentPasswordError, 'Contraseña actual incorrecta');
+        return;
+      }
+
+      if (wantsPasswordChange && formData.password !== formData.passwordConfirmation) {
+        mostrarError('La nueva contraseña y su confirmación no coinciden.', 'Contraseñas diferentes');
+        return;
+      }
+
       const updateData = {
         email: formData.email,
         nombre: formData.nombre,
         apellido: formData.apellido,
         telefono: formData.telefono
       };
-      
-      // Solo incluir password si se proporcionó uno nuevo
-      if (formData.password && formData.password.trim() !== '') {
+
+      if (wantsPasswordChange) {
+        updateData.currentPassword = formData.currentPassword;
         updateData.password = formData.password;
+        updateData.passwordConfirmation = formData.passwordConfirmation;
       }
       
       // Llamar a la API para actualizar el perfil
@@ -91,8 +151,11 @@ export default function Profile() {
         nombre: updatedUser.nombre || '',
         apellido: updatedUser.apellido || '',
         telefono: updatedUser.telefono || '',
-        password: ''
+        currentPassword: '',
+        password: '',
+        passwordConfirmation: ''
       });
+      setChangePassword(false);
       
       mostrarExito('Tus datos se han guardado correctamente.', 'Perfil actualizado');
       setEditing(false);
@@ -150,8 +213,11 @@ export default function Profile() {
       nombre: user.nombre || '',
       apellido: user.apellido || '',
       telefono: user.telefono || '',
-      password: ''
+      currentPassword: '',
+      password: '',
+      passwordConfirmation: ''
     });
+    setChangePassword(false);
     cerrarAviso();
   };
 
@@ -317,14 +383,74 @@ export default function Profile() {
               />
             </div>
             
-            <div className="form-group">
-              <label>Nueva Contraseña:</label>
-              <PasswordInput
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Dejar vacío para mantener la actual"
-              />
+            <div className="password-change-section">
+              <label className="password-change-question">
+                <span>¿Deseas cambiar tu contraseña?</span>
+                <input
+                  type="checkbox"
+                  checked={changePassword}
+                  onChange={(e) => {
+                    setChangePassword(e.target.checked);
+                    if (!e.target.checked) {
+                      setCurrentPasswordError('');
+                      setPasswordMismatch(false);
+                      setFormData((current) => ({
+                        ...current,
+                        currentPassword: '',
+                        password: '',
+                        passwordConfirmation: ''
+                      }));
+                    }
+                  }}
+                />
+              </label>
+
+              {changePassword && (
+                <div className="password-change-fields">
+                  <div className="form-group password-change-group">
+                    <label>Contraseña actual:</label>
+                    <PasswordInput
+                      name="currentPassword"
+                      autoComplete="current-password"
+                      value={formData.currentPassword}
+                      onChange={handleInputChange}
+                      onBlur={handleCurrentPasswordBlur}
+                      placeholder="Escribe tu contraseña actual"
+                    />
+                    <small className={currentPasswordError ? 'password-field-error' : ''}>
+                      {verifyingPassword ? 'Verificando contraseña actual…' : currentPasswordError || 'Necesaria para confirmar que eres el titular de la cuenta.'}
+                    </small>
+                  </div>
+
+                  <div className="form-group password-change-group">
+                    <label>Nueva Contraseña:</label>
+                    <PasswordInput
+                      name="password"
+                      autoComplete="new-password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Escribe tu nueva contraseña"
+                    />
+                  </div>
+
+                  <div className="form-group password-change-group">
+                    <label>Repetir nueva contraseña:</label>
+                    <PasswordInput
+                      name="passwordConfirmation"
+                      autoComplete="new-password"
+                      value={formData.passwordConfirmation}
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        setPasswordMismatch(Boolean(e.target.value) && e.target.value !== formData.password);
+                      }}
+                      placeholder="Repite la nueva contraseña"
+                    />
+                    {passwordMismatch && (
+                      <small className="password-field-error">Las nuevas contraseñas no coinciden.</small>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="form-actions">
