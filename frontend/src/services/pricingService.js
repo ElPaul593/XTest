@@ -46,45 +46,11 @@ export async function getPricing(cantidad, rutaId = null) {
     };
   } catch (err) {
     console.error('[PricingService] Error calculando precio:', err);
-    console.warn('[PricingService] Usando cálculo fallback local');
-    return calculatePricingFallback(cantidad);
+    return {
+      ok: false,
+      error: 'No se pudo obtener el precio vigente de la ruta'
+    };
   }
-}
-
-/**
- * Cálculo fallback local cuando el backend no está disponible
- * @param {number} cantidad
- */
-function calculatePricingFallback(cantidad) {
-  const precioUnitario = 50000;
-  const subtotal = cantidad * precioUnitario;
-
-  // Descuentos por cantidad
-  let porcentajeDescuento = 0;
-  if (cantidad >= 5) {
-    porcentajeDescuento = 10;
-  } else if (cantidad >= 4) {
-    porcentajeDescuento = 10;
-  } else if (cantidad >= 3) {
-    porcentajeDescuento = 7;
-  } else if (cantidad >= 2) {
-    porcentajeDescuento = 5;
-  }
-
-  const montoDescuento = Math.round(subtotal * (porcentajeDescuento / 100));
-  const total = subtotal - montoDescuento;
-
-  return {
-    ok: true,
-    cantidad,
-    precioUnitario,
-    subtotal,
-    porcentajeDescuento,
-    montoDescuento,
-    total,
-    ahorros: montoDescuento,
-    _isFallback: true
-  };
 }
 
 export default {

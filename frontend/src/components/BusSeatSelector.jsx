@@ -193,8 +193,9 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         try {
             // Pasar rutaId para que use el precio de la ruta local, no el de la API externa
             console.log(`[BusSeatSelector] Llamando getPricing con cantidad: ${myHolds.length}, rutaId: ${normalizedRutaId}`);
-            // Al pagar se muestra la cotización de la API, que es la que PayPal cobra
-            const pricingResult = await getPricing(myHolds.length, modoPago ? null : normalizedRutaId);
+            // El precio canónico viene de la ruta seleccionada y debe ser el
+            // mismo que se muestra antes de abrir PayPal.
+            const pricingResult = await getPricing(myHolds.length, normalizedRutaId);
             console.log('[BusSeatSelector] Pricing result:', pricingResult);
 
             if (pricingResult.ok) {
@@ -220,7 +221,10 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
             }
         } catch (precioErr) {
             console.error('[BusSeatSelector] Error calculando precio:', precioErr);
-            setPricingInfo(null);
+            setPricingInfo({
+                ok: false,
+                error: precioErr.message || 'No se pudo obtener el precio vigente de la ruta'
+            });
         }
     }, [myHolds.length, normalizedRutaId]);
 

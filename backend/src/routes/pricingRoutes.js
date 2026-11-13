@@ -32,11 +32,31 @@ router.post("/calcular-precio", asyncHandler(async (req, res) => {
     if (rutaId) {
         try {
             const ruta = await Ruta.findById(rutaId).lean();
-            if (ruta && ruta.price) {
-                precioUnitario = ruta.price;
+            if (!ruta) {
+                return res.status(404).json({
+                    ok: false,
+                    error: "No encontramos la ruta seleccionada"
+                });
             }
+            if (!Number.isFinite(ruta.price)) {
+                return res.status(422).json({
+                    ok: false,
+                    error: "La ruta seleccionada no tiene un precio válido"
+                });
+            }
+            precioUnitario = ruta.price;
         } catch (err) {
-            console.log('[PricingProxy] Error obteniendo ruta, usando precio por defecto');
+            if (err?.name === 'CastError') {
+                return res.status(400).json({
+                    ok: false,
+                    error: "El identificador de ruta no es válido"
+                });
+            }
+            console.error('[PricingProxy] Error obteniendo ruta:', err);
+            return res.status(503).json({
+                ok: false,
+                error: "No se pudo consultar el precio de la ruta"
+            });
         }
     }
 
