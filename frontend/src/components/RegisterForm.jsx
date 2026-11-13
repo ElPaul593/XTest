@@ -483,20 +483,11 @@ export default function RegisterForm() {
 
           <div className="field">
             <div id="preferencias-destinos-label" style={{ fontWeight: 600 }}>Preferencias de destinos turísticos</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px' }}>
+            <div className="preference-options">
               {opcionesPreferencias.map((preferencia) => (
                 <label
                   key={preferencia}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '999px',
-                    background: preferencias.includes(preferencia) ? '#e8f2ff' : '#fff',
-                    cursor: 'pointer'
-                  }}
+                  className={`preference-option${preferencias.includes(preferencia) ? ' is-selected' : ''}`}
                 >
                   <input
                     type="checkbox"
@@ -507,7 +498,7 @@ export default function RegisterForm() {
                 </label>
               ))}
             </div>
-            <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>
+            <div className="preference-hint">
               Opcional: el sistema prioriza estas categorías, pero sigue mostrando recomendaciones de otras.
             </div>
           </div>

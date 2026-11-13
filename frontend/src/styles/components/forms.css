@@ -117,6 +117,36 @@
   text-align: right;
 }
 
+.preference-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.preference-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.preference-option.is-selected {
+  background: var(--glass-accent);
+  border-color: var(--glass-accent-border);
+}
+
+.preference-hint {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
 .forgot-link {
   background: none;
   border: none;
