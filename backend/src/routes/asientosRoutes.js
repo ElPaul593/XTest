@@ -57,6 +57,29 @@ const { calcularPrecioLocal } = require('../utils/discountUtils');
 
 const TIMEOUT = DEFAULT_REQUEST_TIMEOUT_MS;
 
+/**
+ * Precio unitario de la ruta en el catálogo local (USD).
+ *
+ * Es el precio que ve el usuario al elegir la ruta ("Guayaquil ➜ Quito ($18)")
+ * y el que debe cobrar PayPal. Antes la API externa lo ignoraba y recalculaba
+ * con su BASE_PRICE (12,50 USD): el comprador veía 18 y pagaba 12,50. Ahora el
+ * precio viaja a la API externa al bloquear (`precioUnitario`), ella lo guarda
+ * en el hold y lo usa al crear la orden de PayPal.
+ *
+ * Devuelve null si la ruta no es un ObjectId válido (p. ej. rutas de prueba
+ * como "123") o no existe: en ese caso la API externa usa su precio base.
+ */
+async function precioDeRuta(rutaId) {
+  if (!rutaId || !mongoose.isValidObjectId(rutaId)) return null;
+  try {
+    const ruta = await Ruta.findById(rutaId).select('price').lean();
+    return ruta && Number.isFinite(ruta.price) ? ruta.price : null;
+  } catch (err) {
+    console.warn('[AsientosRoutes] No se pudo leer el precio de la ruta:', err.message);
+    return null;
+  }
+}
+
 /** Normaliza el cuerpo de entrada: acepta `asiento` suelto o `asientos` en lote. */
 function normalizarAsientos({ asiento, asientos }) {
   const lista = Array.isArray(asientos) ? asientos : (asiento != null ? [asiento] : []);
@@ -316,7 +339,10 @@ router.post("/reservar", asyncHandler(async (req, res) => {
 
   const owner = userId || clientId || 'guest';
 
-  const vendidos = await getAsientosVendidos(rutaId, fecha);
+  const [vendidos, precioUnitario] = await Promise.all([
+    getAsientosVendidos(rutaId, fecha),
+    precioDeRuta(rutaId)
+  ]);
   if (asientos.some((asiento) => vendidos.has(asiento))) {
     return res.status(409).json({ ok: false, error: 'Ese asiento ya fue vendido' });
   }
@@ -324,10 +350,11 @@ router.post("/reservar", asyncHandler(async (req, res) => {
   try {
     // Una sola llamada para todos los asientos. La API resuelve los conflictos
     // y devuelve 409 si alguno ya está tomado, así que no hace falta
-    // comprobarlo antes por nuestra cuenta.
+    // comprobarlo antes por nuestra cuenta. El precio de la ruta viaja con el
+    // hold para que PayPal cobre el mismo importe que muestra la aplicación.
     const response = await axios.post(
       seatApiUrl('reservar'),
-      { rutaId, fecha, asientos, userId: owner },
+      { rutaId, fecha, asientos, userId: owner, ...(precioUnitario != null ? { precioUnitario } : {}) },
       { timeout: TIMEOUT }
     );
     return res.json({ ok: true, ...response.data, _source: 'external-api' });
@@ -509,12 +536,16 @@ router.post("/reservar-definitivo", asyncHandler(async (req, res) => {
  */
 router.post("/calcular-precio", asyncHandler(async (req, res) => {
   const { cantidad, rutaId, fecha } = req.body;
+  const precioRuta = await precioDeRuta(rutaId);
 
   try {
     if (cantidad && Number(cantidad) > 0) {
+      // Con `precioUnitario` la API externa cotiza con el precio de la ruta
+      // local y aplica su propia tabla de descuentos: el desglose que vuelve es
+      // exactamente el que luego cobrará PayPal.
       const response = await axios.post(
         seatApiUrl('calcularPrecio'),
-        { cantidad: Number(cantidad) },
+        { cantidad: Number(cantidad), ...(precioRuta != null ? { precioUnitario: precioRuta } : {}) },
         { timeout: TIMEOUT }
       );
       // Se devuelve íntegro: `moneda`, `porcentajeDescuento`, `cobro`…
@@ -527,15 +558,7 @@ router.post("/calcular-precio", asyncHandler(async (req, res) => {
   }
 
   // ---- Respaldo local (API caída, o petición sin `cantidad`) ----
-  let precioUnitario = DEFAULT_PRECIO_UNITARIO_USD;
-  if (rutaId) {
-    try {
-      const ruta = await Ruta.findById(rutaId).lean();
-      if (ruta && ruta.price) precioUnitario = ruta.price;
-    } catch (err) {
-      // Se mantiene el precio por defecto.
-    }
-  }
+  const precioUnitario = precioRuta ?? DEFAULT_PRECIO_UNITARIO_USD;
 
   if (cantidad && Number(cantidad) > 0) {
     const desglose = calcularPrecioLocal(Number(cantidad), precioUnitario);

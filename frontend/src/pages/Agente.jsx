@@ -7,6 +7,7 @@ import {
   togglePasajero
 } from '../services/agente';
 import { AlertPopup } from '../components/Popup';
+import Icon from '../components/Icon';
 
 /**
  * Panel del Agente de Turismo.
@@ -149,7 +150,7 @@ export default function Agente() {
         variant={popupMessage?.variant}
       />
       <div style={S.header}>
-        <h1 style={S.h1}>🎫 Verificación de Boletos</h1>
+        <h1 style={S.h1}><Icon name="qr" size={22} /> Verificación de Boletos</h1>
         <p style={S.subtitle}>Agente de Turismo · escanea el QR y controla el abordaje</p>
       </div>
 
@@ -161,7 +162,7 @@ export default function Agente() {
             style={scannerOpen ? S.btnGhost : S.btnPrimary}
             onClick={() => setScannerOpen((v) => !v)}
           >
-            {scannerOpen ? 'Detener cámara' : '📷 Abrir cámara'}
+            {scannerOpen ? 'Detener cámara' : <><Icon name="camera" size={16} /> Abrir cámara</>}
           </button>
         </div>
 
@@ -212,12 +213,12 @@ export default function Agente() {
                 onClick={() => openRuta(r.id)}
                 style={{ ...S.rutaCard, ...(selectedRuta === r.id ? S.rutaCardActive : {}) }}
               >
-                <div style={S.rutaTitle}>{r.from} ➜ {r.to}</div>
+                <div style={S.rutaTitle}>{r.from} <Icon name="arrow-right" size={14} /> {r.to}</div>
                 <div style={S.rutaMeta}>{r.duration || ''}</div>
                 <div style={S.badges}>
-                  <span style={S.badgeTotal}>👤 {r.totalPasajeros}</span>
-                  <span style={S.badgeOk}>✓ {r.verificados}</span>
-                  <span style={S.badgePend}>⏳ {r.pendientes}</span>
+                  <span style={S.badgeTotal}><Icon name="users" size={12} /> {r.totalPasajeros}</span>
+                  <span style={S.badgeOk}><Icon name="check" size={12} /> {r.verificados}</span>
+                  <span style={S.badgePend}><Icon name="hourglass" size={12} /> {r.pendientes}</span>
                 </div>
               </button>
             ))}
@@ -235,7 +236,7 @@ export default function Agente() {
           ) : (
             <>
               <div style={S.pasHeader}>
-                <h2 style={S.h2}>Control de abordaje · {pasData.ruta.from} ➜ {pasData.ruta.to}</h2>
+                <h2 style={S.h2}>Control de abordaje · {pasData.ruta.from} → {pasData.ruta.to}</h2>
                 <div style={S.resumen}>
                   <span style={S.badgeTotal}>Total {pasData.resumen.total}</span>
                   <span style={S.badgeOk}>Abordaron {pasData.resumen.verificados}</span>
@@ -272,8 +273,8 @@ export default function Agente() {
                           <td style={S.td}>{(p.asientos || []).join(', ') || '—'}</td>
                           <td style={S.td}>
                             {p.verificado
-                              ? <span style={S.tagOk}>✓ Abordó</span>
-                              : <span style={S.tagPend}>⏳ Falta</span>}
+                              ? <span style={S.tagOk}><Icon name="check" size={14} /> Abordó</span>
+                              : <span style={S.tagPend}><Icon name="hourglass" size={14} /> Falta</span>}
                           </td>
                           <td style={S.td}>
                             {p.verificado ? (
@@ -301,11 +302,14 @@ export default function Agente() {
       {scanResult && (
         <div style={S.overlay} onClick={() => setScanResult(null)}>
           <div style={S.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: '46px', textAlign: 'center' }}>
-              {scanResult.estado === 'VERIFICADO' ? '✅'
-                : scanResult.estado === 'YA_VERIFICADO' ? '⚠️'
-                : scanResult.estado === 'CANCELADO' ? '⛔'
-                : '❌'}
+            <div style={{ display: 'flex', justifyContent: 'center', color: scanResult.estado === 'VERIFICADO' ? 'var(--success-ink)' : scanResult.estado === 'YA_VERIFICADO' ? 'var(--warning-ink)' : 'var(--error)' }}>
+              <Icon
+                size={52}
+                name={scanResult.estado === 'VERIFICADO' ? 'check-circle'
+                  : scanResult.estado === 'YA_VERIFICADO' ? 'alert'
+                  : scanResult.estado === 'CANCELADO' ? 'ban'
+                  : 'x-circle'}
+              />
             </div>
             <h2 style={{ textAlign: 'center', margin: '8px 0 4px' }}>
               {scanResult.estado === 'VERIFICADO' ? 'Boleto verificado'
@@ -319,11 +323,11 @@ export default function Agente() {
               <div style={S.modalInfo}>
                 <div><strong>Pasajero:</strong> {scanResult.pasajero}</div>
                 {scanResult.cedula && <div><strong>Cédula/Pasaporte:</strong> {scanResult.cedula}</div>}
-                {scanResult.ruta && <div><strong>Ruta:</strong> {scanResult.ruta.from} ➜ {scanResult.ruta.to}</div>}
+                {scanResult.ruta && <div><strong>Ruta:</strong> {scanResult.ruta.from} → {scanResult.ruta.to}</div>}
                 {scanResult.asientos && <div><strong>Asiento(s):</strong> {(scanResult.asientos || []).join(', ') || '—'}</div>}
                 {scanResult.pertenece === false && scanResult.ruta && (
                   <div style={{ color: 'var(--warning-ink)', marginTop: '6px' }}>
-                    ⚠️ Esta ruta no está entre tus rutas asignadas.
+                    <Icon name="alert" size={14} /> Esta ruta no está entre tus rutas asignadas.
                   </div>
                 )}
               </div>

@@ -7,7 +7,7 @@ import {
 } from '../../services/pagos';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
-const nombreRuta = (ruta) => (ruta ? `${ruta.from} ➜ ${ruta.to}` : 'Ruta no disponible');
+const nombreRuta = (ruta) => (ruta ? `${ruta.from} → ${ruta.to}` : 'Ruta no disponible');
 const nombreCliente = (user) =>
   [user?.nombre, user?.apellido].filter(Boolean).join(' ') || user?.email || user?.cedula || 'Cliente';
 

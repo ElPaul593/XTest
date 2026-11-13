@@ -16,7 +16,7 @@ const emptyCreate = { cedula: '', pasaporte: '', email: '', nombre: '', apellido
 const ESTADOS_UI = {
   ACTIVO: { etiqueta: 'Activo', color: 'var(--success)', icono: '●' },
   BLOQUEADO: { etiqueta: 'Bloqueado', color: 'var(--warning)', icono: '⊘' },
-  ELIMINADO: { etiqueta: 'De baja', color: 'var(--error)', icono: '✕' }
+  ELIMINADO: { etiqueta: 'De baja', color: 'var(--error)', icono: '×' }
 };
 
 /** Los usuarios creados antes de la baja lógica no tienen el campo `estado`. */
@@ -317,7 +317,7 @@ export default function AdminUsers() {
                                     checked={(editForm.assignedRutas || []).includes(rid)}
                                     onChange={() => toggleAssignedRuta(rid)}
                                   />
-                                  {r.from} ➜ {r.to}
+                                  {r.from} → {r.to}
                                 </label>
                               );
                             })}

@@ -1,10 +1,12 @@
 // Opciones de calificación disponibles
+// Etiquetas de texto: dentro de un <option> no se pueden pintar iconos SVG,
+// y los emojis de estrella se ven distintos en cada sistema operativo.
 export const OPCIONES_CALIFICACION = [
-  { value: 1, label: '1 ⭐' },
-  { value: 2, label: '2 ⭐⭐' },
-  { value: 3, label: '3 ⭐⭐⭐' },
-  { value: 4, label: '4 ⭐⭐⭐⭐' },
-  { value: 5, label: '5 ⭐⭐⭐⭐⭐' }
+  { value: 1, label: '1 estrella' },
+  { value: 2, label: '2 estrellas' },
+  { value: 3, label: '3 estrellas' },
+  { value: 4, label: '4 estrellas' },
+  { value: 5, label: '5 estrellas' }
 ];
 
 /**

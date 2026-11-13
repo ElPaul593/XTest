@@ -61,28 +61,44 @@ router.post("/calcular-precio", asyncHandler(async (req, res) => {
     }
 
     try {
+        // Se envía el precio de la ruta local: la API externa cotiza con él y
+        // devuelve el mismo desglose (subtotal, descuento, total, cobro PayPal)
+        // que usará al crear la orden. Así el "Pagar $X con PayPal" del
+        // frontend y el cargo real no pueden divergir.
         const response = await axios.post(`${EXTERNAL_API_URL}/calcular-precio`, {
-            cantidad: Number(cantidad)
+            cantidad: Number(cantidad),
+            precioUnitario
         }, {
-            timeout: 10000,
+            timeout: DEFAULT_REQUEST_TIMEOUT_MS,
             headers: { 'Content-Type': 'application/json' }
         });
 
-        const porcentajeDescuento = response.data.porcentajeDescuento || 0;
-        const subtotal = cantidad * precioUnitario;
-        const montoDescuento = Math.round(subtotal * (porcentajeDescuento / 100) * 100) / 100;
-        const total = subtotal - montoDescuento;
+        const externo = response.data || {};
+        const porcentajeDescuento = Number(externo.porcentajeDescuento) || 0;
+
+        // Si la API externa respetó el precio enviado, se usa su desglose tal
+        // cual. Si es una versión antigua que lo ignoró, se recalcula aquí con
+        // el precio local y solo se aprovecha su porcentaje de descuento.
+        const respetoPrecio = Number(externo.precioUnitario) === Number(precioUnitario);
+        const subtotal = respetoPrecio ? Number(externo.subtotal) : Math.round(cantidad * precioUnitario * 100) / 100;
+        const montoDescuento = respetoPrecio
+            ? Number(externo.montoDescuento) || 0
+            : Math.round(subtotal * (porcentajeDescuento / 100) * 100) / 100;
+        const total = respetoPrecio ? Number(externo.total) : Math.round((subtotal - montoDescuento) * 100) / 100;
 
         return res.json({
             ok: true,
-            cantidad,
+            cantidad: Number(cantidad),
+            moneda: externo.moneda || 'USD',
             precioUnitario,
             subtotal,
             porcentajeDescuento,
             montoDescuento,
             total,
             ahorros: montoDescuento,
-            _source: 'local_price_external_discount'
+            requiereCompania: externo.requiereCompania ?? false,
+            cobro: respetoPrecio ? externo.cobro : { moneda: 'USD', valor: total.toFixed(2), tasaConversion: 1 },
+            _source: respetoPrecio ? 'external_api_route_price' : 'local_price_external_discount'
         });
     } catch (error) {
         console.error('[PricingProxy] API externa no disponible, usando cálculo local:', error.message);

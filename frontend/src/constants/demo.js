@@ -7,22 +7,22 @@ export const HERO_CONTENT = {
 
 export const FEATURES = [
   {
-    icon: '🗺️',
+    icon: 'map',
     title: 'Rutas Interprovinciales',
     description: 'Conectamos las principales ciudades del Ecuador con rutas directas y cómodas.'
   },
   {
-    icon: '💺',
+    icon: 'seat',
     title: 'Reserva tu Asiento',
     description: 'Selecciona tu asiento favorito y viaja con la comodidad que mereces.'
   },
   {
-    icon: '📱',
+    icon: 'smartphone',
     title: 'Boletos Digitales',
     description: 'Recibe tu boleto al instante y viaja sin complicaciones con tu móvil.'
   },
   {
-    icon: '🔒',
+    icon: 'lock',
     title: 'Pago Seguro',
     description: 'Transacciones protegidas para que reserves con total tranquilidad.'
   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import HoldTimer from './HoldTimer';
+import Icon from './Icon';
 import './BusSeatSelector.css';
 import {
     getDisponibles,
@@ -13,52 +14,116 @@ import { getPricing } from '../services/pricingService';
 import { crearOrdenPago } from '../services/pagos';
 import { AlertPopup, ConfirmPopup } from './Popup';
 
+/** Asientos por fila: 2 + pasillo + 2, igual que `SeatLayout` en la API externa. */
+const ASIENTOS_POR_FILA = 4;
+
+const ETIQUETA_ESTADO = {
+    available: 'disponible',
+    heldByMe: 'bloqueado por ti',
+    heldByOther: 'bloqueado por otro pasajero',
+    reserved: 'vendido'
+};
+
+/** "Ventana" o "Pasillo" según la posición dentro de la fila (misma regla que la API). */
+function posicionAsiento(numero) {
+    const offset = (numero - 1) % ASIENTOS_POR_FILA;
+    return offset === 0 || offset === ASIENTOS_POR_FILA - 1 ? 'Ventana' : 'Pasillo';
+}
+
+const formatoUSD = (valor) =>
+    Number(valor || 0).toLocaleString('es-EC', { style: 'currency', currency: 'USD' });
+
 const SeatButton = ({ seat, myHolds, loading, onSeatClick }) => {
     const isSelected = myHolds.some(h => h.asiento === seat.number);
+    const posicion = posicionAsiento(seat.number);
     let className = `seat seat-${seat.status}`;
     if (isSelected) className += ' seat-selected';
 
     return (
         <button
+            type="button"
             className={className}
             onClick={() => onSeatClick(seat)}
             disabled={loading || (seat.status !== 'available' && seat.status !== 'heldByMe')}
-            title={`Asiento ${seat.number} - ${seat.status}`}
+            aria-pressed={isSelected}
+            aria-label={`Asiento ${seat.number}, ${posicion.toLowerCase()}, ${ETIQUETA_ESTADO[seat.status] || seat.status}`}
+            title={`Asiento ${seat.number} · ${posicion} · ${ETIQUETA_ESTADO[seat.status] || seat.status}`}
         >
-            {seat.number}
+            <span className="seat__num">{seat.number}</span>
+            <span className="seat__pos" aria-hidden="true">{posicion === 'Ventana' ? 'vent' : 'pas'}</span>
+            {seat.status === 'heldByMe' && <Icon name="check" size={10} className="seat__mark" />}
+            {seat.status === 'reserved' && <Icon name="x" size={10} className="seat__mark" />}
         </button>
     );
 };
 
+/**
+ * Carrocería del bus.
+ *
+ * Antes el mapa era una rejilla de botones sobre un degradado gris: no se
+ * distinguía dónde estaba el conductor, cuál era el pasillo ni qué asientos
+ * daban a la ventana. Ahora la fila lleva su número, el pasillo tiene una línea
+ * de guía, los laterales marcan las ventanas y la parte delantera muestra el
+ * volante y la puerta, de modo que el pasajero se orienta como en el bus real.
+ */
 const BusGrid = ({ seats, myHolds, loading, onSeatClick }) => {
     if (!seats || seats.length === 0) {
-        return <div className="no-seats" style={{ color: '#000', padding: '20px', textAlign: 'center' }}>No hay asientos disponibles</div>;
+        return <div className="bus-empty">No hay asientos disponibles</div>;
     }
 
     const rows = [];
-    for (let i = 0; i < seats.length; i += 4) {
-        const rowSeats = seats.slice(i, i + 4);
+    for (let i = 0; i < seats.length; i += ASIENTOS_POR_FILA) {
+        const rowSeats = seats.slice(i, i + ASIENTOS_POR_FILA);
         const rowKey = rowSeats[0]?.number ?? i;
+        const celda = (seat, col) => (seat
+            ? <SeatButton key={seat.number} seat={seat} myHolds={myHolds} loading={loading} onSeatClick={onSeatClick} />
+            : <div key={`ph-${rowKey}-${col}`} className="seat-placeholder" aria-hidden="true" />);
+
         rows.push(
             <div key={rowKey} className="bus-row">
-                {rowSeats[0] ? <SeatButton seat={rowSeats[0]} myHolds={myHolds} loading={loading} onSeatClick={onSeatClick} /> : <div className="seat-placeholder"></div>}
-                {rowSeats[1] ? <SeatButton seat={rowSeats[1]} myHolds={myHolds} loading={loading} onSeatClick={onSeatClick} /> : <div className="seat-placeholder"></div>}
-                <div className="aisle"></div>
-                {rowSeats[2] ? <SeatButton seat={rowSeats[2]} myHolds={myHolds} loading={loading} onSeatClick={onSeatClick} /> : <div className="seat-placeholder"></div>}
-                {rowSeats[3] ? <SeatButton seat={rowSeats[3]} myHolds={myHolds} loading={loading} onSeatClick={onSeatClick} /> : <div className="seat-placeholder"></div>}
+                <span className="bus-row__num" aria-hidden="true">{i / ASIENTOS_POR_FILA + 1}</span>
+                <div className="bus-row__side">{celda(rowSeats[0], 0)}{celda(rowSeats[1], 1)}</div>
+                <div className="bus-aisle" aria-hidden="true"><i /><i /><i /></div>
+                <div className="bus-row__side">{celda(rowSeats[2], 2)}{celda(rowSeats[3], 3)}</div>
             </div>
         );
     }
-    return rows;
+
+    return (
+        <div className="bus-shell" role="group" aria-label="Mapa de asientos del bus">
+            <div className="bus-front" aria-hidden="true">
+                <span className="bus-front__windshield">Frente del bus</span>
+            </div>
+
+            <div className="bus-cabin" aria-hidden="true">
+                <div className="bus-cabin__driver">
+                    <Icon name="wheel" size={22} />
+                    <span>Conductor</span>
+                </div>
+                <div className="bus-cabin__door">
+                    <Icon name="door" size={20} />
+                    <span>Puerta</span>
+                </div>
+            </div>
+
+            <div className="bus-body">
+                <div className="bus-rail bus-rail--left" aria-hidden="true"><span>Ventana</span></div>
+                <div className="bus-rows">{rows}</div>
+                <div className="bus-rail bus-rail--right" aria-hidden="true"><span>Ventana</span></div>
+            </div>
+
+            <div className="bus-back" aria-hidden="true">Parte trasera</div>
+        </div>
+    );
 };
 
 const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPago = false }) => {
     const [seats, setSeats] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [myHolds, setMyHolds] = useState([]); // Array de holds: [{ holdId, asiento, rutaId, fecha, expiresAt, remainingMs }]
+    const [myHolds, setMyHolds] = useState([]); // [{ holdId, asiento, rutaId, fecha, expiresAt, remainingMs }]
     const [apiResponse, setApiResponse] = useState(null);
-    const [pricingInfo, setPricingInfo] = useState(null); // { precioBase, descuento, recargo, totalPagar }
+    const [pricingInfo, setPricingInfo] = useState(null);
     const [showDebug, setShowDebug] = useState(false);
     const [debugData, setDebugData] = useState(null);
     const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
@@ -104,18 +169,16 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 getHolds()
             ]);
 
-            // Guardar para debug
             setDebugData({
                 disponibles: disponiblesRes,
                 holds: holdsRes,
                 timestamp: new Date().toISOString()
             });
 
-            consecutiveErrors.current = 0; // Resetear en éxito
+            consecutiveErrors.current = 0;
             setApiResponse({ disponibles: disponiblesRes, holds: holdsRes });
 
             if (disponiblesRes.ok) {
-                // Normalizar la respuesta - puede venir como available[] o asientos[]
                 let availableSeats = [];
                 if (Array.isArray(disponiblesRes.available)) {
                     availableSeats = disponiblesRes.available;
@@ -133,7 +196,6 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 });
                 setSeats(seatMap || []);
 
-                // Buscar todos mis holds activos para esta ruta y fecha
                 const myActiveHolds = (holdsRes.holds || []).filter(
                     h => (h.userId === myUserId || h.clientId === myUserId) && h.rutaId === rutaIdToUse && h.fecha === fecha
                 );
@@ -147,21 +209,19 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                         remainingMs: h.remainingMs
                     })));
                 }
+            } else if (disponiblesRes._isFallback) {
+                const seatMap = buildSeatMap({
+                    available: disponiblesRes.available || [],
+                    holds: [],
+                    total: 40,
+                    myUserId
+                });
+                setSeats(seatMap || []);
             } else {
-                if (disponiblesRes._isFallback) {
-                    const seatMap = buildSeatMap({
-                        available: disponiblesRes.available || [],
-                        holds: [],
-                        total: 40,
-                        myUserId
-                    });
-                    setSeats(seatMap || []);
-                } else {
-                    setError(disponiblesRes.error || 'Error al cargar asientos');
-                }
+                setError(disponiblesRes.error || 'Error al cargar asientos');
             }
         } catch (e) {
-            consecutiveErrors.current += 1; // Incrementar en error
+            consecutiveErrors.current += 1;
             setError(e.message);
         } finally {
             setLoading(false);
@@ -172,18 +232,18 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         loadSeats();
     }, [loadSeats]);
 
-    // Auto-refresh cada 10 segundos — se detiene si hay 3 errores consecutivos (evita spam de 404/timeouts)
+    // Auto-refresh cada 10 segundos — se detiene si hay 3 errores consecutivos
     useEffect(() => {
-        consecutiveErrors.current = 0; // Resetear al cambiar ruta o fecha
+        consecutiveErrors.current = 0;
         const interval = setInterval(() => {
-            if (myHolds.length > 0) return; // No refrescar si el usuario tiene holds activos
-            if (consecutiveErrors.current >= 3) return; // Detener si la API falla repetidamente
+            if (myHolds.length > 0) return;
+            if (consecutiveErrors.current >= 3) return;
             loadSeats();
         }, 10000);
         return () => clearInterval(interval);
     }, [loadSeats, myHolds.length, rutaId, fecha]);
 
-    // Calcular precio total usando la API de pricing
+    // Calcular precio total usando la API de pricing (precio de la ruta local)
     const calculateTotalPrice = useCallback(async () => {
         if (myHolds.length === 0) {
             setPricingInfo(null);
@@ -191,15 +251,11 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         }
 
         try {
-            // Pasar rutaId para que use el precio de la ruta local, no el de la API externa
-            console.log(`[BusSeatSelector] Llamando getPricing con cantidad: ${myHolds.length}, rutaId: ${normalizedRutaId}`);
-            // El precio canónico viene de la ruta seleccionada y debe ser el
-            // mismo que se muestra antes de abrir PayPal.
+            // El precio canónico viene de la ruta seleccionada y es el mismo que
+            // viaja a la API externa al bloquear, así que coincide con PayPal.
             const pricingResult = await getPricing(myHolds.length, normalizedRutaId);
-            console.log('[BusSeatSelector] Pricing result:', pricingResult);
 
             if (pricingResult.ok) {
-                // La API retorna: { cantidad, precioUnitario, subtotal, porcentajeDescuento, montoDescuento, total, ahorros }
                 setPricingInfo({
                     ok: true,
                     cantidad: pricingResult.cantidad,
@@ -212,7 +268,8 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                     recargo: 0,
                     recargoTotal: 0,
                     totalPagar: pricingResult.total,
-                    ahorros: pricingResult.ahorros,
+                    ahorros: pricingResult.montoDescuento,
+                    cobro: pricingResult.cobro || null,
                     _isFallback: pricingResult._isFallback || false
                 });
             } else {
@@ -242,11 +299,9 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
             return;
         }
 
-        // Verificar si el asiento ya está en mis holds
         const existingHold = myHolds.find(h => h.asiento === seat.number);
 
         if (existingHold) {
-            // Deseleccionar: cancelar el hold
             setLoading(true);
             setError(null);
 
@@ -271,14 +326,12 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 setLoading(false);
             }
         } else if (seat.status === 'available') {
-            // Seleccionar: crear hold
             setLoading(true);
             setError(null);
 
             try {
                 const result = await createHold({ rutaId: rutaIdToUse, fecha, seatNumber: seat.number });
 
-                // Guardar para debug
                 setDebugData(prev => ({
                     ...prev,
                     lastHoldResponse: result,
@@ -307,35 +360,9 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         }
     };
 
-    // Cancelar todos los holds
+    // Cancelar todos los holds (con ventana emergente de la aplicación, no `confirm()`)
     const handleCancelAll = async () => {
         if (myHolds.length === 0) return;
-
-        /**
-         * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
-         * emergente de la aplicación.
-         *
-         * Esta pantalla usa 3 llamadas nativas. Un `window.confirm` para liberar los holds y dos `alert` de resultado tras confirmar las reservas.
-         *
-         * Tres problemas concretos:
-         *
-         *  1. `alert()` y `confirm()` bloquean el hilo principal: mientras el diálogo
-         *     está abierto, React no puede repintar ni se ejecutan los temporizadores.
-         *     En las pantallas de asientos eso congela el contador del hold.
-         *  2. El navegador los pinta con su propio estilo, ajeno al negro + amarillo del
-         *     proyecto, y antepone el dominio ("localhost:3000 dice…").
-         *  3. No admiten formato ni contenido enriquecido, así que los mensajes largos
-         *     se apelmazan y los saltos de línea con `\n` se ven de forma distinta en
-         *     cada navegador.
-         *
-         * Sustitución disponible: `components/Popup.jsx` (`AlertPopup` para avisar,
-         * `ConfirmPopup` para confirmar) junto al hook `hooks/useFeedback.js`. Se
-         * renderizan con `createPortal` sobre `document.body` y en la capa `--z-modal`,
-         * por encima del navbar fijo. Ya están aplicados en `LoginForm`, `Profile`,
-         * `Dashboard` y `admin/AdminUsers` y pueden servir de referencia.
-         *
-         * NO se corrige aquí por indicación expresa: solo se documenta.
-         */
         setConfirmCancelOpen(true);
     };
 
@@ -345,19 +372,16 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         const rutaIdToUse = normalizeRutaId(rutaId);
 
         try {
-            const deletePromises = myHolds.map(hold =>
+            const results = await Promise.all(myHolds.map(hold =>
                 deleteHold({
                     holdId: hold.holdId,
                     rutaId: hold.rutaId || rutaIdToUse,
                     fecha: hold.fecha || fecha,
                     asiento: hold.asiento
                 })
-            );
+            ));
 
-            const results = await Promise.all(deletePromises);
-            const allOk = results.every(r => r.ok);
-
-            if (allOk) {
+            if (results.every(r => r.ok)) {
                 setMyHolds([]);
                 setPricingInfo(null);
                 await loadSeats();
@@ -371,7 +395,7 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         }
     };
 
-    // Reserva los asientos en la API y envía al comprador a PayPal
+    // Crea la orden en la API externa y envía al comprador a PayPal
     const handlePagar = async () => {
         setLoading(true);
         setError(null);
@@ -384,11 +408,10 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         }
     };
 
-    // Confirmar todas las reservas
+    // Confirmar todas las reservas (flujo sin pago en línea)
     const handleConfirm = async () => {
         if (myHolds.length === 0) return;
 
-        // Validar que todos los holds tengan los datos requeridos
         const invalidHolds = myHolds.filter(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento);
         if (invalidHolds.length > 0) {
             setError('Algunos holds no tienen todos los datos requeridos. Por favor, cancela y vuelve a seleccionar.');
@@ -399,17 +422,15 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         setError(null);
 
         try {
-            // Confirmar todos los holds
-            const confirmPromises = myHolds.map(hold =>
+            const results = await Promise.all(myHolds.map(hold =>
                 confirmReserva({
                     holdId: hold.holdId,
                     rutaId: hold.rutaId,
                     fecha: hold.fecha,
                     asiento: hold.asiento
                 })
-            );
+            ));
 
-            const results = await Promise.all(confirmPromises);
             const successful = results.filter(r => r.ok);
             const failed = results.filter(r => !r.ok);
 
@@ -420,7 +441,6 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                     variant: 'success'
                 });
 
-                // Pasar información completa incluyendo precio
                 const completeResult = {
                     ok: true,
                     asientos: myHolds.map(h => h.asiento),
@@ -467,14 +487,19 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
         }
     };
 
-    // Cuando un timer expira
     const handleTimerExpire = (expiredHoldId) => {
         setMyHolds(prev => prev.filter(h => h.holdId !== expiredHoldId));
         loadSeats();
     };
 
-    // Lista de asientos seleccionados
     const selectedSeatsList = myHolds.map(h => h.asiento).sort((a, b) => a - b);
+    const resumen = {
+        libres: seats.filter(s => s.status === 'available').length,
+        mios: seats.filter(s => s.status === 'heldByMe').length,
+        otros: seats.filter(s => s.status === 'heldByOther').length,
+        vendidos: seats.filter(s => s.status === 'reserved').length
+    };
+    const holdsIncompletos = myHolds.some(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento);
 
     return (
         <div className="bus-seat-selector">
@@ -482,9 +507,9 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 open={confirmCancelOpen}
                 onCancel={() => setConfirmCancelOpen(false)}
                 onConfirm={confirmCancelAll}
-                title="¿Cancelar todos los holds?"
+                title="¿Liberar todos los asientos?"
                 message={`Se liberarán ${myHolds.length} asiento${myHolds.length > 1 ? 's' : ''} seleccionado${myHolds.length > 1 ? 's' : ''}.`}
-                confirmLabel="Cancelar holds"
+                confirmLabel="Liberar asientos"
                 cancelLabel="Mantener asientos"
                 destructive
             />
@@ -495,208 +520,172 @@ const BusSeatSelector = ({ rutaId, fecha, onClose, onReservationComplete, modoPa
                 message={popupMessage?.message}
                 variant={popupMessage?.variant}
             />
+
             <div className="selector-header">
-                <h2 style={{ color: '#000' }}>Selección de Asientos</h2>
-                <p style={{ color: '#000' }}>Ruta: {normalizedRutaId || 'N/A'} | Fecha: {String(fecha || '')}</p>
+                <div>
+                    <h2><Icon name="bus" size="0.95em" /> Selección de asientos</h2>
+                    <p>Fecha de viaje: {String(fecha || '')}</p>
+                </div>
                 {onClose && (
-                    <button className="btn-close" onClick={onClose}>✕</button>
+                    <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar">
+                        <Icon name="x" size={20} />
+                    </button>
                 )}
             </div>
 
             {error && (
                 <div className="error-banner">
-                    <span style={{ color: '#000' }}>{error}</span>
-                    <button onClick={() => setError(null)}>✕</button>
+                    <span><Icon name="alert" size={16} /> {error}</span>
+                    <button type="button" onClick={() => setError(null)} aria-label="Cerrar aviso"><Icon name="x" size={16} /></button>
                 </div>
             )}
 
-            {loading && <div className="loading-overlay" style={{ color: '#000' }}>Cargando...</div>}
-
-            <div className="bus-container">
-                <div className="driver-section">🚌 Conductor</div>
-                <div className="seats-grid">
-                    <BusGrid seats={seats} myHolds={myHolds} loading={loading} onSeatClick={handleSeatClick} />
+            {loading && (
+                <div className="loading-overlay">
+                    <Icon name="loader" size={16} className="spin" /> Actualizando el mapa…
                 </div>
-            </div>
+            )}
+
+            <BusGrid seats={seats} myHolds={myHolds} loading={loading} onSeatClick={handleSeatClick} />
 
             <div className="legend">
-                <span className="legend-item"><span className="dot available"></span> Disponible</span>
-                <span className="legend-item"><span className="dot heldByMe"></span> Mi Hold</span>
-                <span className="legend-item"><span className="dot heldByOther"></span> Ocupado (Hold)</span>
-                <span className="legend-item"><span className="dot reserved"></span> Reservado</span>
+                <span className="legend-item"><span className="dot available" /> Disponible</span>
+                <span className="legend-item"><span className="dot heldByMe" /> Tu selección</span>
+                <span className="legend-item"><span className="dot heldByOther" /> Bloqueado por otro</span>
+                <span className="legend-item"><span className="dot reserved" /> Vendido</span>
             </div>
 
-            {/* Lista de asientos seleccionados */}
+            {seats.length > 0 && (
+                <div className="bus-stats" aria-label="Resumen de ocupación">
+                    <div className="bus-stat"><strong>{resumen.libres}</strong><span>Libres</span></div>
+                    <div className="bus-stat bus-stat--mine"><strong>{resumen.mios}</strong><span>Tuyos</span></div>
+                    <div className="bus-stat bus-stat--held"><strong>{resumen.otros}</strong><span>En espera</span></div>
+                    <div className="bus-stat bus-stat--taken"><strong>{resumen.vendidos}</strong><span>Vendidos</span></div>
+                </div>
+            )}
+
+            {/* Asientos seleccionados y su cuenta atrás */}
             {selectedSeatsList.length > 0 && (
-                <div className="selected-seats-panel" style={{
-                    background: '#e8f5e9',
-                    border: '2px solid #4caf50',
-                    borderRadius: '8px',
-                    padding: '15px',
-                    marginBottom: '15px'
-                }}>
-                    <strong style={{ color: '#000', display: 'block', marginBottom: '10px', fontSize: '16px' }}>
-                        Asientos seleccionados: [{selectedSeatsList.join(', ')}]
-                    </strong>
-                    {myHolds.map(hold => (
-                        <div key={hold.holdId} style={{ marginBottom: '8px', fontSize: '14px', color: '#000' }}>
-                            <span>Asiento #{hold.asiento}</span>
-                            <HoldTimer
-                                expiresAt={hold.expiresAt}
-                                remainingMs={hold.remainingMs}
-                                onExpire={() => handleTimerExpire(hold.holdId)}
-                            />
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Panel de Precio */}
-            {myHolds.length > 0 && pricingInfo && pricingInfo.ok && (
-                <div className="pricing-panel" style={{
-                    marginBottom: '15px',
-                    padding: '15px',
-                    background: '#f8f9fa',
-                    borderRadius: '8px',
-                    border: '1px solid #dee2e6'
-                }}>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: '600', color: '#000' }}>
-                        💰 Resumen de Precio {pricingInfo._isFallback && <span style={{ color: '#999', fontSize: '12px' }}>(local)</span>}
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', color: '#000' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Precio Unitario:</span>
-                            <strong>${pricingInfo.precioBase?.toLocaleString() || '0'}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Cantidad de Asientos:</span>
-                            <strong>{pricingInfo.cantidadAsientos || myHolds.length}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Subtotal:</span>
-                            <strong>${pricingInfo.precioBaseTotal?.toLocaleString() || '0'}</strong>
-                        </div>
-                        {pricingInfo.porcentajeDescuento > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#28a745' }}>
-                                <span>Descuento ({pricingInfo.porcentajeDescuento}%):</span>
-                                <strong>-${pricingInfo.descuentoTotal?.toLocaleString() || '0'}</strong>
-                            </div>
-                        )}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            marginTop: '8px',
-                            paddingTop: '8px',
-                            borderTop: '2px solid #dee2e6',
-                            fontSize: '18px',
-                            fontWeight: 'bold'
-                        }}>
-                            <span>Total a Pagar:</span>
-                            <strong style={{ color: '#11998e' }}>
-                                ${pricingInfo.totalPagar?.toLocaleString() || '0'}
-                            </strong>
-                        </div>
-                        {pricingInfo.ahorros > 0 && (
-                            <div style={{
-                                textAlign: 'center',
-                                background: '#d4edda',
-                                color: '#155724',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                marginTop: '8px',
-                                fontWeight: '600'
-                            }}>
-                                ¡Ahorras ${pricingInfo.ahorros?.toLocaleString() || '0'}!
-                            </div>
-                        )}
+                <div className="selected-seats-panel">
+                    <div className="selected-seats-panel__head">
+                        <Icon name="seat" size={18} />
+                        <strong>Asientos seleccionados: {selectedSeatsList.join(', ')}</strong>
                     </div>
+                    <ul className="selected-seats-list">
+                        {myHolds.map(hold => (
+                            <li key={hold.holdId}>
+                                <span>Asiento {hold.asiento} · {posicionAsiento(hold.asiento)}</span>
+                                <HoldTimer
+                                    expiresAt={hold.expiresAt}
+                                    remainingMs={hold.remainingMs}
+                                    onExpire={() => handleTimerExpire(hold.holdId)}
+                                />
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 
-            {/* Panel de acciones */}
+            {/* Resumen de precio: el que se envía a PayPal */}
+            {myHolds.length > 0 && pricingInfo && pricingInfo.ok && (
+                <div className="pricing-panel">
+                    <h4>
+                        <Icon name="wallet" size={18} /> Resumen de precio
+                        {pricingInfo._isFallback && <span className="pricing-panel__tag">cálculo local</span>}
+                    </h4>
+                    <dl className="pricing-rows">
+                        <div><dt>Precio por asiento</dt><dd>{formatoUSD(pricingInfo.precioBase)}</dd></div>
+                        <div><dt>Asientos</dt><dd>{pricingInfo.cantidadAsientos || myHolds.length}</dd></div>
+                        <div><dt>Subtotal</dt><dd>{formatoUSD(pricingInfo.precioBaseTotal)}</dd></div>
+                        {pricingInfo.porcentajeDescuento > 0 && (
+                            <div className="pricing-rows__save">
+                                <dt>Descuento ({pricingInfo.porcentajeDescuento}%)</dt>
+                                <dd>−{formatoUSD(pricingInfo.descuentoTotal)}</dd>
+                            </div>
+                        )}
+                    </dl>
+                    <div className="pricing-total">
+                        <span>Total a pagar</span>
+                        <strong>{formatoUSD(pricingInfo.totalPagar)}</strong>
+                    </div>
+                    {pricingInfo.cobro?.valor && (
+                        <div className="pricing-charge">
+                            Se cobrarán {pricingInfo.cobro.valor} {pricingInfo.cobro.moneda} en PayPal
+                        </div>
+                    )}
+                    {pricingInfo.ahorros > 0 && (
+                        <div className="pricing-savings">
+                            <Icon name="check-circle" size={14} /> Ahorras {formatoUSD(pricingInfo.ahorros)}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Acciones */}
             {myHolds.length > 0 && (
                 <div className="hold-panel">
                     <div className="hold-actions">
                         <button
+                            type="button"
                             className="btn btn-confirm"
                             onClick={modoPago ? handlePagar : handleConfirm}
-                            disabled={loading || !pricingInfo?.ok || myHolds.some(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento)}
-                            title={!pricingInfo?.ok ? 'Calculando precio...' : (myHolds.some(h => !h.holdId || !h.rutaId || !h.fecha || !h.asiento) ? 'Faltan datos en algunos holds' : '')}
+                            disabled={loading || !pricingInfo?.ok || holdsIncompletos}
+                            title={!pricingInfo?.ok ? 'Calculando precio...' : (holdsIncompletos ? 'Faltan datos en algunos holds' : '')}
                         >
                             {modoPago
-                                ? `Pagar $${pricingInfo?.totalPagar?.toLocaleString() || ''} con PayPal`
-                                : `✓ Confirmar ${myHolds.length} Reserva${myHolds.length > 1 ? 's' : ''}`}
+                                ? <><Icon name="card" size={16} /> Pagar {pricingInfo?.totalPagar != null ? formatoUSD(pricingInfo.totalPagar) : ''} con PayPal</>
+                                : <><Icon name="check" size={16} /> Confirmar {myHolds.length} reserva{myHolds.length > 1 ? 's' : ''}</>}
                         </button>
                         <button
+                            type="button"
                             className="btn btn-cancel"
                             onClick={handleCancelAll}
                             disabled={loading}
                         >
-                            ✕ Cancelar Todo
+                            <Icon name="x" size={16} /> Liberar todo
                         </button>
                     </div>
                 </div>
             )}
 
             <div className="actions-bar">
-                <button className="btn btn-refresh" onClick={loadSeats} disabled={loading}>
-                    🔄 Refrescar
+                <button type="button" className="btn btn-refresh" onClick={loadSeats} disabled={loading}>
+                    <Icon name="refresh" size={16} /> Actualizar
                 </button>
                 <button
+                    type="button"
                     className="btn btn-refresh"
                     onClick={() => setShowDebug(!showDebug)}
-                    style={{ marginLeft: '10px' }}
                 >
-                    🔍 Ver datos de la API
+                    <Icon name="search" size={16} /> Datos de la API
                 </button>
             </div>
 
-            {/* Panel de Debug */}
+            {/* Panel de depuración */}
             {showDebug && (
-                <div className="api-debug" style={{
-                    background: '#1a1a2e',
-                    color: '#0f0',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    marginTop: '15px',
-                    maxHeight: '400px',
-                    overflow: 'auto'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <strong style={{ color: '#fff' }}>Datos de la API (Debug)</strong>
-                        <button
-                            onClick={() => setShowDebug(false)}
-                            style={{ background: '#dc3545', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                            Cerrar
-                        </button>
+                <div className="api-debug">
+                    <div className="api-debug__head">
+                        <strong>Datos de la API (depuración)</strong>
+                        <button type="button" onClick={() => setShowDebug(false)}>Cerrar</button>
                     </div>
                     <details open>
-                        <summary style={{ color: '#888', cursor: 'pointer', marginBottom: '10px' }}>GET /api/asientos/disponibles</summary>
-                        <pre style={{ color: '#0f0', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {JSON.stringify(debugData?.disponibles || apiResponse?.disponibles || {}, null, 2)}
-                        </pre>
+                        <summary>GET /api/asientos/disponibles</summary>
+                        <pre>{JSON.stringify(debugData?.disponibles || apiResponse?.disponibles || {}, null, 2)}</pre>
                     </details>
                     <details open>
-                        <summary style={{ color: '#888', cursor: 'pointer', marginBottom: '10px' }}>GET /api/asientos/holds</summary>
-                        <pre style={{ color: '#0f0', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                            {JSON.stringify(debugData?.holds || apiResponse?.holds || {}, null, 2)}
-                        </pre>
+                        <summary>GET /api/asientos/holds</summary>
+                        <pre>{JSON.stringify(debugData?.holds || apiResponse?.holds || {}, null, 2)}</pre>
                     </details>
                     {debugData?.lastHoldResponse && (
                         <details open>
-                            <summary style={{ color: '#888', cursor: 'pointer', marginBottom: '10px' }}>POST /api/asientos/reservar (último hold)</summary>
-                            <pre style={{ color: '#0f0', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                                {JSON.stringify(debugData.lastHoldResponse, null, 2)}
-                            </pre>
+                            <summary>POST /api/asientos/reservar (último hold)</summary>
+                            <pre>{JSON.stringify(debugData.lastHoldResponse, null, 2)}</pre>
                         </details>
                     )}
                     {pricingInfo && (
                         <details open>
-                            <summary style={{ color: '#888', cursor: 'pointer', marginBottom: '10px' }}>POST /api/asientos/calcular-precio</summary>
-                            <pre style={{ color: '#0f0', fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                                {JSON.stringify(pricingInfo, null, 2)}
-                            </pre>
+                            <summary>POST /api/pricing/calcular-precio</summary>
+                            <pre>{JSON.stringify(pricingInfo, null, 2)}</pre>
                         </details>
                     )}
                 </div>

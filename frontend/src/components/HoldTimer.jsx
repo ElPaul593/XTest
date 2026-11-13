@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Icon from './Icon';
 
 /**
  * HoldTimer - Componente de cuenta regresiva para el hold de asiento
@@ -51,7 +52,7 @@ const HoldTimer = ({ expiresAt, remainingMs, onExpire }) => {
 
     return (
         <div className={`hold-timer ${getColorClass()}`}>
-            <span className="timer-icon">⏱</span>
+            <span className="timer-icon"><Icon name="timer" size={16} /></span>
             <span className="timer-value">{formatTime(timeLeft)}</span>
         </div>
     );
@@ -92,7 +93,8 @@ const styles = `
 }
 
 .timer-icon {
-    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
 }
 `;
 

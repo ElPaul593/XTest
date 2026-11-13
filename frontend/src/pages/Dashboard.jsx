@@ -6,6 +6,7 @@ import BusSeatSelector from '../components/BusSeatSelector';
 import BoletoQR from '../components/BoletoQR';
 import Popup, { AlertPopup, ConfirmPopup } from '../components/Popup';
 import useFeedback from '../hooks/useFeedback';
+import Icon from '../components/Icon';
 
 /**
  * Dashboard del USUARIO: "Mis Reservas".
@@ -261,7 +262,7 @@ export default function Dashboard() {
             <p>Elige ruta y fecha y selecciona tu asiento en el mapa del bus.</p>
           </div>
           <button type="button" className="btn btn-primary" onClick={() => setShowQuickReserve(true)}>
-            🚌 Reserva rápida
+            <Icon name="bus" size={18} /> Reserva rápida
           </button>
         </div>
 
@@ -274,7 +275,7 @@ export default function Dashboard() {
           onClose={() => setShowQuickReserve(false)}
           title="Reserva rápida"
           subtitle="Elige la ruta y el día del viaje."
-          icon="🚌"
+          icon="bus"
         >
           <div className="field">
             <label htmlFor="qr-ruta">Ruta</label>
@@ -287,7 +288,7 @@ export default function Dashboard() {
               <option value="">— Elige una ruta —</option>
               {rutas.map(r => (
                 <option key={r._id || r.id} value={r._id || r.id}>
-                  {r.from} ➜ {r.to} (${r.price})
+                  {r.from} → {r.to} (${r.price})
                 </option>
               ))}
             </select>
@@ -367,7 +368,7 @@ export default function Dashboard() {
                   <div className="boleto-header">
                     <div className="route">
                       <span className="origen">{reserva.ruta?.from || 'Origen'}</span>
-                      <span className="arrow">➜</span>
+                      <span className="arrow"><Icon name="arrow-right" size={16} /></span>
                       <span className="destino">{reserva.ruta?.to || 'Destino'}</span>
                     </div>
                     <div className="precioStatus">
@@ -413,7 +414,7 @@ export default function Dashboard() {
                       onClick={() => setQrReserva(reserva)}
                       style={{ marginTop: '10px' }}
                     >
-                      🎫 Ver QR
+                      <Icon name="qr" size={16} /> Ver QR
                     </button>
                     <button
                       type="button"
@@ -421,7 +422,7 @@ export default function Dashboard() {
                       onClick={() => handleChangeSeat(reserva)}
                       style={{ marginTop: '10px' }}
                     >
-                      🔄 Cambiar Asiento
+                      <Icon name="refresh" size={16} /> Cambiar Asiento
                     </button>
                     <button
                       className="btn btn-danger"

@@ -74,7 +74,7 @@ export default function AdminStats() {
                   <tbody>
                     {stats.porRuta.map((r, i) => (
                       <tr key={i}>
-                        <td>{r.route?.from} ➜ {r.route?.to}</td>
+                        <td>{r.route?.from} → {r.route?.to}</td>
                         <td>{r.totalReservas}</td>
                         <td>{r.reservasActivas}</td>
                         <td>{r.reservasCanceladas}</td>

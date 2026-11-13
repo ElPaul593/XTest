@@ -85,7 +85,7 @@ export default function AdminBoletos() {
     const ruta = r.ruta || {};
     const seats = Array.isArray(r.seatNumbers) && r.seatNumbers.length ? r.seatNumbers.join(',') : r.seatNumber;
     const userName = r.user && typeof r.user === 'object' ? `${r.user.nombre || ''} ${r.user.apellido || ''}`.trim() : '';
-    return `${ruta.from || '?'} ➜ ${ruta.to || '?'} | asientos ${seats}${userName ? ' | ' + userName : ''}`;
+    return `${ruta.from || '?'} → ${ruta.to || '?'} | asientos ${seats}${userName ? ' | ' + userName : ''}`;
   };
 
   return (

@@ -365,7 +365,7 @@ export default function LoginForm() {
         title="¿Olvidaste tu contraseña o tu correo?"
         subtitle="Te enviaremos un enlace para crear una contraseña nueva."
         variant="info"
-        icon="✉"
+        icon="mail"
         closeOnBackdrop={!resetEnviando}
         showClose={!resetEnviando}
       >
@@ -428,7 +428,7 @@ export default function LoginForm() {
         title="Confirma tu correo electrónico"
         subtitle={verificacionPendiente?.email || undefined}
         variant="warning"
-        icon="✉"
+        icon="mail"
       >
         <p>
           Todavía no has confirmado tu dirección. Te enviamos un enlace al registrarte:

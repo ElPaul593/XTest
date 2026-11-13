@@ -6,6 +6,7 @@ import BusSeatSelector from '../components/BusSeatSelector';
 import { capturarPago } from '../services/pagos';
 import './SeatBooking.css';
 import { AlertPopup } from '../components/Popup';
+import Icon from '../components/Icon';
 
 const SeatBooking = () => {
     const navigate = useNavigate();
@@ -159,7 +160,7 @@ const SeatBooking = () => {
     return (
         <div className="seat-booking-page">
             <div className="booking-header">
-                <h1>🚌 Reserva de Asientos</h1>
+                <h1><Icon name="bus" size="0.9em" /> Reserva de Asientos</h1>
                 <p>Selecciona tu ruta, fecha y asiento preferido</p>
             </div>
 
@@ -178,7 +179,7 @@ const SeatBooking = () => {
                                     <option value="">-- Selecciona una ruta --</option>
                                     {rutas.map((ruta) => (
                                         <option key={ruta._id || ruta.id} value={ruta._id || ruta.id}>
-                                            {ruta.from} ➜ {ruta.to} (${ruta.price})
+                                            {ruta.from} → {ruta.to} (${ruta.price})
                                         </option>
                                     ))}
                                 </select>
@@ -204,14 +205,14 @@ const SeatBooking = () => {
                                 onClick={handleReservarClick}
                                 disabled={!selectedRuta || !selectedFecha || loading}
                             >
-                                🎫 Reservar Ahora
+                                <Icon name="ticket" size={18} /> Reservar Ahora
                             </button>
                         </div>
 
                         {selectedRuta && selectedFecha && (
                             <div className="info-preview">
                                 <p>
-                                    <strong>Ruta seleccionada:</strong> {rutas.find(r => (r._id || r.id) === selectedRuta)?.from} ➜ {rutas.find(r => (r._id || r.id) === selectedRuta)?.to}
+                                    <strong>Ruta seleccionada:</strong> {rutas.find(r => (r._id || r.id) === selectedRuta)?.from} <Icon name="arrow-right" size={14} /> {rutas.find(r => (r._id || r.id) === selectedRuta)?.to}
                                 </p>
                                 <p>
                                     <strong>Fecha:</strong> {selectedFecha}

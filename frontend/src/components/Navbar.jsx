@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { isAuthenticated, isAdmin, isAgente, homePathForRole } from '../services/session';
 import { logout } from '../services/auth';
 import useTheme from '../hooks/useTheme';
+import Icon from './Icon';
 
 /**
  * Barra de navegación.
@@ -14,19 +15,19 @@ import useTheme from '../hooks/useTheme';
  */
 function enlacesPorRol({ admin, agente }) {
   if (agente && !admin) {
-    return [{ to: '/agente', label: 'Verificar boletos', icon: '🎫' }];
+    return [{ to: '/agente', label: 'Verificar boletos', icon: 'qr' }];
   }
 
   const comunes = [
-    { to: '/boletos', label: 'Comprar boletos', icon: '🎟️' },
-    { to: '/dashboard', label: 'Mis reservas', icon: '🧾' },
-    { to: '/lugares-turisticos', label: 'Lugares', icon: '📍' }
+    { to: '/boletos', label: 'Comprar boletos', icon: 'ticket' },
+    { to: '/dashboard', label: 'Mis reservas', icon: 'receipt' },
+    { to: '/lugares-turisticos', label: 'Lugares', icon: 'pin' }
   ];
 
   if (admin) {
     return [
-      { to: '/admin', label: 'Panel admin', icon: '⚙️' },
-      { to: '/agente', label: 'Verificar boletos', icon: '🎫' },
+      { to: '/admin', label: 'Panel admin', icon: 'settings' },
+      { to: '/agente', label: 'Verificar boletos', icon: 'qr' },
       ...comunes
     ];
   }
@@ -86,7 +87,7 @@ export default function Navbar() {
             {enlaces.map((e) => (
               <li key={e.to}>
                 <NavLink to={e.to} className={({ isActive }) => `topbar-link ${isActive ? 'is-active' : ''}`}>
-                  {e.label}
+                  <Icon name={e.icon} size={16} />{e.label}
                 </NavLink>
               </li>
             ))}
@@ -102,7 +103,7 @@ export default function Navbar() {
             aria-pressed={theme === 'light'}
             title={`Cambiar a modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
           >
-            <span aria-hidden="true">{theme === 'dark' ? '☀' : '🌙'}</span>
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
           </button>
           {sesion ? (
             <>
@@ -113,7 +114,7 @@ export default function Navbar() {
                   aria-label="Mi perfil"
                   title="Mi perfil"
                 >
-                  👤
+                  <Icon name="user" size={18} />
                 </NavLink>
               )}
               <button type="button" className="btn btn-ghost btn-sm topbar-desktop" onClick={handleLogout}>
@@ -148,14 +149,14 @@ export default function Navbar() {
             {enlaces.map((e) => (
               <li key={e.to}>
                 <NavLink to={e.to} className={({ isActive }) => `drawer-link ${isActive ? 'is-active' : ''}`}>
-                  <span aria-hidden="true">{e.icon}</span>{e.label}
+                  <Icon name={e.icon} size={18} />{e.label}
                 </NavLink>
               </li>
             ))}
             {!(agente && !admin) && (
               <li>
                 <NavLink to="/profile" className={({ isActive }) => `drawer-link ${isActive ? 'is-active' : ''}`}>
-                  <span aria-hidden="true">👤</span>Mi perfil
+                  <Icon name="user" size={18} />Mi perfil
                 </NavLink>
               </li>
             )}

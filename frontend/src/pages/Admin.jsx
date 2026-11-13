@@ -5,14 +5,15 @@ import AdminBoletos from './admin/AdminBoletos';
 import AdminStats from './admin/AdminStats';
 import AdminLugares from './admin/AdminLugares';
 import AdminFinanzas from './admin/AdminFinanzas';
+import Icon from '../components/Icon';
 
 const TABS = [
-  { key: 'usuarios', label: '👥 Usuarios', Comp: AdminUsers },
-  { key: 'rutas', label: '🛣️ Rutas', Comp: AdminRutas },
-  { key: 'lugares', label: '🗺️ Lugares', Comp: AdminLugares },
-  { key: 'boletos', label: '🎫 Boletos', Comp: AdminBoletos },
-  { key: 'stats', label: '📊 Estadísticas', Comp: AdminStats },
-  { key: 'finanzas', label: '💵 Finanzas', Comp: AdminFinanzas },
+  { key: 'usuarios', label: 'Usuarios', icon: 'users', Comp: AdminUsers },
+  { key: 'rutas', label: 'Rutas', icon: 'route', Comp: AdminRutas },
+  { key: 'lugares', label: 'Lugares', icon: 'map', Comp: AdminLugares },
+  { key: 'boletos', label: 'Boletos', icon: 'ticket', Comp: AdminBoletos },
+  { key: 'stats', label: 'Estadísticas', icon: 'chart', Comp: AdminStats },
+  { key: 'finanzas', label: 'Finanzas', icon: 'banknote', Comp: AdminFinanzas },
 ];
 
 export default function Admin() {
@@ -34,7 +35,7 @@ export default function Admin() {
               onClick={() => setActive(t.key)}
               className={`btn ${active === t.key ? 'btn-primary' : 'btn-secondary'}`}
             >
-              {t.label}
+              <Icon name={t.icon} size={16} /> {t.label}
             </button>
           ))}
         </div>

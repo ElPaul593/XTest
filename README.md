@@ -41,8 +41,12 @@ docker compose up --build
   y el usuario a **Mis Reservas** (con código QR del boleto).
 
 ## Documentación
+- **Estado del proyecto (fase final):** [`docs/ESTADO-DEL-PROYECTO.md`](./docs/ESTADO-DEL-PROYECTO.md)
+- Integración con la API de asientos y PayPal: [`docs/INTEGRACION-SEAT-API.md`](./docs/INTEGRACION-SEAT-API.md)
+- Variables de entorno de los dos repositorios: [`docs/VARIABLES-DE-ENTORNO.md`](./docs/VARIABLES-DE-ENTORNO.md)
+- Despliegue y verificación en producción: [`docs/DESPLIEGUE-Y-VERIFICACION.md`](./docs/DESPLIEGUE-Y-VERIFICACION.md)
 - Arquitectura: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
-- Despliegue: [`DEPLOYMENT.md`](./DEPLOYMENT.md)
+- Despliegue (configuración inicial): [`DEPLOYMENT.md`](./DEPLOYMENT.md)
 - API (Swagger): `http://localhost:5000/api-docs`
 
 ## CI/CD con GitHub Actions

@@ -5,6 +5,7 @@ import { validarCedula } from '../services/cedula';
 import { PAISES } from '../constants/paises';
 import { getCodigoTelefonico } from '../constants/codigosTelefonicos';
 import PasswordInput from './PasswordInput';
+import Icon from './Icon';
 
 export default function RegisterForm() {
   const [activeTab, setActiveTab] = useState('nacional'); // 'nacional' o 'extranjero'
@@ -396,9 +397,9 @@ export default function RegisterForm() {
                   Cédula
                   {cedulaDigits.length === 10 && (
                     <span style={{marginLeft: '8px', fontSize: '0.85em'}}>
-                      {validandoCedula && '⏳ Validando...'}
-                      {!validandoCedula && cedulaValida === true && '✓ Válida'}
-                      {!validandoCedula && cedulaValida === false && '✗ Inválida'}
+                      {validandoCedula && <><Icon name="loader" size={12} className="spin" /> Validando...</>}
+                      {!validandoCedula && cedulaValida === true && <><Icon name="check" size={12} /> Válida</>}
+                      {!validandoCedula && cedulaValida === false && <><Icon name="x" size={12} /> Inválida</>}
                     </span>
                   )}
                 </label>
@@ -422,7 +423,7 @@ export default function RegisterForm() {
                 {cedulaError && <div className="error">{cedulaError}</div>}
                 {cedulaDigits.length === 10 && !cedulaError && cedulaValida === true && (
                   <div style={{color: '#28a745', fontSize: '0.85em', marginTop: '4px'}}>
-                    ✓ Cédula ecuatoriana válida
+                    <Icon name="check-circle" size={14} /> Cédula ecuatoriana válida
                   </div>
                 )}
               </div>
@@ -599,7 +600,7 @@ export default function RegisterForm() {
               </div>
               {activeTab === 'extranjero' && !paisOrigen && (
                 <div style={{ fontSize: '0.85em', color: '#666', marginTop: '4px' }}>
-                  ⓘ Seleccione un país de origen para habilitar el campo de teléfono
+                  <Icon name="info" size={14} /> Seleccione un país de origen para habilitar el campo de teléfono
                 </div>
               )}
               {telefonoError && <div className="error">{telefonoError}</div>}

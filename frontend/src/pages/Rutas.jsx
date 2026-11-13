@@ -311,7 +311,7 @@ export default function Rutas() {
               return (
                 <>
             <div className="ruta-fila__info">
-              <strong>{ruta.origen} ➜ {ruta.destino}</strong>
+              <strong>{ruta.origen} → {ruta.destino}</strong>
               <span>
                 {ruta.salidas.length ? (
                   <label>

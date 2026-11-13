@@ -4,6 +4,7 @@ import { getRecomendados } from '../services/recomendaciones';
 import { TIPOS_RECOMENDACION, TIPO_DEFAULT } from '../constants/recomendaciones';
 import { API_BASE_URL } from '../constants/api';
 import { AlertPopup } from '../components/Popup';
+import Icon, { Stars } from '../components/Icon';
 
 function resolverImagen(item) {
   const url = item?.imagen || item?.fotoUrl;
@@ -98,10 +99,6 @@ export default function Recomendados() {
     }
   };
 
-  const renderStars = (rating) => {
-    return '⭐'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
-  };
-
   if (loading) {
     return <div className="recomendados-container"><div className="loading">Cargando recomendaciones...</div></div>;
   }
@@ -159,7 +156,7 @@ export default function Recomendados() {
                 />
               ) : (
                 <div className="recomendado-card__image recomendado-card__image--fallback" aria-hidden="true">
-                  🏞️
+                  <Icon name="landscape" size={40} />
                 </div>
               )}
               <div className="badge-top">
@@ -180,9 +177,7 @@ export default function Recomendados() {
                 <div className="stat-item">
                   <span className="stat-label">Calificación:</span>
                   <span className="stat-value stat-value--rating">
-                    <span className="rating-stars" aria-label="Estrellas de calificación">
-                      {renderStars(item.promedioGeneral || item.calificacionPromedio || 0)}
-                    </span>
+                    <Stars className="rating-stars" value={item.promedioGeneral || item.calificacionPromedio || 0} />
                     <span className="rating-number">
                       {(item.promedioGeneral || item.calificacionPromedio || 0).toFixed(1)}
                     </span>
@@ -202,7 +197,7 @@ export default function Recomendados() {
                   <div className="stat-item highlight">
                     <span className="stat-label">Tu provincia:</span>
                     <span className="stat-value">
-                      {item.promedioMismaNacionalidad.toFixed(1)} ⭐
+                      {item.promedioMismaNacionalidad.toFixed(1)} <Icon name="star" size={14} filled />
                     </span>
                   </div>
                 )}

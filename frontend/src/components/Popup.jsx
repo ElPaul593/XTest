@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import Icon, { ICON_PATHS } from './Icon';
 
 /**
  * Ventanas emergentes (pop-up) de la aplicación.
@@ -24,12 +25,12 @@ import { createPortal } from 'react-dom';
  */
 
 const ICONOS_POR_VARIANTE = {
-  success: '✓',
-  error: '!',
-  warning: '!',
-  danger: '!',
-  info: 'i',
-  default: 'i'
+  success: 'check',
+  error: 'alert',
+  warning: 'alert',
+  danger: 'alert',
+  info: 'info',
+  default: 'info'
 };
 
 /** Nº de pop-ups abiertos, para no desbloquear el scroll si queda alguno. */
@@ -39,7 +40,7 @@ let popupsAbiertos = 0;
  * Diálogo genérico.
  *
  * @param {boolean}  open             Si está abierto. Cuando es false no renderiza nada.
- * @param {Function} onClose          Cierre por Escape, clic en el velo o botón ✕.
+ * @param {Function} onClose          Cierre por Escape, clic en el velo o botón de cerrar.
  * @param {string}   title            Título.
  * @param {string}   [subtitle]       Texto bajo el título.
  * @param {string}   [icon]           Icono; si se omite se deduce de `variant`.
@@ -164,7 +165,9 @@ export default function Popup({
           <div className="popup-header">
             {iconoMostrado && (
               <div className="popup-icon" aria-hidden="true">
-                {iconoMostrado}
+                {typeof iconoMostrado === 'string' && ICON_PATHS[iconoMostrado]
+                  ? <Icon name={iconoMostrado} size={22} />
+                  : iconoMostrado}
               </div>
             )}
 
@@ -180,7 +183,7 @@ export default function Popup({
                 onClick={handleClose}
                 aria-label="Cerrar"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             )}
           </div>

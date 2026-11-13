@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Icon from './Icon';
 
 /**
  * Escáner de QR basado en la cámara (html5-qrcode).
@@ -89,7 +90,7 @@ export default function QrScanner({ onScan, active }) {
       />
       {error && (
         <div style={{ color: '#b45309', background: '#fef3c7', borderRadius: '8px', padding: '10px', marginTop: '10px', fontSize: '13px' }}>
-          ⚠️ {error}
+          <Icon name="alert" size={16} /> {error}
         </div>
       )}
     </div>

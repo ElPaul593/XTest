@@ -1,5 +1,6 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import Icon from './Icon';
 
 /**
  * Muestra el QR de un boleto/reserva con la información del viaje.
@@ -40,10 +41,10 @@ export default function BoletoQR({ reserva, onClose }) {
           className="boleto-qr-close"
           aria-label="Cerrar"
         >
-          ✕
+          <Icon name="x" size={18} />
         </button>
-        <h2>🎫 Tu boleto</h2>
-        <p className="boleto-qr-route">{origen} ➜ {destino}</p>
+        <h2><Icon name="ticket" size="0.9em" /> Tu boleto</h2>
+        <p className="boleto-qr-route">{origen} <Icon name="arrow-right" size={14} /> {destino}</p>
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <QRCodeSVG value={qrText} size={208} level="M" includeMargin />

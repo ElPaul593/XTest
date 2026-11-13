@@ -6,6 +6,7 @@ import { getCalificaciones, createCalificacion } from '../services/calificacione
 import { OPCIONES_CALIFICACION, CALIFICACION_DEFAULT } from '../constants/calificaciones';
 import { API_BASE_URL } from '../constants/api';
 import { AlertPopup } from '../components/Popup';
+import { Stars } from '../components/Icon';
 
 export default function Destino() {
   const [searchParams] = useSearchParams();
@@ -166,9 +167,7 @@ export default function Destino() {
     }
   };
 
-  const renderStars = (rating) => {
-    return '⭐'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
-  };
+  const renderStars = (rating) => <Stars value={rating} />;
 
   if (loading) {
     return <div className="destino-container"><div className="loading">Cargando...</div></div>;

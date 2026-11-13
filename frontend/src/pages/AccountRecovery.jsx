@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import Icon from '../components/Icon';
 
 /**
  * Recuperación de cuenta por código de 6 dígitos.
@@ -77,7 +78,7 @@ export default function AccountRecovery({ purpose = 'account' }) {
           key={n}
           className={`recovery-step ${step === n ? 'is-active' : ''} ${step > n ? 'is-done' : ''}`}
         >
-          <span className="recovery-step-num" aria-hidden="true">{step > n ? '✓' : n}</span>
+          <span className="recovery-step-num" aria-hidden="true">{step > n ? <Icon name="check" size={14} /> : n}</span>
           <span className="recovery-step-text">{texto}</span>
         </li>
       ))}

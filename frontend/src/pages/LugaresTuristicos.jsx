@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { getLugaresTuristicos } from '../services/lugaresTuristicos';
 import { REGIONES, getProvinciaDeCiudad } from '../constants/provincias';
+import Icon from '../components/Icon';
 
 const LUGARES_POR_TANDA = 12;
 
@@ -34,7 +35,7 @@ function LugarImagen({ lugar, ancho = 640 }) {
   const [fallo, setFallo] = useState(false);
 
   if (!lugar.imagen || fallo) {
-    return <div className="lugar-sin-imagen" aria-hidden="true">🏞️</div>;
+    return <div className="lugar-sin-imagen" aria-hidden="true"><Icon name="landscape" size={40} /></div>;
   }
 
   return (
@@ -60,7 +61,7 @@ function LugarDetalle({ lugar, onClose }) {
   return createPortal(
     <div className="lugar-detalle" role="dialog" aria-modal="true" aria-label={lugar.nombre} onClick={onClose}>
       <div className="lugar-detalle__caja" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="lugar-detalle__cerrar" aria-label="Cerrar" onClick={onClose}>✕</button>
+        <button type="button" className="lugar-detalle__cerrar" aria-label="Cerrar" onClick={onClose}><Icon name="x" size={18} /></button>
         <div className="lugar-detalle__imagen"><LugarImagen lugar={lugar} ancho={1000} /></div>
         <div className="lugar-detalle__cuerpo">
           <p className="lugar-ciudad">{lugar.ciudad}</p>

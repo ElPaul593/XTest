@@ -1392,90 +1392,7 @@ form > .error:last-child {
   border-radius: var(--radius-md) !important;
 }
 
-/* --- Mapa de asientos (BusSeatSelector.css) ---
-   El selector era una tarjeta blanca con el bus en degradado gris claro. Se pasa
-   a cristal oscuro. Los colores de los asientos se conservan porque significan
-   algo (libre / tuyo / de otro / ocupado), solo se ajustan al fondo oscuro. */
-.bus-seat-selector {
-  background: var(--glass-bg-strong) !important;
-  color: var(--text);
-  border: 1px solid var(--glass-border-strong);
-  border-radius: var(--radius-xl) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur-strong));
-  backdrop-filter: blur(var(--glass-blur-strong));
-  box-shadow: var(--glass-shadow-lg) !important;
-}
-
-.selector-header { border-bottom-color: var(--glass-border) !important; }
-.selector-header h2 { color: var(--text) !important; }
-.selector-header p { color: var(--text-muted) !important; }
-.btn-close { color: var(--text-muted) !important; }
-
-.bus-container {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-xl) !important;
-}
-
-.driver-section {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: var(--text-muted) !important;
-  border-radius: var(--radius-md) !important;
-}
-
-.seat {
-  border-radius: 10px !important;
-  border-width: 1px !important;
-  font-family: var(--font-sans);
-  font-weight: 700;
-}
-
-.seat-available  { background: rgba(34, 197, 94, 0.18) !important; border-color: rgba(34, 197, 94, 0.55) !important; color: #bbf7d0 !important; }
-.seat-heldByMe   { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--accent-ink) !important; }
-.seat-heldByOther{ background: rgba(249, 115, 22, 0.2) !important; border-color: rgba(249, 115, 22, 0.55) !important; color: #fed7aa !important; }
-.seat-reserved   { background: rgba(255, 255, 255, 0.06) !important; border-color: rgba(255, 255, 255, 0.12) !important; color: var(--text-dim) !important; }
-
-.legend {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg) !important;
-}
-
-.legend-item { color: var(--text-muted) !important; }
-.dot.available { background: #22c55e !important; }
-.dot.heldByMe { background: var(--accent) !important; }
-
-:root[data-theme='light'] .seat-available {
-  background: #dcfce7 !important;
-  border-color: #22c55e !important;
-  color: #166534 !important;
-}
-
-:root[data-theme='light'] .seat-heldByMe {
-  background: var(--accent) !important;
-  border-color: #ca8a04 !important;
-  color: #0f1733 !important;
-}
-
-:root[data-theme='light'] .seat-heldByOther {
-  background: #ffedd5 !important;
-  border-color: #f97316 !important;
-  color: #9a3412 !important;
-}
-
-:root[data-theme='light'] .seat-reserved {
-  background: #e5e7eb !important;
-  border-color: #9ca3af !important;
-  color: #374151 !important;
-}
-
-:root[data-theme='light'] .legend {
-  background: #ffffff !important;
-}
-
-:root[data-theme='light'] .hold-panel {
-  color: #78350f;
-}
+/* --- Mapa de asientos: estilos propios en components/BusSeatSelector.css (usa las variables del tema) --- */
 
 /* --- Comprar boletos: botón «Ver recomendados» (boletos.css) --- */
 .link-recomendados {
@@ -2008,3 +1925,19 @@ form > .error:last-child {
     min-width: 116px;
   }
 }
+
+/* ==========================================================================
+   Iconografía vectorial (components/Icon.jsx)
+   Sustituye a los emojis: hereda el color del texto y respeta el tema.
+   ========================================================================== */
+.icon { display: inline-block; vertical-align: -0.125em; }
+.btn .icon, .topbar-link .icon, .drawer-link .icon { margin-right: 2px; }
+.topbar-link, .drawer-link { display: inline-flex; align-items: center; gap: 7px; }
+.feature-icon .icon { color: var(--accent); }
+.popup-icon .icon { display: block; }
+.spin { animation: spin 0.9s linear infinite; }
+
+/* Estrellas de calificación */
+.stars { display: inline-flex; gap: 2px; align-items: center; }
+.stars .star--on { color: var(--accent); }
+.stars .star--off { color: var(--text-dim); opacity: 0.55; }

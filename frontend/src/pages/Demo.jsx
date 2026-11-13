@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getRutas } from '../services/rutas';
+import Icon from '../components/Icon';
 
 /**
  * Portada pública. Solo la ven los visitantes: con la sesión iniciada,
@@ -16,22 +17,22 @@ import { getRutas } from '../services/rutas';
 
 const VENTAJAS = [
   {
-    icono: '💺',
+    icono: 'seat',
     titulo: 'Elige tu asiento',
     texto: 'Mapa del bus en tiempo real. El asiento queda reservado para ti mientras completas la compra.'
   },
   {
-    icono: '📲',
+    icono: 'qr',
     titulo: 'Boleto con QR',
     texto: 'Recíbelo en tu correo y preséntalo desde el móvil al abordar. Sin papeles.'
   },
   {
-    icono: '🧭',
+    icono: 'compass',
     titulo: 'Recomendaciones locales',
     texto: 'Lugares del destino valorados por viajeros de tu misma provincia.'
   },
   {
-    icono: '🔐',
+    icono: 'shield',
     titulo: 'Cuenta protegida',
     texto: 'Verificación de correo, recuperación segura y acceso con Google.'
   }
@@ -122,7 +123,7 @@ export default function Demo() {
         <div className="feature-grid">
           {VENTAJAS.map((v) => (
             <article key={v.titulo} className="feature glass">
-              <span className="feature-icon" aria-hidden="true">{v.icono}</span>
+              <span className="feature-icon" aria-hidden="true"><Icon name={v.icono} size={26} /></span>
               <h3>{v.titulo}</h3>
               <p>{v.texto}</p>
             </article>
@@ -151,8 +152,8 @@ export default function Demo() {
                       <span>{r.to}</span>
                     </div>
                     <div className="route-tile-meta">
-                      {r.duration && <span>⏱ {r.duration}</span>}
-                      {r.horaSalida && <span>🕗 {r.horaSalida}</span>}
+                      {r.duration && <span><Icon name="timer" size={14} /> {r.duration}</span>}
+                      {r.horaSalida && <span><Icon name="clock" size={14} /> {r.horaSalida}</span>}
                     </div>
                     {formatoPrecio(r.price) && (
                       <div className="route-tile-price">

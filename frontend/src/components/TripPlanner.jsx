@@ -1,6 +1,7 @@
 import React from 'react';
 import { REGIONES } from '../constants/provincias';
 import EcuadorMapSelector from './EcuadorMapSelector';
+import Icon from './Icon';
 
 const PASOS = [
   { id: 'origen', numero: 'A', titulo: 'Salgo de', vacio: 'Provincia' },
@@ -76,7 +77,7 @@ export default function TripPlanner({ origen, destino, paso, opciones, onPasoCha
                   aria-label={`Quitar ${valores[id]}`}
                   onClick={() => onSelect(id, '')}
                 >
-                  ✕
+                  <Icon name="x" size={14} />
                 </button>
               )}
             </div>
