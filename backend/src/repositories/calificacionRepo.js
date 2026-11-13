@@ -13,12 +13,12 @@ const Calificacion = require('../models/calificacionModel');
  */
 
 exports.findAll = async (filters = {}) => {
-  return Calificacion.find(filters).populate('usuario', 'nombre apellido paisOrigen provincia').sort({ fecha: -1 }).lean();
+  return Calificacion.find(filters).populate('usuario', 'nombre apellido paisOrigen provincia cedula').sort({ fecha: -1 }).lean();
 };
 
 exports.findByTipoYReferencia = async (tipo, referencia) => {
   return Calificacion.find({ tipo, referencia })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
+    .populate('usuario', 'nombre apellido paisOrigen provincia cedula')
     .sort({ fecha: -1 })
     .lean();
 };
@@ -30,20 +30,20 @@ exports.findByTipoYReferencia = async (tipo, referencia) => {
 exports.findByTipoYReferenciaIn = async (tipo, referencias = []) => {
   if (!Array.isArray(referencias) || referencias.length === 0) return [];
   return Calificacion.find({ tipo, referencia: { $in: referencias } })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
+    .populate('usuario', 'nombre apellido paisOrigen provincia cedula')
     .sort({ fecha: -1 })
     .lean();
 };
 
 exports.findByUsuario = async (usuarioId) => {
   return Calificacion.find({ usuario: usuarioId })
-    .populate('usuario', 'nombre apellido paisOrigen provincia')
+    .populate('usuario', 'nombre apellido paisOrigen provincia cedula')
     .sort({ fecha: -1 })
     .lean();
 };
 
 exports.findById = async (id) => {
-  return Calificacion.findById(id).populate('usuario', 'nombre apellido paisOrigen provincia').lean();
+  return Calificacion.findById(id).populate('usuario', 'nombre apellido paisOrigen provincia cedula').lean();
 };
 
 exports.create = async (data) => {

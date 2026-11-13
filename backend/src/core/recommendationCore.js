@@ -1,7 +1,11 @@
 const CalificacionRepo = require('../repositories/calificacionRepo');
 const LugarTuristicoRepo = require('../repositories/lugarTuristicoRepo');
 const RutaRepo = require('../repositories/rutaRepo');
-const { getProvinciaFromCiudad, getCiudadesDeProvincia } = require('../utils/provinciaUtils');
+const {
+  getProvinciaFromCiudad,
+  getCiudadesDeProvincia,
+  getProvinciaFromCedula
+} = require('../utils/provinciaUtils');
 const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
 
 /**
@@ -20,11 +24,12 @@ const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
 /**
  * Algoritmo de recomendaciones personalizado por provincia de origen
  * 
- Este algoritmo filtra las calificaciones SOLO de usuarios de la misma provincia
- de origen del usuario que solicita las recomendaciones. Por ejemplo:
- - Si un usuario de Loja busca recomendaciones para Guayaquil, solo se consideran
-   las calificaciones de otros usuarios de Loja que hayan calificado lugares de Guayaquil
-  Las calificaciones de usuarios de otras provincias (ej: Pichincha) NO influyen
+ Este algoritmo usa exclusivamente las calificaciones de usuarios de la misma
+ provincia de origen del usuario que solicita las recomendaciones. Por ejemplo:
+ - Si un usuario de Pichincha busca recomendaciones y otros usuarios de
+   Pichincha calificaron tres lugares, los tres aparecen para todos ellos.
+ - Las calificaciones de usuarios de otras provincias no influyen ni hacen
+   aparecer lugares.
  * 
  * Prioriza:
  * 1. Calificaciones de usuarios de la misma provincia (peso 100%)
@@ -83,12 +88,19 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
     const lugaresConCalificaciones = lugaresTuristicos.map((lugar) => {
         const todasCalificaciones = calificacionesPorLugar.get(String(lugar._id)) || [];
 
-        // FILTRAR: Solo calificaciones de usuarios de la misma provincia de origen
+        // Las recomendaciones se comparten por provincia: una calificación de
+        // cualquier usuario de la provincia debe ser visible para los demás.
+        const provinciaObjetivo = String(provinciaOrigen).trim().toLocaleLowerCase();
         const calificacionesMismaProvincia = todasCalificaciones.filter(
-          c => c.usuario && c.usuario.provincia === provinciaOrigen
+          c => {
+            if (!c.usuario) return false;
+            const provinciaCalificador = c.usuario.provincia ||
+              getProvinciaFromCedula(c.usuario.cedula);
+            return provinciaCalificador &&
+              String(provinciaCalificador).trim().toLocaleLowerCase() === provinciaObjetivo;
+          }
         );
 
-        // Si no hay calificaciones de usuarios de la misma provincia, retornar null
         if (calificacionesMismaProvincia.length === 0) {
           return null;
         }
@@ -126,6 +138,7 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
           calificacionPromedio: promedioCalificaciones,
           totalCalificaciones: calificacionesMismaProvincia.length,
           totalCalificacionesGenerales: todasCalificaciones.length,
+          usaPromedioGeneral: false,
           calificacionesMesActual,
           score: score,
           provinciaOrigen: provinciaOrigen,
@@ -134,11 +147,9 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
         };
     });
 
-    // Filtrar lugares que tienen calificaciones de la misma provincia
-    const lugaresFiltrados = lugaresConCalificaciones.filter(item => item !== null);
-
-    // Ordenar por score descendente (mejores primero)
-    const lugaresOrdenados = [...lugaresFiltrados].sort((a, b) => b.score - a.score);
+    const lugaresOrdenados = [...lugaresConCalificaciones]
+      .filter(item => item !== null)
+      .sort((a, b) => b.score - a.score);
 
     // Si hay un usuarioId, guardar las recomendaciones en la colección hija
     if (usuarioId && lugaresOrdenados.length > 0) {
@@ -227,6 +238,7 @@ exports.getRecomendadosPorProvincia = async (provinciaOrigen, ciudadDestino, usu
         totalCalificaciones: item.totalCalificaciones || 0,
         totalCalificacionesGenerales: item.totalCalificacionesGenerales || item.totalCalificaciones || 0,
         score: item.score || 0,
+        usaPromedioGeneral: false,
         // Propiedades adicionales para el frontend
         calificacionesMesActual: item.calificacionesMesActual || 0,
         promedioMismaNacionalidad: item.calificacionPromedio || 0, // Para compatibilidad
@@ -310,4 +322,3 @@ exports.getRecomendadosPorProvinciaYDestino = async (provinciaOrigen, ciudadDest
     throw error;
   }
 };
-

@@ -108,7 +108,7 @@ export default function Recomendados() {
         <h1>Recomendados para ti en {ciudad}</h1>
         <p>
           {usuarioId 
-            ? 'Recomendaciones personalizadas basadas en tu nacionalidad y votaciones recientes'
+            ? 'Recomendaciones personalizadas basadas en tu provincia y las votaciones de usuarios de tu provincia'
             : 'Recomendaciones basadas en las mejores calificaciones recientes'}
         </p>
       </div>
@@ -184,11 +184,11 @@ export default function Recomendados() {
                     <span className="stat-value">{item.calificacionesMesActual} votos</span>
                   </div>
                 )}
-                {(item.promedioMismaNacionalidad > 0 || item.calificacionPromedio > 0) && (
+                {item.promedioMismaNacionalidad > 0 && (
                   <div className="stat-item highlight">
                     <span className="stat-label">Tu provincia:</span>
                     <span className="stat-value">
-                      {(item.promedioMismaNacionalidad || item.calificacionPromedio || 0).toFixed(1)} ⭐
+                      {item.promedioMismaNacionalidad.toFixed(1)} ⭐
                     </span>
                   </div>
                 )}
