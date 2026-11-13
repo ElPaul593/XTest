@@ -1,5 +1,6 @@
 const RecomendacionService = require('../services/recomendacionService');
 const User = require('../models/userModel');
+const { getProvinciaFromCedula } = require('../utils/provinciaUtils');
 
 /**
  * PATRÓN DE DISEÑO: Service Layer Pattern (Controlador)
@@ -157,30 +158,35 @@ exports.getRecomendados = async (req, res) => {
     
     if (usuarioId) {
       const usuario = await User.findById(usuarioId)
-        .select('paisOrigen provincia preferencias')
+        .select('paisOrigen provincia cedula preferencias')
         .lean();
 
       // Los hoteles siempre usan calificaciones globales, sin personalización.
       if (tipo === 'hotel') {
         recomendados = await RecomendacionService.getHotelesRecomendadosGlobales(ciudad);
-      } else if (usuario?.provincia) {
-        console.log(`[Recomendaciones] Usuario ${usuarioId} de provincia ${usuario.provincia} buscando lugares en ${ciudad}`);
-        recomendados = await RecomendacionService.getRecomendadosPorProvincia(
-          usuario.provincia,
-          ciudad,
-          usuarioId,
-          usuario.preferencias || []
-        );
-        console.log(`[Recomendaciones] Encontrados ${recomendados.length} lugares recomendados`);
-      } else if (usuario?.paisOrigen) {
-        // Fallback al método anterior por nacionalidad
-        recomendados = await RecomendacionService.getRecomendadosPorNacionalidad(
-          usuario.paisOrigen,
-          ciudad,
-          tipo
-        );
       } else {
-        recomendados = await RecomendacionService.getRecomendadosGenerales(ciudad, tipo);
+        const provinciaUsuario = usuario?.provincia ||
+          getProvinciaFromCedula(usuario?.cedula);
+
+        if (provinciaUsuario) {
+          console.log(`[Recomendaciones] Usuario ${usuarioId} de provincia ${provinciaUsuario} buscando lugares en ${ciudad}`);
+          recomendados = await RecomendacionService.getRecomendadosPorProvincia(
+            provinciaUsuario,
+            ciudad,
+            usuarioId,
+            usuario.preferencias || []
+          );
+          console.log(`[Recomendaciones] Encontrados ${recomendados.length} lugares recomendados`);
+        } else if (usuario?.paisOrigen) {
+          // Fallback al método anterior por nacionalidad para extranjeros.
+          recomendados = await RecomendacionService.getRecomendadosPorNacionalidad(
+            usuario.paisOrigen,
+            ciudad,
+            tipo
+          );
+        } else {
+          recomendados = await RecomendacionService.getRecomendadosGenerales(ciudad, tipo);
+        }
       }
     } else {
       recomendados = await RecomendacionService.getRecomendadosGenerales(ciudad, tipo);
