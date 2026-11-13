@@ -57,6 +57,10 @@ const { calcularPrecioLocal } = require('../utils/discountUtils');
 
 const TIMEOUT = DEFAULT_REQUEST_TIMEOUT_MS;
 
+// Reglas de volumen del respaldo local (las mismas que impone la API externa).
+const FALLBACK_MAX_ASIENTOS = Number(process.env.MAX_SEATS_PER_BOOKING || 10);
+const FALLBACK_COMPANY_FROM = Number(process.env.CORPORATE_DISCOUNT_FROM || 5);
+
 /**
  * Precio unitario de la ruta en el catálogo local (USD).
  *
@@ -327,7 +331,7 @@ router.get("/holds", asyncHandler(async (req, res) => {
  *       409: { description: Alguno de los asientos ya está bloqueado por otro usuario }
  */
 router.post("/reservar", asyncHandler(async (req, res) => {
-  const { rutaId, fecha, userId, clientId } = req.body;
+  const { rutaId, fecha, userId, clientId, companyName } = req.body;
   const asientos = normalizarAsientos(req.body);
 
   if (!rutaId || !fecha || asientos.length === 0) {
@@ -354,7 +358,14 @@ router.post("/reservar", asyncHandler(async (req, res) => {
     // hold para que PayPal cobre el mismo importe que muestra la aplicación.
     const response = await axios.post(
       seatApiUrl('reservar'),
-      { rutaId, fecha, asientos, userId: owner, ...(precioUnitario != null ? { precioUnitario } : {}) },
+      {
+        rutaId,
+        fecha,
+        asientos,
+        userId: owner,
+        ...(companyName ? { companyName } : {}),
+        ...(precioUnitario != null ? { precioUnitario } : {})
+      },
       { timeout: TIMEOUT }
     );
     return res.json({ ok: true, ...response.data, _source: 'external-api' });
@@ -369,10 +380,41 @@ router.post("/reservar", asyncHandler(async (req, res) => {
       });
     }
 
+    // Una regla de negocio incumplida (máximo de asientos, razón social desde
+    // 5 asientos, precio inválido) también es una respuesta legítima de la API:
+    // se devuelve tal cual. Antes caía al respaldo local, que no validaba nada y
+    // dejaba saltarse la regla.
+    if (error?.response?.status === 400) {
+      return res.status(400).json({
+        ok: false,
+        ...(error.response.data || {}),
+        error: error.response.data?.error || 'Solicitud de reserva inválida'
+      });
+    }
+
     logFallback('reservar', error);
 
     // Fallback local: la unicidad (rutaId+fecha+asiento) la garantiza el índice
-    // único de Mongo.
+    // único de Mongo. Las reglas de volumen se aplican igual que en la API.
+    const propios = await Hold.countDocuments({
+      rutaId: String(rutaId),
+      fecha: String(fecha),
+      userId: owner,
+      expiresAt: { $gt: new Date() }
+    });
+    if (propios + asientos.length > FALLBACK_MAX_ASIENTOS) {
+      return res.status(400).json({
+        ok: false,
+        error: `No se pueden reservar más de ${FALLBACK_MAX_ASIENTOS} asientos por viaje`
+      });
+    }
+    if (propios + asientos.length >= FALLBACK_COMPANY_FROM && !String(companyName || '').trim()) {
+      return res.status(400).json({
+        ok: false,
+        code: 'COMPANY_REQUIRED',
+        error: `Para ${FALLBACK_COMPANY_FROM} asientos o más se requiere el nombre de la compañía`
+      });
+    }
     const expiresAt = new Date(Date.now() + FALLBACK_HOLD_TTL_MS);
     const creados = [];
 

@@ -44,19 +44,29 @@ export async function getDisponibles({ rutaId, fecha }) {
  * Crea un hold temporal sobre un asiento
  * Con fallback para modo demo
  */
-export async function createHold({ rutaId, fecha, seatNumber }) {
+export async function createHold({ rutaId, fecha, seatNumber, seatNumbers, companyName }) {
     try {
         const userId = CLIENT_ID();
+        // Varios asientos en UNA llamada: la API valida las reglas de volumen
+        // (máximo y razón social desde 5) sobre el conjunto y es todo-o-nada.
+        const asientos = Array.isArray(seatNumbers) && seatNumbers.length > 0
+            ? seatNumbers
+            : [seatNumber];
         const response = await axios.post(`${SEAT_API_BASE_URL}/reservar`, {
             rutaId,
             fecha,
-            asiento: seatNumber,
-            userId: userId // El proxy espera userId, no clientId
+            asientos,
+            userId,
+            ...(companyName ? { companyName } : {})
         }, { timeout: 15000 });
         return response.data;
     } catch (err) {
         console.error('Error creating hold:', err);
-        return { ok: false, error: err.response?.data?.error || err.message };
+        return {
+            ok: false,
+            error: err.response?.data?.error || err.message,
+            code: err.response?.data?.code || err.response?.data?.details?.code
+        };
     }
 }
 
@@ -79,8 +89,15 @@ export async function getHolds() {
  * Libera un hold (cancela reserva temporal)
  * La API externa requiere holdId en el body
  */
-export async function deleteHold({ holdId, rutaId, fecha, asiento }) {
+export async function deleteHold({ holdId, holdIds, rutaId, fecha, asiento }) {
     try {
+        if (Array.isArray(holdIds) && holdIds.length > 0) {
+            const response = await axios.delete(`${SEAT_API_BASE_URL}/holds`, {
+                data: { holdIds },
+                timeout: 15000
+            });
+            return response.data;
+        }
         // Intentar primero con holdId (método preferido)
         if (holdId) {
             const response = await axios.delete(`${SEAT_API_BASE_URL}/holds`, {
