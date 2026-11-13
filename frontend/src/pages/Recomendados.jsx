@@ -107,7 +107,9 @@ export default function Recomendados() {
       <div className="recomendados-header">
         <h1>Recomendados para ti en {ciudad}</h1>
         <p>
-          {usuarioId 
+          {tipo === 'hotel'
+            ? 'Hoteles ordenados por la calificación global de todos los usuarios'
+            : usuarioId
             ? 'Recomendaciones personalizadas basadas en tu provincia y las votaciones de usuarios de tu provincia'
             : 'Recomendaciones basadas en las mejores calificaciones recientes'}
         </p>

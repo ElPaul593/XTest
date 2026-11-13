@@ -217,10 +217,59 @@ exports.getRecomendadosGenerales = async (ciudad, tipo = 'lugarTuristico') => {
         totalCalificaciones: todasCalificaciones.length,
         calificacionesMesActual: calificacionesMesActual.length
       };
+
     });
 
   return itemsConCalificaciones
     .filter(item => item.totalCalificaciones > 0)
+    .sort((a, b) => b.score - a.score);
+};
+
+/**
+ * Recomendaciones globales de hoteles.
+ * Los hoteles no se personalizan por provincia ni por preferencias:
+ * se ordenan por el promedio de todas sus calificaciones.
+ */
+exports.getHotelesRecomendadosGlobales = async (ciudad) => {
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+
+  const hoteles = await HotelRepo.findByCiudad(ciudad);
+  if (hoteles.length === 0) return [];
+
+  const calificaciones = await CalificacionRepo.findByTipoYReferenciaIn(
+    'hotel',
+    hoteles.map((hotel) => hotel._id)
+  );
+  const porHotel = new Map();
+
+  for (const calificacion of calificaciones) {
+    const key = String(calificacion.referencia);
+    if (!porHotel.has(key)) porHotel.set(key, []);
+    porHotel.get(key).push(calificacion);
+  }
+
+  return hoteles
+    .map((hotel) => {
+      const votos = porHotel.get(String(hotel._id)) || [];
+      const promedioGeneral = votos.length > 0
+        ? votos.reduce((sum, voto) => sum + voto.calificacion, 0) / votos.length
+        : 0;
+
+      return {
+        ...hotel,
+        score: promedioGeneral,
+        promedioGeneral,
+        calificacionPromedio: promedioGeneral,
+        totalCalificaciones: votos.length,
+        calificacionesMesActual: votos.filter((voto) => {
+          const fecha = voto.fecha || voto.createdAt;
+          return fecha && new Date(fecha) >= inicioMes;
+        }).length
+      };
+    })
+    .filter((hotel) => hotel.totalCalificaciones > 0)
     .sort((a, b) => b.score - a.score);
 };
 
@@ -256,4 +305,3 @@ exports.getRecomendadosGuardados = async (usuarioId, rutaId) => {
 exports.getRecomendadosPorProvinciaYDestino = async (provinciaOrigen, ciudadDestino) => {
   return await RecommendationCore.getRecomendadosPorProvinciaYDestino(provinciaOrigen, ciudadDestino);
 };
-

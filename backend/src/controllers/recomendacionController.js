@@ -160,8 +160,10 @@ exports.getRecomendados = async (req, res) => {
         .select('paisOrigen provincia preferencias')
         .lean();
 
-      // Si el usuario tiene provincia, usar el nuevo algoritmo
-      if (usuario?.provincia) {
+      // Los hoteles siempre usan calificaciones globales, sin personalización.
+      if (tipo === 'hotel') {
+        recomendados = await RecomendacionService.getHotelesRecomendadosGlobales(ciudad);
+      } else if (usuario?.provincia) {
         console.log(`[Recomendaciones] Usuario ${usuarioId} de provincia ${usuario.provincia} buscando lugares en ${ciudad}`);
         recomendados = await RecomendacionService.getRecomendadosPorProvincia(
           usuario.provincia,
