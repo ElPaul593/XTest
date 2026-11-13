@@ -178,14 +178,19 @@ exports.getRecomendados = async (req, res) => {
           );
           console.log(`[Recomendaciones] Encontrados ${recomendados.length} lugares recomendados`);
         } else if (usuario?.paisOrigen) {
-          // Fallback al método anterior por nacionalidad para extranjeros.
-          recomendados = await RecomendacionService.getRecomendadosPorNacionalidad(
-            usuario.paisOrigen,
+          // Los extranjeros usan el ranking global, personalizado solo por
+          // sus preferencias y por la recencia de las calificaciones.
+          recomendados = await RecomendacionService.getRecomendadosGenerales(
             ciudad,
-            tipo
+            tipo,
+            usuario.preferencias || []
           );
         } else {
-          recomendados = await RecomendacionService.getRecomendadosGenerales(ciudad, tipo);
+          recomendados = await RecomendacionService.getRecomendadosGenerales(
+            ciudad,
+            tipo,
+            usuario?.preferencias || []
+          );
         }
       }
     } else {

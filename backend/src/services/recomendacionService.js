@@ -172,9 +172,16 @@ exports.getRecomendadosPorNacionalidad = async (paisOrigen, ciudad, tipo = 'luga
  * PRINCIPIO SOLID: Single Responsibility Principle (SRP)
  * Método dedicado exclusivamente a generar recomendaciones generales.
  */
-exports.getRecomendadosGenerales = async (ciudad, tipo = 'lugarTuristico') => {
+exports.getRecomendadosGenerales = async (
+  ciudad,
+  tipo = 'lugarTuristico',
+  preferenciasUsuario = []
+) => {
   const ahora = new Date();
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+  const preferenciasValidas = Array.isArray(preferenciasUsuario)
+    ? preferenciasUsuario.filter(Boolean)
+    : [];
 
   const items = tipo === 'hotel' 
     ? await HotelRepo.findByCiudad(ciudad)
@@ -205,10 +212,14 @@ exports.getRecomendadosGenerales = async (ciudad, tipo = 'lugarTuristico') => {
         ? calificacionesMesActual.reduce((sum, c) => sum + c.calificacion, 0) / calificacionesMesActual.length
         : 0;
 
-      // Priorizar votaciones del mes actual (70%) sobre promedio general (30%)
-      const score = promedioMesActual > 0
+      // Priorizar votaciones del mes actual (70%) sobre promedio general (30%).
+      let score = promedioMesActual > 0
         ? promedioMesActual * 0.7 + promedioGeneral * 0.3
         : promedioGeneral;
+
+      if (preferenciasValidas.includes(item.tipo)) {
+        score *= 1.2;
+      }
 
       return {
         ...item,
