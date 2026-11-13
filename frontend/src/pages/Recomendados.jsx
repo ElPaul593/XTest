@@ -2,7 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getRecomendados } from '../services/recomendaciones';
 import { TIPOS_RECOMENDACION, TIPO_DEFAULT } from '../constants/recomendaciones';
+import { API_BASE_URL } from '../constants/api';
 import { AlertPopup } from '../components/Popup';
+
+function resolverImagen(item) {
+  const url = item?.imagen || item?.fotoUrl;
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+}
 
 export default function Recomendados() {
   const [searchParams] = useSearchParams();
@@ -135,12 +146,13 @@ export default function Recomendados() {
         <div className="recomendados-grid">
           {recomendados.map((item, index) => (
             <div key={item._id} className="recomendado-card">
-              {item.imagen ? (
+              {resolverImagen(item) ? (
                 <img
                   className="recomendado-card__image"
-                  src={item.imagen}
+                  src={resolverImagen(item)}
                   alt={`Imagen de ${item.nombre}`}
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                   onError={(event) => {
                     event.currentTarget.style.display = 'none';
                   }}
