@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { getRutas, getCiudadesRutas, createRuta, updateRuta, deleteRuta } from '../../services/rutas';
 import { ConfirmPopup } from '../../components/Popup';
 import useFeedback from '../../hooks/useFeedback';
@@ -14,6 +14,92 @@ const preventNonNumericKeys = (event) => {
 const onlyDecimalInput = (value) => value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
 const onlyIntegerInput = (value) => value.replace(/\D/g, '');
 const PAGE_SIZE = 10;
+
+const dateToValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const valueToDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+function DatePicker({ value, min, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => valueToDate(value) || valueToDate(min) || new Date());
+  const pickerRef = useRef(null);
+  const selectedDate = valueToDate(value);
+  const minDate = valueToDate(min);
+  const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
+  const daysInMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate();
+  const leadingDays = (firstDay.getDay() + 6) % 7;
+  const monthLabel = visibleMonth.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' });
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, []);
+
+  return (
+    <div className="date-picker" ref={pickerRef}>
+      <button
+        type="button"
+        className="input date-picker__trigger"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => {
+          if (!open) setVisibleMonth(selectedDate || minDate || new Date());
+          setOpen(current => !current);
+        }}
+      >
+        {selectedDate ? selectedDate.toLocaleDateString('es-EC') : 'Selecciona una fecha'}
+      </button>
+      {open && (
+        <div className="date-picker__popover" role="dialog" aria-label="Seleccionar fecha">
+          <div className="date-picker__header">
+            <strong>{monthLabel}</strong>
+            <div>
+              <button type="button" aria-label="Mes anterior" onClick={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1))}>‹</button>
+              <button type="button" aria-label="Mes siguiente" onClick={() => setVisibleMonth(current => new Date(current.getFullYear(), current.getMonth() + 1, 1))}>›</button>
+            </div>
+          </div>
+          <div className="date-picker__weekdays">
+            {['LU', 'MA', 'MI', 'JU', 'VI', 'SA', 'DO'].map(day => <span key={day}>{day}</span>)}
+          </div>
+          <div className="date-picker__days">
+            {Array.from({ length: leadingDays }).map((_, index) => <span key={`empty-${index}`} />)}
+            {Array.from({ length: daysInMonth }, (_, index) => {
+              const date = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), index + 1);
+              const dateValue = dateToValue(date);
+              const disabled = minDate && dateValue < dateToValue(minDate);
+              return (
+                <button
+                  type="button"
+                  key={dateValue}
+                  className={dateValue === value ? 'is-selected' : ''}
+                  disabled={disabled}
+                  onClick={() => {
+                    onChange(dateValue);
+                    setOpen(false);
+                  }}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminRutas() {
   const [rutas, setRutas] = useState([]);
@@ -200,7 +286,7 @@ export default function AdminRutas() {
         loading={eliminando}
         error={rutaParaEliminar?.error}
       />
-      <div className="dashboard-section">
+      <div className="dashboard-section admin-rutas-form-section">
         <h2>Nueva ruta</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>Precio en USD (entre 3 y 20). El nombre se genera como "Origen - Destino".</p>
         <form onSubmit={handleCreate} className="user-form">
@@ -238,8 +324,14 @@ export default function AdminRutas() {
                   <div key={`${salida.fecha}-${salida.horaSalida}-${index}`} style={{ display: 'flex', gap: '6px', alignItems: 'end' }}>
                     <label>
                       Fecha
-                      <input className="input" type="date" min={new Date().toLocaleDateString('en-CA')} value={salida.fecha}
-                        onChange={(e) => setForm((current) => ({ ...current, salidas: current.salidas.map((item, i) => i === index ? { ...item, fecha: e.target.value } : item) }))} />
+                      <DatePicker
+                        min={new Date().toLocaleDateString('en-CA')}
+                        value={salida.fecha}
+                        onChange={(fecha) => setForm((current) => ({
+                          ...current,
+                          salidas: current.salidas.map((item, i) => i === index ? { ...item, fecha } : item)
+                        }))}
+                      />
                     </label>
                     <label>
                       Hora

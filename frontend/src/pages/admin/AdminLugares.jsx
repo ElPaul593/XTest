@@ -72,12 +72,7 @@ export default function AdminLugares() {
   };
 
   const openEditModal = (lugar) => {
-    setLugarParaEliminar(lugar);
-  };
-
-  const confirmarEliminacion = async () => {
-    if (!lugarParaEliminar) return;
-    const id = lugarParaEliminar._id || lugarParaEliminar.id;
+    const id = lugar._id || lugar.id;
     setEditingId(id);
     setForm({
       nombre: lugar.nombre || '',
@@ -90,6 +85,23 @@ export default function AdminLugares() {
       imagen: lugar.imagen || '',
     });
     setIsModalOpen(true);
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!lugarParaEliminar) return;
+    const id = lugarParaEliminar._id || lugarParaEliminar.id;
+    try {
+      setEliminando(true);
+      setError(null);
+      await deleteLugarTuristico(id);
+      setLugarParaEliminar(null);
+      await load();
+      mostrarExito('El lugar turístico se eliminó correctamente.', 'Lugar eliminado');
+    } catch (e) {
+      setLugarParaEliminar((current) => ({ ...current, error: e.message }));
+    } finally {
+      setEliminando(false);
+    }
   };
 
   const closeModal = () => {
@@ -134,45 +146,8 @@ export default function AdminLugares() {
     }
   };
 
-  const handleDelete = async (lugar) => {
-    const id = lugar._id || lugar.id;
-    /**
-     * #33BUG — Avisos con el diálogo nativo del navegador en lugar de una ventana
-     * emergente de la aplicación.
-     *
-     * Esta pantalla usa 1 llamada nativa. Un `window.confirm` para borrar un lugar turístico, que además es un borrado físico.
-     *
-     * Tres problemas concretos:
-     *
-     *  1. `alert()` y `confirm()` bloquean el hilo principal: mientras el diálogo
-     *     está abierto, React no puede repintar ni se ejecutan los temporizadores.
-     *     En las pantallas de asientos eso congela el contador del hold.
-     *  2. El navegador los pinta con su propio estilo, ajeno al negro + amarillo del
-     *     proyecto, y antepone el dominio ("localhost:3000 dice…").
-     *  3. No admiten formato ni contenido enriquecido, así que los mensajes largos
-     *     se apelmazan y los saltos de línea con `\n` se ven de forma distinta en
-     *     cada navegador.
-     *
-     * Sustitución disponible: `components/Popup.jsx` (`AlertPopup` para avisar,
-     * `ConfirmPopup` para confirmar) junto al hook `hooks/useFeedback.js`. Se
-     * renderizan con `createPortal` sobre `document.body` y en la capa `--z-modal`,
-     * por encima del navbar fijo. Ya están aplicados en `LoginForm`, `Profile`,
-     * `Dashboard` y `admin/AdminUsers` y pueden servir de referencia.
-     *
-     * NO se corrige aquí por indicación expresa: solo se documenta.
-     */
-    try {
-      setEliminando(true);
-      setError(null);
-      await deleteLugarTuristico(id);
-      setLugarParaEliminar(null);
-      await load();
-      mostrarExito('El lugar turístico se eliminó correctamente.', 'Lugar eliminado');
-    } catch (e) {
-      setLugarParaEliminar((current) => ({ ...current, error: e.message }));
-    } finally {
-      setEliminando(false);
-    }
+  const handleDelete = (lugar) => {
+    setLugarParaEliminar(lugar);
   };
 
   return (
@@ -201,7 +176,7 @@ export default function AdminLugares() {
           <div>
             <h2>Lugares turísticos</h2>
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>
-              CRUD de lugares turísticos con imagen por URL, protegido por el backend existente.
+              Crea o edita lugares turísticos y agrega sus imágenes.
             </p>
           </div>
           <button type="button" className="btn btn-primary" onClick={openCreateModal}>

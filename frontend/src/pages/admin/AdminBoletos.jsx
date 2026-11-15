@@ -100,7 +100,7 @@ export default function AdminBoletos() {
         <h2>Emitir boleto</h2>
         <p style={{ color: '#666', fontSize: '13px', marginTop: 0 }}>El precio se calcula automáticamente según la ruta y la estrategia de pricing.</p>
         <form onSubmit={handleEmit} className="user-form">
-          <div className="form-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="form-row boletos-emision-row">
             <select className="input" value={reservaId} onChange={e => { setReservaId(e.target.value); setSeatNumber(''); }} style={{ minWidth: '320px' }}>
               <option value="">-- Selecciona una reserva --</option>
               {reservas.map(r => (
