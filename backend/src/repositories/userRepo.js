@@ -1,7 +1,7 @@
 const User = require('../models/userModel');
 const Reserva = require('../models/reservaModel');
 const Calificacion = require('../models/calificacionModel');
-const LugaresRecomendados = require('../models/lugaresRecomendadosModel');
+const Pago = require('../models/pagoModel');
 
 /**
  * PATRÓN DE DISEÑO: Repository Pattern
@@ -124,16 +124,17 @@ exports.updateEstadoById = async (id, { estado, motivo = null, actorId = null })
 /**
  * Elimina físicamente solo cuentas que no tienen actividad relacionada.
  * Las colecciones históricas se consultan antes del borrado para no dejar
- * referencias huérfanas en reservas, calificaciones o recomendaciones.
+ * referencias huérfanas en reservas, calificaciones o pagos. Las recomendaciones
+ * no cuentan como historial: son una caché que se genera automáticamente.
  */
 exports.removeIfWithoutHistory = async (id) => {
-  const [reservas, calificaciones, recomendaciones] = await Promise.all([
+  const [reservas, calificaciones, pagos] = await Promise.all([
     Reserva.exists({ user: id }),
     Calificacion.exists({ usuario: id }),
-    LugaresRecomendados.exists({ usuario: id })
+    Pago.exists({ user: id })
   ]);
 
-  if (reservas || calificaciones || recomendaciones) {
+  if (reservas || calificaciones || pagos) {
     return { deleted: false, hasHistory: true };
   }
 

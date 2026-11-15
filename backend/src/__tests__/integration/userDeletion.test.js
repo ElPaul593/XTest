@@ -3,6 +3,9 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const AuthService = require('../../services/authService');
 const UserService = require('../../services/userService');
 const Reserva = require('../../models/reservaModel');
+const Calificacion = require('../../models/calificacionModel');
+const LugaresRecomendados = require('../../models/lugaresRecomendadosModel');
+const Pago = require('../../models/pagoModel');
 
 let mongoServer;
 let originalMongoUri;
@@ -27,7 +30,10 @@ afterAll(async () => {
 beforeEach(async () => {
   await Promise.all([
     mongoose.model('User').deleteMany({}),
-    Reserva.deleteMany({})
+    Reserva.deleteMany({}),
+    Calificacion.deleteMany({}),
+    LugaresRecomendados.deleteMany({}),
+    Pago.deleteMany({})
   ]);
 });
 
@@ -61,6 +67,40 @@ const createUser = (pasaporte) => AuthService.register({
  *   3. se puede restaurar y el historial sigue intacto.
  */
 describe('Reglas de baja de usuarios (modelo de estado)', () => {
+  test('eliminar desde administración borra una cuenta sin historial aunque tenga recomendaciones en caché', async () => {
+    const user = await createUser('TEST-PASS-ADMIN-001');
+    await LugaresRecomendados.create({
+      usuario: user._id,
+      lugarTuristico: new mongoose.Types.ObjectId(),
+      ruta: new mongoose.Types.ObjectId(),
+      provinciaOrigen: 'Pichincha',
+      ciudadDestino: 'Quito',
+      provinciaDestino: 'Pichincha',
+      calificacionPromedio: 4,
+      score: 4
+    });
+
+    const result = await UserService.removeFromAdmin(user._id);
+
+    expect(result).toEqual({ deleted: true, blocked: false });
+    expect(await mongoose.model('User').findById(user._id)).toBeNull();
+  });
+
+  test('eliminar desde administración bloquea una cuenta con un pago histórico', async () => {
+    const user = await createUser('TEST-PASS-ADMIN-002');
+    await Pago.create({
+      orderId: 'ORDER-TEST-ADMIN-002',
+      user: user._id
+    });
+
+    const result = await UserService.removeFromAdmin(user._id);
+    const almacenado = await mongoose.model('User').findById(user._id).lean();
+
+    expect(result.deleted).toBe(false);
+    expect(result.blocked).toBe(true);
+    expect(almacenado.estado).toBe('BLOQUEADO');
+  });
+
   test('dar de baja una cuenta sin historial la marca ELIMINADO y NO borra el documento', async () => {
     const user = await createUser('TEST-PASS-001');
     const result = await UserService.softDelete(user._id);
