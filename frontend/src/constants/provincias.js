@@ -111,3 +111,7 @@ const CIUDAD_A_PROVINCIA = Object.fromEntries(
 export function getProvinciaDeCiudad(ciudad) {
   return CIUDAD_A_PROVINCIA[ciudad] || null;
 }
+
+export function getCiudadesDeProvincia(provincia) {
+  return CIUDADES_POR_PROVINCIA[provincia] || [];
+}

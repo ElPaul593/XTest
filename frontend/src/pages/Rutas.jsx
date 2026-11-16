@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getCurrentUser } from '../services/users';
-import { getProvinciaFromCedula, getProvinciaDeCiudad } from '../constants/provincias';
+import {
+  getCiudadesDeProvincia,
+  getProvinciaFromCedula,
+  getProvinciaDeCiudad
+} from '../constants/provincias';
 import { getRutas, getRutaById } from '../services/rutas';
 import TripPlanner from '../components/TripPlanner';
 import RouteMap from '../components/RouteMap';
@@ -69,6 +73,31 @@ function agruparPorProvincia(rutas, provinciaKey, ciudadKey) {
 
 function ciudadesUnicas(rutas, ciudadKey) {
   return [...new Set(rutas.map((ruta) => ruta[ciudadKey]))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function compararRutasPorPreferencia(a, b, provinciaPreferida) {
+  if (!provinciaPreferida) return 0;
+
+  const prioridad = (ruta) => {
+    if (ruta.provinciaOrigen === provinciaPreferida) return 0;
+    if (ruta.provinciaDestino === provinciaPreferida) return 1;
+    return 2;
+  };
+
+  const diferenciaPrioridad = prioridad(a) - prioridad(b);
+  if (diferenciaPrioridad !== 0) return diferenciaPrioridad;
+
+  const ciudadesOrdenadas = getCiudadesDeProvincia(provinciaPreferida);
+  const indiceCiudad = (ciudad) => {
+    const indice = ciudadesOrdenadas.indexOf(ciudad);
+    return indice === -1 ? Number.MAX_SAFE_INTEGER : indice;
+  };
+
+  const ciudadClave = prioridad(a) === 0 ? 'origen' : 'destino';
+  const diferenciaCiudad = indiceCiudad(a[ciudadClave]) - indiceCiudad(b[ciudadClave]);
+  if (diferenciaCiudad !== 0) return diferenciaCiudad;
+
+  return `${a.origen} ${a.destino}`.localeCompare(`${b.origen} ${b.destino}`, 'es');
 }
 
 function coincide(ruta, { origen, destino, ciudadOrigen, ciudadDestino }) {
@@ -180,8 +209,10 @@ export default function Rutas() {
     'destino'
   );
 
-  const rutasMostradas = todasLasRutas.filter((ruta) =>
-    coincide(ruta, { origen, destino, ciudadOrigen, ciudadDestino }));
+  const rutasMostradas = useMemo(() => todasLasRutas
+    .filter((ruta) => coincide(ruta, { origen, destino, ciudadOrigen, ciudadDestino }))
+    .sort((a, b) => compararRutasPorPreferencia(a, b, provinciaUsuario)),
+  [todasLasRutas, origen, destino, ciudadOrigen, ciudadDestino, provinciaUsuario]);
 
   const cambiarModo = (nuevoModo) => {
     setModo(nuevoModo);
