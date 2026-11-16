@@ -27,19 +27,40 @@ export default function AdminFinanzas() {
   const [motivos, setMotivos] = useState({});
   const [procesando, setProcesando] = useState(null);
   const [error, setError] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const cargar = useCallback(async () => {
     setError('');
     try {
-      const [datos, pagos] = await Promise.all([getResumenFinanciero(), getPagosPendientes()]);
+      const [datos, pagos] = await Promise.all([
+        getResumenFinanciero({ from: from || undefined, to: to || undefined }),
+        getPagosPendientes()
+      ]);
       setResumen(datos);
       setPendientes(pagos);
     } catch (err) {
       setError(err.message);
     }
-  }, []);
+  }, [from, to]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  const filtrosFecha = (
+    <div className="dashboard-section finanzas-filtros">
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '13px' }}>Desde</label>
+          <input className="input" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '13px' }}>Hasta</label>
+          <input className="input" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={cargar}>Aplicar</button>
+      </div>
+    </div>
+  );
 
   const resolver = async (orderId, accion) => {
     setProcesando(orderId);
@@ -55,9 +76,12 @@ export default function AdminFinanzas() {
   };
 
   if (!resumen) {
-    return error
-      ? <p className="finanzas-error">{error}</p>
-      : <p>Cargando finanzas...</p>;
+    return (
+      <div className="finanzas">
+        {filtrosFecha}
+        {error ? <p className="finanzas-error">{error}</p> : <p>Cargando finanzas...</p>}
+      </div>
+    );
   }
 
   const { ventas, pasarela } = resumen;
@@ -65,6 +89,8 @@ export default function AdminFinanzas() {
   return (
     <div className="finanzas">
       {error && <p className="finanzas-error">{error}</p>}
+
+      {filtrosFecha}
 
       <h2>Ingresos y egresos</h2>
       <div className="finanzas-datos">

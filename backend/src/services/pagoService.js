@@ -128,13 +128,18 @@ exports.rechazar = async (orderId, motivo) => {
   return pago.save();
 };
 
-exports.resumenFinanciero = async () => {
+exports.resumenFinanciero = async ({ from, to } = {}) => {
+  const fechaQuery = {};
+  if (typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from)) fechaQuery.$gte = from;
+  if (typeof to === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(to)) fechaQuery.$lte = to;
+  const ventasQuery = Object.keys(fechaQuery).length ? { estado: 'PAGADO', fecha: fechaQuery } : { estado: 'PAGADO' };
+
   const [ventas, ultimasVentas, pendientes, cuenta] = await Promise.all([
     Pago.aggregate([
-      { $match: { estado: 'PAGADO' } },
+      { $match: ventasQuery },
       { $group: { _id: null, total: { $sum: '$total' }, cantidad: { $sum: 1 } } }
     ]),
-    Pago.find({ estado: 'PAGADO' })
+    Pago.find(ventasQuery)
       .sort({ updatedAt: -1 })
       .limit(10)
       .populate('ruta', 'from to')

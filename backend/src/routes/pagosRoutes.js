@@ -26,7 +26,10 @@ router.post('/capturar-orden', authenticateToken, asyncHandler(async (req, res) 
 router.use('/admin', authenticateToken, requireAdminAccess);
 
 router.get('/admin/resumen', asyncHandler(async (req, res) => {
-  res.json(await PagoService.resumenFinanciero());
+  res.json(await PagoService.resumenFinanciero({
+    from: req.query.from,
+    to: req.query.to
+  }));
 }));
 
 router.get('/admin/pendientes', asyncHandler(async (req, res) => {

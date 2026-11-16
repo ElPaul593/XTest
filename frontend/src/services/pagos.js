@@ -19,8 +19,10 @@ export const crearOrdenPago = (holdIds) =>
 export const capturarPago = (orderId) =>
   solicitar(() => api.post('/pagos/capturar-orden', { orderId }), 'No se pudo confirmar el pago');
 
-export const getResumenFinanciero = () =>
-  solicitar(() => api.get('/pagos/admin/resumen'), 'No se pudo cargar el resumen financiero');
+export const getResumenFinanciero = ({ from, to } = {}) =>
+  solicitar(() => api.get('/pagos/admin/resumen', {
+    params: { from: from || undefined, to: to || undefined }
+  }), 'No se pudo cargar el resumen financiero');
 
 export const getPagosPendientes = () =>
   solicitar(() => api.get('/pagos/admin/pendientes'), 'No se pudieron cargar los pagos pendientes');
