@@ -1,0 +1,146 @@
+name: Quality and Security - XTest
+
+on:
+  push:
+    branches: [main, main_paul, master]
+  pull_request:
+    branches: [main, main_paul, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xtest-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Jest coverage, lint and SonarQube Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: https://sonarcloud.io
+    steps:
+      - name: Checkout with history for Sonar analysis
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Check backend lint rules
+        working-directory: backend
+        run: npm run lint
+
+      - name: Run backend tests and generate LCOV coverage
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-quality-test-secret-not-for-production
+        run: npm run test:coverage -- --runInBand --coverageReporters=lcov --coverageReporters=text-summary
+
+      - name: Confirm LCOV report exists
+        run: test -s backend/coverage/lcov.info
+
+      - name: Save coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtest-backend-coverage
+          path: backend/coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: SonarQube Cloud scan with quality gate
+        if: ${{ env.SONAR_TOKEN != '' && vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' }}
+        uses: SonarSource/sonarqube-scan-action@v6
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.qualitygate.wait=true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: Explain if SonarQube connection is missing
+        if: ${{ env.SONAR_TOKEN == '' || vars.SONAR_PROJECT_KEY == '' || vars.SONAR_ORGANIZATION == '' }}
+        run: |
+          echo "### SonarQube Cloud: CONFIGURATION PENDING" >> "$GITHUB_STEP_SUMMARY"
+          echo "The code coverage and lint checks ran, but no SonarQube analysis was performed." >> "$GITHUB_STEP_SUMMARY"
+          echo "Set secret SONAR_TOKEN and repository variables SONAR_PROJECT_KEY and SONAR_ORGANIZATION." >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::SonarQube Cloud was not analyzed because required repository settings are missing."
+
+  dependency-security:
+    name: Dependency vulnerability assessment
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit dependencies (baseline reporting)
+        id: audit
+        continue-on-error: true
+        working-directory: ${{ matrix.module }}
+        run: npm audit --audit-level=high --json > npm-audit.json
+
+      - name: Publish audit status
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+          MODULE: ${{ matrix.module }}
+        run: |
+          echo "### npm audit — $MODULE" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$AUDIT_OUTCOME" = "success" ]; then
+            echo "No high/critical findings reported by npm audit (see JSON artifact)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Vulnerability findings or audit error: **review the artifact before deciding remediation**." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::npm audit reported issues in $MODULE; this baseline does not block the current deployment."
+          fi
+
+      - name: Preserve dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtest-audit-${{ matrix.module }}
+          path: ${{ matrix.module }}/npm-audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  codeql:
+    name: CodeQL security analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL for JavaScript and TypeScript
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
