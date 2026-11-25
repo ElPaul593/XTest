@@ -36,22 +36,34 @@ test('XT-E2E-04 | viajes: búsqueda rápida filtra rutas por ciudad', async ({pa
   await expect(page.getByRole('heading',{name:'Comprar boletos'})).toBeVisible();
   await page.getByRole('button',{name:'Búsqueda rápida'}).click();
   await expect(page.locator('.ruta-fila')).toHaveCount(2);
-  await page.locator('.compra-rapida').getByText('Desde').locator('..').locator('select').selectOption('Quito');
+  await page.getByLabel('Desde').selectOption('Quito');
   await expect(page.locator('.ruta-fila')).toHaveCount(1);
-  await expect(page.locator('.ruta-fila').first()).toContainText('Quito');
-  await expect(page.locator('.ruta-fila').first()).toContainText('Guayaquil');
+  const ruta = page.locator('.ruta-fila').filter({hasText:'Quito → Guayaquil'});
+  await expect(ruta).toContainText('$15');
+  await expect(page.getByLabel('Hasta').locator('option')).toHaveCount(2);
+  await page.getByLabel('Hasta').selectOption('Guayaquil');
+  await expect(ruta).toHaveCount(1);
+  await page.getByRole('button',{name:'Limpiar'}).click();
+  await expect(page.locator('.ruta-fila')).toHaveCount(2);
 });
 
 test('XT-E2E-05 | detalle del viaje permite abrir selección de asientos', async ({page}) => {
   await session(page);
-  await mockApi(page);
+  const api = await mockApi(page);
   await page.goto('/boletos');
   await page.getByRole('button',{name:'Búsqueda rápida'}).click();
-  const fila = page.locator('.ruta-fila').filter({hasText:'Guayaquil'}).first();
+  const fila = page.locator('.ruta-fila').filter({hasText:'Quito → Guayaquil'});
   await expect(fila).toContainText('$15');
   await fila.getByRole('button',{name:'Elegir'}).click();
   await expect(page).toHaveURL(/\/seat-booking\?/);
+  const bookingUrl = new URL(page.url());
+  expect(bookingUrl.searchParams.get('ruta')).toBe('507f1f77bcf86cd799439011');
+  expect(bookingUrl.searchParams.get('fecha')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(bookingUrl.searchParams.get('hora')).toBe('08:00');
   await expect(page.getByRole('heading',{name:/Reserva de Asientos/})).toBeVisible();
+  await expect(page.getByRole('group',{name:'Mapa de asientos del bus'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Asiento 1, ventana, disponible'})).toBeVisible();
+  await expect.poll(() => api.calls.filter(call => call.path === '/asientos/disponibles')).toHaveLength(1);
 });
 
 test('XT-E2E-06 | turismo: filtro por nombre y ciudad', async ({page}) => {

@@ -6,7 +6,7 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed --workers=1",
     "test:ui": "playwright test --ui",
-    "test:demo": "playwright test --headed --workers=1 --trace on",
+    "test:demo": "playwright test --config=playwright.demo.config.js --headed --workers=1 --trace on",
     "report": "playwright show-report"
   },
   "devDependencies": {
