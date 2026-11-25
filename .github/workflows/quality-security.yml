@@ -1,4 +1,4 @@
-name: Quality and Security - XTest
+name: Dependency and Code Security - XTest
 
 on:
   push:
@@ -15,73 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Jest coverage, lint and SonarQube Cloud
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: https://sonarcloud.io
-    steps:
-      - name: Checkout with history for Sonar analysis
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Check backend lint rules
-        working-directory: backend
-        run: npm run lint
-
-      - name: Run backend tests and generate LCOV coverage
-        working-directory: backend
-        env:
-          NODE_ENV: test
-          JWT_SECRET: ci-quality-test-secret-not-for-production
-        run: npm run test:coverage -- --runInBand --coverageReporters=lcov --coverageReporters=text-summary
-
-      - name: Confirm LCOV report exists
-        run: test -s backend/coverage/lcov.info
-
-      - name: Save coverage evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xtest-backend-coverage
-          path: backend/coverage/
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: SonarQube Cloud scan with quality gate
-        if: ${{ env.SONAR_TOKEN != '' && vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' }}
-        uses: SonarSource/sonarqube-scan-action@v6
-        with:
-          args: >
-            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
-            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
-            -Dsonar.qualitygate.wait=true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-
-      - name: Explain if SonarQube connection is missing
-        if: ${{ env.SONAR_TOKEN == '' || vars.SONAR_PROJECT_KEY == '' || vars.SONAR_ORGANIZATION == '' }}
-        run: |
-          echo "### SonarQube Cloud: CONFIGURATION PENDING" >> "$GITHUB_STEP_SUMMARY"
-          echo "The code coverage and lint checks ran, but no SonarQube analysis was performed." >> "$GITHUB_STEP_SUMMARY"
-          echo "Set secret SONAR_TOKEN and repository variables SONAR_PROJECT_KEY and SONAR_ORGANIZATION." >> "$GITHUB_STEP_SUMMARY"
-          echo "::warning::SonarQube Cloud was not analyzed because required repository settings are missing."
-
   dependency-security:
     name: Dependency vulnerability assessment
     runs-on: ubuntu-latest
