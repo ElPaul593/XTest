@@ -104,7 +104,7 @@ const userSchemas = {
     paisOrigen: Joi.string().optional().min(2).max(50),
     provincia: Joi.string().optional().max(50),
     password: Joi.string().required().min(6),
-    role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
+    role: Joi.string().valid('ADMIN', 'USER', 'AGENTE', 'VERIFICADOR').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()
   }).or('cedula', 'pasaporte'),
 
@@ -118,7 +118,7 @@ const userSchemas = {
     password: Joi.string().min(6).allow('').optional(),
     currentPassword: Joi.string().allow('').optional(),
     passwordConfirmation: Joi.string().allow('').optional(),
-    role: Joi.string().valid('ADMIN', 'USER', 'AGENTE').optional(),
+    role: Joi.string().valid('ADMIN', 'USER', 'AGENTE', 'VERIFICADOR').optional(),
     assignedRutas: Joi.array().items(Joi.string()).optional()
   }),
 

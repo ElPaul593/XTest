@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { isAuthenticated, isAdmin, isAgente, homePathForRole } from '../services/session';
+import { isAuthenticated, isAdmin, isAgente, isVerificador, homePathForRole } from '../services/session';
 
 /**
  * Pantallas solo para visitantes: portada, inicio de sesión, registro y
@@ -35,10 +35,16 @@ export function AdminRoute({ children }) {
 }
 
 /**
- * Requiere rol agente (o admin). Sin sesión -> /login; con sesión sin permiso -> /dashboard.
+ * Requiere rol agente, verificador o admin. Sin sesión -> /login; con sesión
+ * sin permiso -> /dashboard.
+ *
+ * Agente y Admin ven el panel completo (escaneo QR + control de abordaje);
+ * Verificador ve la misma pantalla en modo solo lectura (rutas y ocupación),
+ * sin poder verificar boletos ni marcar abordaje — eso lo decide `Agente.jsx`
+ * mirando el rol, no este guard.
  */
 export function AgenteRoute({ children }) {
   if (!isAuthenticated()) return <Navigate to="/login" replace />;
-  if (!isAgente() && !isAdmin()) return <Navigate to="/dashboard" replace />;
+  if (!isAgente() && !isVerificador() && !isAdmin()) return <Navigate to="/dashboard" replace />;
   return children;
 }

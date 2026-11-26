@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { isAuthenticated, isAdmin, isAgente, homePathForRole } from '../services/session';
+import { isAuthenticated, isAdmin, isAgente, isVerificador, homePathForRole } from '../services/session';
 import { logout } from '../services/auth';
 import useTheme from '../hooks/useTheme';
 import Icon from './Icon';
@@ -13,9 +13,9 @@ import Icon from './Icon';
  * mostraba rutas de ejemplo que no correspondían con las reales. El logotipo lleva
  * a la pantalla de inicio de cada rol.
  */
-function enlacesPorRol({ admin, agente }) {
-  if (agente && !admin) {
-    return [{ to: '/agente', label: 'Verificar boletos', icon: 'qr' }];
+function enlacesPorRol({ admin, agente, verificador }) {
+  if ((agente || verificador) && !admin) {
+    return [{ to: '/agente', label: verificador ? 'Rutas y ocupación' : 'Verificar boletos', icon: 'qr' }];
   }
 
   const comunes = [
@@ -45,6 +45,7 @@ export default function Navbar() {
   const sesion = isAuthenticated();
   const admin = isAdmin();
   const agente = isAgente();
+  const verificador = isVerificador();
 
   // El menú móvil se cierra al cambiar de pantalla.
   useEffect(() => { setMenuAbierto(false); }, [location.pathname]);
@@ -70,7 +71,7 @@ export default function Navbar() {
     navigate('/', { replace: true });
   };
 
-  const enlaces = sesion ? enlacesPorRol({ admin, agente }) : [];
+  const enlaces = sesion ? enlacesPorRol({ admin, agente, verificador }) : [];
   const destinoLogo = sesion ? homePathForRole() : '/';
 
   return (
@@ -107,7 +108,7 @@ export default function Navbar() {
           </button>
           {sesion ? (
             <>
-              {!(agente && !admin) && (
+              {!((agente || verificador) && !admin) && (
                 <NavLink
                   to="/profile"
                   className={({ isActive }) => `topbar-avatar ${isActive ? 'is-active' : ''}`}
@@ -153,7 +154,7 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ))}
-            {!(agente && !admin) && (
+            {!((agente || verificador) && !admin) && (
               <li>
                 <NavLink to="/profile" className={({ isActive }) => `drawer-link ${isActive ? 'is-active' : ''}`}>
                   <Icon name="user" size={18} />Mi perfil

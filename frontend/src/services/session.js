@@ -75,6 +75,10 @@ export function isAgente() {
   return getRole() === 'agente';
 }
 
+export function isVerificador() {
+  return getRole() === 'verificador';
+}
+
 export function clearSession() {
   localStorage.removeItem('token');
   localStorage.removeItem('role');
@@ -85,5 +89,6 @@ export function clearSession() {
 export function homePathForRole(role = getRole()) {
   if (role === 'admin') return '/admin';
   if (role === 'agente') return '/agente';
+  if (role === 'verificador') return '/agente';
   return '/dashboard';
 }

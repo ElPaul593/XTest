@@ -78,12 +78,28 @@ exports.capturarOrden = async ({ user, orderId }) => {
 
   pago.captureId = resultado.captureId;
   pago.pagador = resultado.payer?.email_address || pago.pagador;
-  pago.estado = resultado.enRevision ? 'EN_REVISION' : 'PAGADO';
+
+  if (resultado.enRevision) {
+    // Auto-confirmación: la orden que la pasarela marca "en revisión" se
+    // aprueba de inmediato contra la misma API externa (mismo camino que
+    // usaba el botón "Aprobar" del panel admin), en vez de quedar pendiente
+    // de que un administrador la revise manualmente.
+    try {
+      await llamarApi('post', seatApiUrl('adminPagos', `/${encodeURIComponent(orderId)}/aprobar`), {
+        headers: encabezadoAdmin()
+      });
+    } catch (error) {
+      // La API externa pudo reiniciarse y olvidar la orden; el cobro ya está
+      // capturado y registrado aquí, así que se continúa igual.
+      if (!esOrdenPerdida(error)) throw error;
+    }
+  }
+
+  pago.estado = 'PAGADO';
   await pago.save();
+  await entregarAsientos(pago);
 
-  if (!resultado.enRevision) await entregarAsientos(pago);
-
-  return resultado;
+  return { ...resultado, enRevision: false };
 };
 
 exports.listarPendientes = () => Pago.find({ estado: 'EN_REVISION' })
