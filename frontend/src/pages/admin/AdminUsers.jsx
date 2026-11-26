@@ -145,8 +145,8 @@ export default function AdminUsers() {
     try {
       const payload = { ...editForm };
       if (!payload.password) delete payload.password;
-      // Solo enviamos rutas asignadas para agentes; para otros roles las limpiamos.
-      payload.assignedRutas = payload.role === 'AGENTE' ? (payload.assignedRutas || []) : [];
+      // Solo enviamos rutas asignadas para agentes/verificadores; para otros roles las limpiamos.
+      payload.assignedRutas = (payload.role === 'AGENTE' || payload.role === 'VERIFICADOR') ? (payload.assignedRutas || []) : [];
       await updateUser(id, payload);
       setEditingId(null);
       load();
@@ -236,6 +236,7 @@ export default function AdminUsers() {
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
               <option value="AGENTE">AGENTE</option>
+              <option value="VERIFICADOR">VERIFICADOR</option>
             </select>
             <button type="submit" className="btn btn-primary">Crear</button>
           </div>
@@ -301,9 +302,9 @@ export default function AdminUsers() {
                       <td>{editing ? <input className="input" value={editForm.provincia} onChange={e => setEditForm({ ...editForm, provincia: e.target.value })} /> : (u.provincia || '—')}</td>
                       <td>
                         {editing
-                          ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option></select>
+                          ? <select className="input" value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}><option value="USER">USER</option><option value="ADMIN">ADMIN</option><option value="AGENTE">AGENTE</option><option value="VERIFICADOR">VERIFICADOR</option></select>
                           : (u.role || 'USER').toUpperCase()}
-                        {editing && editForm.role === 'AGENTE' && (
+                        {editing && (editForm.role === 'AGENTE' || editForm.role === 'VERIFICADOR') && (
                           <div style={{ marginTop: '8px', maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px', minWidth: '200px' }}>
                             <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Rutas asignadas:</div>
                             {rutas.length === 0 ? (

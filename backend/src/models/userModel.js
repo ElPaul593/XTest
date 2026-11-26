@@ -96,7 +96,7 @@ const UserSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ['ADMIN', 'USER', 'AGENTE'],
+    enum: ['ADMIN', 'USER', 'AGENTE', 'VERIFICADOR'],
     default: 'USER'
   },
 
@@ -126,7 +126,7 @@ const UserSchema = new mongoose.Schema({
   estadoCambiadoEn: { type: Date, default: null },
   estadoCambiadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
-  // Rutas asignadas a un Agente de Turismo para verificar boletos (solo aplica a role AGENTE).
+  // Rutas asignadas a un Agente de Turismo o Verificador (roles AGENTE/VERIFICADOR).
   assignedRutas: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Ruta' }],
 
   password: { type: String, required: true, minlength: 6 },

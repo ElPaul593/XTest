@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import QrScanner from '../components/QrScanner';
+import { isVerificador } from '../services/session';
 import {
   getRutasAsignadas,
   getPasajeros,
@@ -10,12 +11,17 @@ import { AlertPopup } from '../components/Popup';
 import Icon from '../components/Icon';
 
 /**
- * Panel del Agente de Turismo.
+ * Panel del Agente de Turismo / Verificador.
  * - Lista las rutas asignadas con conteo de pasajeros / verificados / pendientes.
- * - Permite escanear el QR del boleto (cámara) o ingresar el código manualmente.
- * - Control de abordaje por nombre: ver quién subió y quién falta, con toggle manual.
+ * - Agente/Admin: puede escanear el QR del boleto (cámara), ingresar el código
+ *   manualmente y controlar el abordaje (toggle manual).
+ * - Verificador: ve exactamente la misma pantalla en modo solo lectura (rutas,
+ *   ocupación y lista de pasajeros), sin escaneo ni botones de abordaje — el
+ *   backend ya rechaza esas acciones para su rol, pero aquí se ocultan para que
+ *   no las intente.
  */
 export default function Agente() {
+  const soloLectura = isVerificador();
   const [rutas, setRutas] = useState([]);
   const [fallback, setFallback] = useState(false);
   const [loadingRutas, setLoadingRutas] = useState(true);
@@ -150,45 +156,53 @@ export default function Agente() {
         variant={popupMessage?.variant}
       />
       <div style={S.header}>
-        <h1 style={S.h1}><Icon name="qr" size={22} /> Verificación de Boletos</h1>
-        <p style={S.subtitle}>Agente de Turismo · escanea el QR y controla el abordaje</p>
+        <h1 style={S.h1}>
+          <Icon name={soloLectura ? 'bus' : 'qr'} size={22} /> {soloLectura ? 'Rutas y ocupación' : 'Verificación de Boletos'}
+        </h1>
+        <p style={S.subtitle}>
+          {soloLectura
+            ? 'Verificador · consulta cómo se van llenando las rutas (solo lectura)'
+            : 'Agente de Turismo · escanea el QR y controla el abordaje'}
+        </p>
       </div>
 
-      {/* ── Panel de escaneo ─────────────────────────────────────── */}
-      <section style={S.card}>
-        <h2 style={S.h2}>Escanear boleto (QR)</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          <button
-            style={scannerOpen ? S.btnGhost : S.btnPrimary}
-            onClick={() => setScannerOpen((v) => !v)}
-          >
-            {scannerOpen ? 'Detener cámara' : <><Icon name="camera" size={16} /> Abrir cámara</>}
-          </button>
-        </div>
+      {/* ── Panel de escaneo (solo Agente/Admin) ─────────────────── */}
+      {!soloLectura && (
+        <section style={S.card}>
+          <h2 style={S.h2}>Escanear boleto (QR)</h2>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <button
+              style={scannerOpen ? S.btnGhost : S.btnPrimary}
+              onClick={() => setScannerOpen((v) => !v)}
+            >
+              {scannerOpen ? 'Detener cámara' : <><Icon name="camera" size={16} /> Abrir cámara</>}
+            </button>
+          </div>
 
-        {scannerOpen && (
-          <QrScanner active={scannerOpen} onScan={handleVerificar} />
-        )}
+          {scannerOpen && (
+            <QrScanner active={scannerOpen} onScan={handleVerificar} />
+          )}
 
-        <div style={S.divider}><span style={S.dividerText}>o ingresa el código manualmente</span></div>
+          <div style={S.divider}><span style={S.dividerText}>o ingresa el código manualmente</span></div>
 
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <input
-            style={S.input}
-            placeholder="Pega el contenido del QR o el código del boleto"
-            value={manualCode}
-            onChange={(e) => setManualCode(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleVerificar(manualCode)}
-          />
-          <button
-            style={S.btnPrimary}
-            disabled={verifying || !manualCode.trim()}
-            onClick={() => handleVerificar(manualCode)}
-          >
-            {verifying ? 'Verificando…' : 'Verificar'}
-          </button>
-        </div>
-      </section>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <input
+              style={S.input}
+              placeholder="Pega el contenido del QR o el código del boleto"
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleVerificar(manualCode)}
+            />
+            <button
+              style={S.btnPrimary}
+              disabled={verifying || !manualCode.trim()}
+              onClick={() => handleVerificar(manualCode)}
+            >
+              {verifying ? 'Verificando…' : 'Verificar'}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ── Rutas asignadas ──────────────────────────────────────── */}
       <section style={S.card}>
@@ -262,7 +276,7 @@ export default function Agente() {
                         <th style={S.th}>Cédula/Pasaporte</th>
                         <th style={S.th}>Asiento(s)</th>
                         <th style={S.th}>Estado</th>
-                        <th style={S.th}>Acción</th>
+                        {!soloLectura && <th style={S.th}>Acción</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -276,17 +290,19 @@ export default function Agente() {
                               ? <span style={S.tagOk}><Icon name="check" size={14} /> Abordó</span>
                               : <span style={S.tagPend}><Icon name="hourglass" size={14} /> Falta</span>}
                           </td>
-                          <td style={S.td}>
-                            {p.verificado ? (
-                              <button style={S.btnSmallGhost} onClick={() => handleToggle(p.reservaId, false)}>
-                                Desmarcar
-                              </button>
-                            ) : (
-                              <button style={S.btnSmall} onClick={() => handleToggle(p.reservaId, true)}>
-                                Marcar abordó
-                              </button>
-                            )}
-                          </td>
+                          {!soloLectura && (
+                            <td style={S.td}>
+                              {p.verificado ? (
+                                <button style={S.btnSmallGhost} onClick={() => handleToggle(p.reservaId, false)}>
+                                  Desmarcar
+                                </button>
+                              ) : (
+                                <button style={S.btnSmall} onClick={() => handleToggle(p.reservaId, true)}>
+                                  Marcar abordó
+                                </button>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

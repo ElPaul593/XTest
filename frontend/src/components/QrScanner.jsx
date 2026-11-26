@@ -16,6 +16,12 @@ export default function QrScanner({ onScan, active }) {
   const containerId = useRef(`qr-reader-${Math.random().toString(36).slice(2)}`);
   const instanceRef = useRef(null);
   const onScanRef = useRef(onScan);
+  const scannedRef = useRef(false);
+  // Serializa start()/stop(): si `active` cambia dos veces seguidas antes de
+  // que termine la operación anterior, html5-qrcode puede lanzar "Cannot
+  // transition to a new state, already under transition" y la cámara se queda
+  // sin arrancar. Encolar en vez de lanzar en paralelo es lo que evita eso.
+  const transitionRef = useRef(Promise.resolve());
   const [error, setError] = useState(null);
 
   useEffect(() => { onScanRef.current = onScan; }, [onScan]);
@@ -25,6 +31,7 @@ export default function QrScanner({ onScan, active }) {
 
     async function start() {
       setError(null);
+      scannedRef.current = false;
 
       const secure = window.isSecureContext ||
         ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -48,13 +55,29 @@ export default function QrScanner({ onScan, active }) {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 240, height: 240 } },
           (decodedText) => {
+            // html5-qrcode sigue leyendo frames (cada ~100ms a 10fps) mientras
+            // stop() no haya terminado, así que un mismo QR puede disparar este
+            // callback varias veces antes de que el padre cierre la cámara.
+            // Sin este guard, cada frame de más llamaba otra vez a onScan y
+            // disparaba una verificación duplicada del mismo boleto.
+            if (scannedRef.current || cancelled) return;
+            scannedRef.current = true;
             if (onScanRef.current) onScanRef.current(decodedText);
           },
           () => { /* fallos de lectura por frame: se ignoran */ }
         );
       } catch (err) {
         if (!cancelled) {
-          setError('No se pudo iniciar la cámara: ' + (err?.message || err) + '. Usa el ingreso manual.');
+          const msg = String(err?.message || err || '');
+          // Mensaje más claro para el caso más común en campo: otra pestaña/app
+          // ya tiene la cámara abierta (p.ej. recargar la página sin haber
+          // soltado el stream anterior).
+          const amigable = /NotReadableError|TrackStartError|already in use/i.test(msg)
+            ? 'La cámara está siendo usada por otra pestaña o aplicación. Cierra las demás y vuelve a abrir la cámara.'
+            : /NotAllowedError|Permission denied/i.test(msg)
+              ? 'Permiso de cámara denegado. Habilítalo en los ajustes del navegador y vuelve a intentar.'
+              : 'No se pudo iniciar la cámara: ' + msg + '. Usa el ingreso manual.';
+          setError(amigable);
         }
       }
     }
@@ -68,10 +91,15 @@ export default function QrScanner({ onScan, active }) {
       }
     }
 
-    if (active) start();
-    else stop();
+    // Encadena esta transición a la anterior en vez de lanzarla de inmediato:
+    // evita que un start() y un stop() (o dos start() seguidos) corran a la vez
+    // sobre la misma instancia de la cámara.
+    transitionRef.current = transitionRef.current.then(() => (active ? start() : stop()));
 
-    return () => { cancelled = true; stop(); };
+    return () => {
+      cancelled = true;
+      transitionRef.current = transitionRef.current.then(() => stop());
+    };
   }, [active]);
 
   return (

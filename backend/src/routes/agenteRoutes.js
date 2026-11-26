@@ -13,6 +13,11 @@ const { authenticateToken, authorizeRole } = require('../middleware/auth');
 // Todas las rutas requieren sesión y rol AGENTE (admin también puede acceder).
 const agenteAccess = [authenticateToken, authorizeRole(['agente', 'admin'])];
 
+// Lectura (rutas y pasajeros) también la puede ver el rol VERIFICADOR: monitorea
+// cómo se van llenando las rutas, pero no puede verificar boletos ni marcar
+// abordaje (esas acciones siguen siendo solo de AGENTE/ADMIN).
+const lecturaAccess = [authenticateToken, authorizeRole(['agente', 'admin', 'verificador'])];
+
 /**
  * @swagger
  * /api/agente/rutas:
@@ -27,7 +32,7 @@ const agenteAccess = [authenticateToken, authorizeRole(['agente', 'admin'])];
  *       403:
  *         description: Acceso denegado (solo agente/admin)
  */
-router.get('/rutas', ...agenteAccess, agenteController.getRutas);
+router.get('/rutas', ...lecturaAccess, agenteController.getRutas);
 
 /**
  * @swagger
@@ -47,7 +52,7 @@ router.get('/rutas', ...agenteAccess, agenteController.getRutas);
  *       200:
  *         description: Pasajeros de la ruta
  */
-router.get('/rutas/:rutaId/pasajeros', ...agenteAccess, agenteController.getPasajeros);
+router.get('/rutas/:rutaId/pasajeros', ...lecturaAccess, agenteController.getPasajeros);
 
 /**
  * @swagger
