@@ -25,6 +25,43 @@ async function llamarApi(metodo, url, { data, params, headers } = {}) {
 
 const esOrdenPerdida = (error) => error.statusCode === 404;
 
+/** Extrae un número de un valor que puede venir como número o como texto ("$1,80"). */
+function aNumero(valor) {
+  if (typeof valor === 'number') return valor;
+  if (valor == null) return 0;
+  const match = String(valor).match(/-?\d+(?:[.,]\d+)?/);
+  return match ? Number(match[0].replace(',', '.')) : 0;
+}
+
+/**
+ * Normaliza el `pricing` que llega de la API externa de checkout antes de
+ * guardarlo en una Reserva.
+ *
+ * BUG: esa API (a diferencia de `/calcular-precio`, que sí lo da en número)
+ * devuelve `ahorros` como texto ya formateado para mostrar en pantalla, p.ej.
+ * `"Ahorras: $1,80"`. El esquema de Reserva declara `pricing.ahorros` como
+ * `Number`, así que `Reserva.create` fallaba con
+ * `Cast to Number failed for value "Ahorras: $1,80"` en cuanto se intentaba
+ * entregar el asiento (tanto al aprobar manualmente desde el panel como,
+ * ahora, al auto-confirmar). Aquí se recalcula `ahorros` a partir de
+ * `montoDescuento` (sí numérico, y es el mismo valor que ya usan
+ * `discountUtils.calcularPrecioLocal` y `pricingRoutes.js`), y de paso se
+ * blinda el resto de campos numéricos por si la API externa repite el patrón.
+ */
+function normalizarPricing(pricing) {
+  if (!pricing || typeof pricing !== 'object') return pricing;
+  return {
+    ...pricing,
+    cantidad: aNumero(pricing.cantidad),
+    precioUnitario: aNumero(pricing.precioUnitario),
+    subtotal: aNumero(pricing.subtotal),
+    porcentajeDescuento: aNumero(pricing.porcentajeDescuento),
+    montoDescuento: aNumero(pricing.montoDescuento),
+    total: aNumero(pricing.total),
+    ahorros: aNumero(pricing.montoDescuento ?? pricing.ahorros)
+  };
+}
+
 async function buscarPagoDelUsuario(orderId, user) {
   const pago = await Pago.findOne({ orderId });
   if (!pago || String(pago.user) !== String(user._id)) {
@@ -41,7 +78,7 @@ async function entregarAsientos(pago) {
     ruta: pago.ruta,
     seatNumbers: pago.asientos,
     fecha: pago.fecha,
-    pricing: pago.pricing
+    pricing: normalizarPricing(pago.pricing)
   });
 
   pago.reserva = reserva._id;
