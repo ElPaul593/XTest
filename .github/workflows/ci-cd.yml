@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend lint and tests
+    name: Backend lint, tests and SonarQube quality gate
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -39,10 +41,46 @@ jobs:
         run: npm run lint
 
       - name: Run tests
-        run: npm test -- --runInBand
+        run: npm run test:coverage -- --runInBand --coverageReporters=lcov --coverageReporters=text-summary
         env:
           NODE_ENV: test
           JWT_SECRET: ci-test-secret
+
+      - name: Confirm LCOV report exists
+        working-directory: .
+        run: test -s backend/coverage/lcov.info
+
+      - name: Save coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtest-backend-coverage
+          path: backend/coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Validate SonarQube configuration
+        working-directory: .
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ] || [ -z "$SONAR_PROJECT_KEY" ] || [ -z "$SONAR_ORGANIZATION" ]; then
+            echo "::error::Configure SONAR_TOKEN, SONAR_PROJECT_KEY and SONAR_ORGANIZATION before running this required quality gate."
+            exit 1
+          fi
+
+      - name: SonarQube Cloud scan with quality gate
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.qualitygate.wait=true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
   frontend:
     name: Frontend build
